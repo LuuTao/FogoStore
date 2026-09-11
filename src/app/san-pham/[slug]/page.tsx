@@ -1,0 +1,208 @@
+import React from 'react';
+import { notFound } from 'next/navigation';
+import IPhoneDetail from '@/components/products/IPhoneDetail';
+import IPadDetail from '@/components/products/IPadDetail';
+import MacBookDetail from '@/components/products/MacBookDetail';
+import UsedProductDetail from '@/components/products/UsedProductDetail';
+import WatchDetail from '@/components/products/WatchDetail';
+import AccessoryDetail from '@/components/products/AccessoryDetail';
+import { ACCESSORY_CATALOG_ITEMS } from '@/data/accessoryCatalog';
+
+interface PageProps {
+  params: Promise<{ slug: string }> | { slug: string };
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
+}
+
+export default async function ProductDetailPage(props: PageProps) {
+  const resolvedParams = await props.params;
+  const currentSlug = resolvedParams.slug;
+
+  // Tách slug và dung lượng/kích cỡ (ví dụ: iphone-16-pro-max-256gb -> baseSlug: iphone-16-pro-max, storage: 256GB)
+  const storageMatch = currentSlug.match(/-(64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
+  const urlStorage = storageMatch ? storageMatch[1].toUpperCase() : '';
+  const baseSlug = storageMatch
+    ? currentSlug.substring(0, currentSlug.length - storageMatch[0].length)
+    : currentSlug;
+
+  let product: any = null;
+
+  // 1. Fetch dữ liệu từ API Backend
+  try {
+    const res = await fetch(`http://localhost:5000/api/products/${baseSlug}`, {
+      cache: 'no-store',
+    });
+    const resJson = await res.json();
+    if (resJson.success && resJson.data) {
+      product = resJson.data;
+    }
+  } catch (err) {
+    console.error('Không thể kết nối API sản phẩm:', err);
+  }
+
+  // 2. Fallback tìm kiếm trong Catalog Phụ Kiện nếu API chưa tạo sản phẩm này trong DB
+  if (!product && ACCESSORY_CATALOG_ITEMS) {
+    const fallbackItem = ACCESSORY_CATALOG_ITEMS.find((item: any) => {
+      const itemSlug = item.slug || item.id || item.href?.replace(/^\/san-pham\//, '');
+      return itemSlug === currentSlug || itemSlug === baseSlug;
+    });
+
+    if (fallbackItem) {
+      product = {
+        id: fallbackItem.id,
+        name: fallbackItem.name,
+        slug: currentSlug,
+        category: { slug: 'phu-kien', name: 'Phụ kiện' },
+        variants: [
+          {
+            id: fallbackItem.id,
+            color: 'Trắng',
+            storage: 'Tiêu chuẩn',
+            price: parsePrice(fallbackItem.currentPrice || fallbackItem.rawPrice || 490000),
+            originalPrice: parsePrice(fallbackItem.originalPrice || 590000),
+            stock: 15,
+            images: [fallbackItem.imageUrl],
+          },
+        ],
+      };
+    }
+  }
+
+  // Nếu vẫn không có dữ liệu -> 404
+  if (!product) {
+    notFound();
+  }
+
+  const catSlug = (product.category?.slug || '').toLowerCase();
+  const catName = (product.category?.name || '').toLowerCase();
+  const prodName = (product.name || '').toLowerCase();
+  const slugLower = currentSlug.toLowerCase();
+
+  // ================= BỘ ĐIỀU PHỐI (DISPATCHER) CHUẨN THỨ TỰ =================
+
+  // 1. ƯU TIÊN SỐ 1: HÀNG CŨ / LIKE NEW (Tránh bị đè bởi iPhone/iPad mới)
+  const isUsedProduct =
+    catSlug === 'hang-cu' ||
+    catSlug.includes('cu') ||
+    catSlug.includes('used') ||
+    catSlug.includes('like-new') ||
+    catName.includes('cũ') ||
+    catName.includes('like new') ||
+    catName.includes('99%') ||
+    prodName.includes('cũ') ||
+    prodName.includes('like new') ||
+    prodName.includes('99%') ||
+    slugLower.includes('-cu') ||
+    slugLower.includes('like-new');
+
+  if (isUsedProduct) {
+    return (
+      <UsedProductDetail
+        initialProduct={product}
+        currentSlug={currentSlug}
+        baseSlug={baseSlug}
+        urlStorage={urlStorage}
+      />
+    );
+  }
+
+  // 2. ƯU TIÊN SỐ 2: PHỤ KIỆN (Tránh phụ kiện Mac/iPad bị nhảy vào trang laptop/tablet)
+  const isAccessory =
+    catSlug.includes('phu-kien') ||
+    catSlug.includes('accessory') ||
+    catName.includes('phụ kiện') ||
+    slugLower.includes('phu-kien') ||
+    slugLower.includes('sac-') ||
+    slugLower.includes('cap-') ||
+    slugLower.includes('cu-sac') ||
+    slugLower.includes('op-lung') ||
+    slugLower.includes('cuong-luc') ||
+    slugLower.includes('pencil') ||
+    slugLower.includes('magic-mouse') ||
+    slugLower.includes('airpods') ||
+    prodName.includes('củ sạc') ||
+    prodName.includes('cáp sạc') ||
+    prodName.includes('tai nghe') ||
+    prodName.includes('airpods') ||
+    prodName.includes('pencil') ||
+    prodName.includes('magic mouse');
+
+  if (isAccessory) {
+    return (
+      <AccessoryDetail
+        initialProduct={product}
+        currentSlug={currentSlug}
+        baseSlug={baseSlug}
+        urlStorage={urlStorage}
+      />
+    );
+  }
+
+  // 3. APPLE WATCH
+  const isWatch =
+    slugLower.includes('watch') ||
+    prodName.includes('watch') ||
+    catSlug.includes('watch') ||
+    catName.includes('watch') ||
+    catName.includes('đồng hồ');
+
+  if (isWatch) {
+    return (
+      <WatchDetail
+        initialProduct={product}
+        currentSlug={currentSlug}
+        baseSlug={baseSlug}
+        urlStorage={urlStorage}
+      />
+    );
+  }
+
+  // 4. MACBOOK
+  const isMacBook =
+    slugLower.includes('macbook') ||
+    prodName.includes('macbook') ||
+    catSlug.includes('macbook') ||
+    catSlug.includes('laptop');
+
+  if (isMacBook) {
+    return (
+      <MacBookDetail
+        initialProduct={product}
+        currentSlug={currentSlug}
+        baseSlug={baseSlug}
+        urlStorage={urlStorage}
+      />
+    );
+  }
+
+  // 5. IPAD
+  const isIPad =
+    slugLower.includes('ipad') ||
+    prodName.includes('ipad') ||
+    catSlug.includes('ipad');
+
+  if (isIPad) {
+    return (
+      <IPadDetail
+        initialProduct={product}
+        currentSlug={currentSlug}
+        baseSlug={baseSlug}
+        urlStorage={urlStorage}
+      />
+    );
+  }
+
+  // 6. MẶC ĐỊNH CUỐI CÙNG: IPHONE
+  return (
+    <IPhoneDetail
+      initialProduct={product}
+      currentSlug={currentSlug}
+      baseSlug={baseSlug}
+      urlStorage={urlStorage}
+    />
+  );
+}
+
+function parsePrice(val: any): number {
+  if (typeof val === 'number') return val;
+  return Number(String(val).replace(/[^0-9]/g, '')) || 0;
+}
