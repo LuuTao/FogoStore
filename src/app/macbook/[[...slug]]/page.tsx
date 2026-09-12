@@ -154,7 +154,7 @@ export default function DynamicMacBookPage() {
   useEffect(() => {
     const fetchLiveMacbook = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/products/filter?category=macbook', {
+        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=macbook', {
           cache: 'no-store',
         });
         const json = await res.json();

@@ -14,7 +14,7 @@ export const HeroSlider: React.FC = () => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/banners');
+        const res = await fetch('https://fogo-store-api.onrender.com/api/banners');
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
           const homeTop = data.data.filter((b: any) => b.position === 'HOME_TOP');

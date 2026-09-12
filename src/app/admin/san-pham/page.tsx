@@ -49,8 +49,8 @@ export default function AdminProductsPage() {
     setLoading(true);
     try {
       const [resProd, resCat] = await Promise.all([
-        fetch('http://localhost:5000/api/products'),
-        fetch('http://localhost:5000/api/admin/categories'),
+        fetch('https://fogo-store-api.onrender.com/api/products'),
+        fetch('https://fogo-store-api.onrender.com/api/admin/categories'),
       ]);
       const [prodData, catData] = await Promise.all([resProd.json(), resCat.json()]);
       if (prodData.success) setProducts(prodData.data);
@@ -133,7 +133,7 @@ export default function AdminProductsPage() {
         })),
       };
 
-      const res = await fetch('http://localhost:5000/api/admin/products', {
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -158,7 +158,7 @@ export default function AdminProductsPage() {
   const handleDeleteProduct = async (id: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/products/${id}`, {
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/products/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

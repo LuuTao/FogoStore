@@ -45,7 +45,7 @@ function OrderTrackingContent() {
     setLoading(true);
     setSearched(true);
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com';
 
     try {
       const res = await fetch(`${baseUrl}/api/orders/track?query=${encodeURIComponent(target)}`, {

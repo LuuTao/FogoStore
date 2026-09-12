@@ -11,7 +11,7 @@ export const FeaturedProductsSection: React.FC = () => {
   useEffect(() => {
     const fetchFlashSale = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/products/filter?isFlashSale=true', {
+        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?isFlashSale=true', {
           cache: 'no-store',
         });
         const data = await res.json();

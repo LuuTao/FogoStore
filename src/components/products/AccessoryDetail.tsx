@@ -86,7 +86,7 @@ export default function AccessoryDetail({
     }
 
     // Lấy danh sách phụ kiện liên quan từ DB
-    fetch(`http://localhost:5000/api/products/filter?category=phu-kien`, { cache: 'no-store' })
+    fetch(`https://fogo-store-api.onrender.com/api/products/filter?category=phu-kien`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
         if (resJson.success && Array.isArray(resJson.data)) {

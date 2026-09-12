@@ -57,7 +57,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Nạp giỏ hàng từ Database của đúng tài khoản đó
   const fetchCartFromDB = useCallback(async (userId: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/cart/${userId}`, { cache: 'no-store' });
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/cart/${userId}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         const mapped: CartItem[] = json.data.map((item: any) => ({
@@ -118,7 +118,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Nếu đã đăng nhập -> Lưu thẳng vào Database
     if (userId) {
       try {
-        await fetch('http://localhost:5000/api/cart/add', {
+        await fetch('https://fogo-store-api.onrender.com/api/cart/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -153,7 +153,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (userId) {
       try {
-        await fetch('http://localhost:5000/api/cart/update-quantity', {
+        await fetch('https://fogo-store-api.onrender.com/api/cart/update-quantity', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, variantId: String(id), quantity }),
@@ -172,7 +172,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (userId) {
       try {
-        await fetch('http://localhost:5000/api/cart/remove', {
+        await fetch('https://fogo-store-api.onrender.com/api/cart/remove', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, variantId: String(id) }),
@@ -190,7 +190,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (userId) {
       try {
-        await fetch(`http://localhost:5000/api/cart/clear/${userId}`, { method: 'DELETE' });
+        await fetch(`https://fogo-store-api.onrender.com/api/cart/clear/${userId}`, { method: 'DELETE' });
       } catch (err) {
         console.error(err);
       }

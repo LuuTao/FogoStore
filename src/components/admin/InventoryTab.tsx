@@ -315,7 +315,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
 
   const handleQuickStockUpdate = async (variantId: string, newStock: number) => {
     try {
-      await fetch(`http://localhost:5000/api/admin/inventory/${variantId}`, {
+      await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/${variantId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stock: newStock }),
@@ -334,7 +334,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
         formData.append('image', files[i]);
-        const res = await fetch('http://localhost:5000/api/upload', {
+        const res = await fetch('https://fogo-store-api.onrender.com/api/upload', {
           method: 'POST',
           body: formData,
         });
@@ -365,7 +365,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     e.preventDefault();
     setLoadingAction(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/inventory/${editingVariant.id}`, {
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/${editingVariant.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -394,7 +394,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     const form = e.target as any;
     setLoadingAction(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/inventory/variant`, {
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/variant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -428,7 +428,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     }
     setLoadingAction(true);
     try {
-      const res = await fetch('http://localhost:5000/api/admin/products/full', {
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/products/full', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -462,7 +462,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const handleDeleteFullProduct = async (productId: string) => {
     if (!confirm('Bạn có chắc muốn xóa toàn bộ dòng máy này cùng tất cả biến thể?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/products/${productId}`, {
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/products/${productId}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -476,7 +476,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const handleDeleteVariant = async (variantId: string) => {
     if (!confirm('Bạn có chắc muốn xóa biến thể cấu hình này?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/inventory/${variantId}`, {
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/${variantId}`, {
         method: 'DELETE',
       });
       const data = await res.json();

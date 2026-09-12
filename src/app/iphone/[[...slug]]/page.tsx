@@ -137,7 +137,7 @@ export default function DynamicIPhonePage() {
   useEffect(() => {
     const fetchIPhoneProducts = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/products/filter?category=iphone', {
+        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=iphone', {
           cache: 'no-store',
         });
         const json = await res.json();

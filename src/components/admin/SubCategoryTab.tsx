@@ -7,11 +7,11 @@ export default function SubCategoryTab() {
   const [form, setForm] = useState({ id: '', name: '', categoryId: '', imageUrl: '', keyword: '', order: 0 });
 
   const fetchData = async () => {
-    const res = await fetch('http://localhost:5000/api/admin/subcategories');
+    const res = await fetch('https://fogo-store-api.onrender.com/api/admin/subcategories');
     const d = await res.json();
     if (d.success) setItems(d.data);
 
-    const catRes = await fetch('http://localhost:5000/api/admin/inventory'); // hoặc API categories
+    const catRes = await fetch('https://fogo-store-api.onrender.com/api/admin/inventory'); // hoặc API categories
     // nạp categories vào state
   };
 
@@ -19,7 +19,7 @@ export default function SubCategoryTab() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('http://localhost:5000/api/admin/subcategories', {
+    await fetch('https://fogo-store-api.onrender.com/api/admin/subcategories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -30,7 +30,7 @@ export default function SubCategoryTab() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Bạn có chắc muốn xóa item này?')) {
-      await fetch(`http://localhost:5000/api/admin/subcategories/${id}`, { method: 'DELETE' });
+      await fetch(`https://fogo-store-api.onrender.com/api/admin/subcategories/${id}`, { method: 'DELETE' });
       fetchData();
     }
   };

@@ -47,7 +47,7 @@ export const IPadShowcaseSection: React.FC = () => {
   useEffect(() => {
     const fetchIPads = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/products/filter?category=ipad', {
+        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=ipad', {
           cache: 'no-store',
         });
         const json = await res.json();

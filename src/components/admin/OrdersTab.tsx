@@ -12,7 +12,7 @@ export default function OrdersTab({ orders, onRefresh }: Props) {
 
   const handleUpdate = async (id: string, orderStatus: string, paymentStatus?: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/orders/${id}/status`, {
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/orders/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderStatus, paymentStatus }),

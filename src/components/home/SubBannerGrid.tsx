@@ -57,7 +57,7 @@ export const HeroSection: React.FC = () => {
     // Fallback API backend
     const fetchBannersFromAPI = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/banners', { cache: 'no-store' });
+        const res = await fetch('https://fogo-store-api.onrender.com/api/banners', { cache: 'no-store' });
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
           const topList = data.data.filter((b: any) => b.position === 'HOME_TOP');

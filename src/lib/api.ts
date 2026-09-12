@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+const API_BASE_URL = `${API_URL}/api`;
 
 export async function getProducts(params?: { category?: string; series?: string; isUsed?: boolean }) {
   try {

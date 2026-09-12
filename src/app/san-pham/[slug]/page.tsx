@@ -28,7 +28,7 @@ export default async function ProductDetailPage(props: PageProps) {
     : currentSlug;
 
   let product: any = null;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com';
 
   // 2. Fetch Backend: Thử lần 1 với baseSlug (kèm proid nếu có)
   try {

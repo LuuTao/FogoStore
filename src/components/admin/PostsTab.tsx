@@ -53,7 +53,7 @@ export default function PostsTab({ posts, onRefresh }: Props) {
 
     setImporting(true);
     try {
-      const res = await fetch('http://localhost:5000/api/admin/posts/import-haravan', {
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/posts/import-haravan', {
         method: 'POST',
         body: form,
       });
@@ -81,7 +81,7 @@ export default function PostsTab({ posts, onRefresh }: Props) {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/admin/posts', {
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -112,7 +112,7 @@ export default function PostsTab({ posts, onRefresh }: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm('Bạn có chắc muốn xóa bài viết này không?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/posts/${id}`, {
+      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/posts/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

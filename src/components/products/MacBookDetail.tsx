@@ -57,7 +57,7 @@ export default function MacBookDetail({
     setSelectedColor(firstVar.color || 'Tiêu chuẩn');
 
     // Lấy danh sách MacBook liên quan
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com';
     fetch(`${apiUrl}/api/products/filter?category=macbook`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {

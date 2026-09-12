@@ -112,12 +112,12 @@ export default function DynamicUsedPage() {
   useEffect(() => {
     const fetchLiveUsedProducts = async () => {
       try {
-        let res = await fetch('http://localhost:5000/api/products/filter?category=hang-cu', { cache: 'no-store' });
+        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=hang-cu', { cache: 'no-store' });
         let json = await res.json();
 
         // Nếu DB chưa có tag hang-cu thì lấy toàn bộ sản phẩm về để lọc
         if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          res = await fetch('http://localhost:5000/api/products', { cache: 'no-store' });
+          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
           json = await res.json();
         }
 

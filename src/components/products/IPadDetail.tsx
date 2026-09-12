@@ -99,7 +99,7 @@ export default function IPadDetail({
     } catch (e) {}
 
     // Lấy các dòng iPad liên quan
-    fetch(`http://localhost:5000/api/products/filter?category=ipad`, { cache: 'no-store' })
+    fetch(`https://fogo-store-api.onrender.com/api/products/filter?category=ipad`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
         if (resJson.success && Array.isArray(resJson.data)) {

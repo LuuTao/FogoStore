@@ -20,7 +20,7 @@ export default function AdminPage() {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/admin/analytics');
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/analytics');
       const data = await res.json();
       if (data.success) setAnalytics(data.data);
     } catch (e) {
@@ -30,7 +30,7 @@ export default function AdminPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/admin/orders');
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/orders');
       const data = await res.json();
       if (data.success) setOrders(data.data);
     } catch (e) {
@@ -40,7 +40,7 @@ export default function AdminPage() {
 
   const fetchInventory = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/admin/inventory');
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/inventory');
       const data = await res.json();
       if (data.success) setInventory(data.data);
     } catch (e) {
@@ -50,7 +50,7 @@ export default function AdminPage() {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/posts');
+      const res = await fetch('https://fogo-store-api.onrender.com/api/posts');
       const data = await res.json();
       if (data.success) setPosts(data.data);
     } catch (e) {
@@ -60,7 +60,7 @@ export default function AdminPage() {
 
   const fetchBanners = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/banners');
+      const res = await fetch('https://fogo-store-api.onrender.com/api/banners');
       const data = await res.json();
       if (data.success) setBanners(data.data);
     } catch (e) {

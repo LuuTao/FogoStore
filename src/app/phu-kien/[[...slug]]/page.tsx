@@ -69,13 +69,13 @@ export default function DynamicAccessoryPage() {
   useEffect(() => {
     const fetchAccessoryFromDB = async () => {
       try {
-        let res = await fetch('http://localhost:5000/api/products/filter?category=phu-kien', {
+        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=phu-kien', {
           cache: 'no-store',
         });
         let json = await res.json();
 
         if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          res = await fetch('http://localhost:5000/api/products', { cache: 'no-store' });
+          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
           json = await res.json();
         }
 

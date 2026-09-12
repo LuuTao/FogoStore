@@ -79,7 +79,7 @@ export default function UsedProductDetail({
     }
 
     // Lấy danh sách máy cũ liên quan
-    fetch(`http://localhost:5000/api/products/filter?category=hang-cu`, { cache: 'no-store' })
+    fetch(`https://fogo-store-api.onrender.com/api/products/filter?category=hang-cu`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
         if (resJson.success && Array.isArray(resJson.data)) {

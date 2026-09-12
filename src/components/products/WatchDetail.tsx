@@ -83,7 +83,7 @@ export default function WatchDetail({
     }
 
     // Lấy danh sách Apple Watch liên quan từ DB
-    fetch(`http://localhost:5000/api/products/filter?category=watch`, { cache: 'no-store' })
+    fetch(`https://fogo-store-api.onrender.com/api/products/filter?category=watch`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
         if (resJson.success && Array.isArray(resJson.data)) {

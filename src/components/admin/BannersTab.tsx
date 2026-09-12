@@ -209,7 +209,7 @@ export default function BannersTab({ onRefresh }: Props) {
       localStorage.setItem('fogo_banners_config', JSON.stringify(items));
       localStorage.setItem('fogo_menu_config', JSON.stringify(menus));
 
-      await fetch('http://localhost:5000/api/admin/banners/sync', {
+      await fetch('https://fogo-store-api.onrender.com/api/admin/banners/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items, menus }),
@@ -272,7 +272,7 @@ export default function BannersTab({ onRefresh }: Props) {
     try {
       const formData = new FormData();
       formData.append('image', file);
-      const res = await fetch('http://localhost:5000/api/upload', { method: 'POST', body: formData });
+      const res = await fetch('https://fogo-store-api.onrender.com/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success && data.imageUrl) setItemImageUrl(data.imageUrl);
       else alert('Tải ảnh thất bại');

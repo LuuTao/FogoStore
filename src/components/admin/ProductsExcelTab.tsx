@@ -19,7 +19,7 @@ export default function ProductsExcelTab({ onSuccess }: Props) {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/admin/products/import-excel', {
+      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/products/import-excel', {
         method: 'POST',
         body: formData,
       });
