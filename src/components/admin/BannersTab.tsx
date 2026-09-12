@@ -283,7 +283,7 @@ export default function BannersTab({ onRefresh }: Props) {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
@@ -293,7 +293,12 @@ export default function BannersTab({ onRefresh }: Props) {
       const res = await fetch('https://fogo-store-api.onrender.com/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success && data.imageUrl) {
-        setItemImageUrl(cleanUrl(data.imageUrl));
+        // ÉP BUỘC CHUYỂN ĐỔI NGAY TẠI ĐÂY NẾU BACKEND VẪN TRẢ VỀ LOCALHOST
+        const forceHttpsUrl = String(data.imageUrl).replace(
+          /http:\/\/localhost:[0-9]+/g,
+          'https://fogo-store-api.onrender.com'
+        );
+        setItemImageUrl(forceHttpsUrl);
       } else {
         alert('Tải ảnh thất bại');
       }
