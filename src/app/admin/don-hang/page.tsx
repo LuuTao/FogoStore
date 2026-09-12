@@ -9,6 +9,25 @@ import ProductsExcelTab from '../../../components/admin/ProductsExcelTab';
 import PostsTab from '../../../components/admin/PostsTab';
 import BannersTab from '../../../components/admin/BannersTab';
 
+// Hàm đệ quy làm sạch mọi link localhost:5000 trong dữ liệu trả về từ API
+const sanitizeUrls = (data: any): any => {
+  if (!data) return data;
+  if (typeof data === 'string') {
+    return data.replace(/http:\/\/localhost:5000/g, 'https://fogo-store-api.onrender.com');
+  }
+  if (Array.isArray(data)) {
+    return data.map(sanitizeUrls);
+  }
+  if (typeof data === 'object') {
+    const cleaned: any = {};
+    for (const key in data) {
+      cleaned[key] = sanitizeUrls(data[key]);
+    }
+    return cleaned;
+  }
+  return data;
+};
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
 
@@ -22,7 +41,7 @@ export default function AdminPage() {
     try {
       const res = await fetch('https://fogo-store-api.onrender.com/api/admin/analytics');
       const data = await res.json();
-      if (data.success) setAnalytics(data.data);
+      if (data.success) setAnalytics(sanitizeUrls(data.data));
     } catch (e) {
       console.error(e);
     }
@@ -32,7 +51,7 @@ export default function AdminPage() {
     try {
       const res = await fetch('https://fogo-store-api.onrender.com/api/admin/orders');
       const data = await res.json();
-      if (data.success) setOrders(data.data);
+      if (data.success) setOrders(sanitizeUrls(data.data));
     } catch (e) {
       console.error(e);
     }
@@ -42,7 +61,7 @@ export default function AdminPage() {
     try {
       const res = await fetch('https://fogo-store-api.onrender.com/api/admin/inventory');
       const data = await res.json();
-      if (data.success) setInventory(data.data);
+      if (data.success) setInventory(sanitizeUrls(data.data));
     } catch (e) {
       console.error(e);
     }
@@ -52,7 +71,7 @@ export default function AdminPage() {
     try {
       const res = await fetch('https://fogo-store-api.onrender.com/api/posts');
       const data = await res.json();
-      if (data.success) setPosts(data.data);
+      if (data.success) setPosts(sanitizeUrls(data.data));
     } catch (e) {
       console.error(e);
     }
@@ -62,7 +81,7 @@ export default function AdminPage() {
     try {
       const res = await fetch('https://fogo-store-api.onrender.com/api/banners');
       const data = await res.json();
-      if (data.success) setBanners(data.data);
+      if (data.success) setBanners(sanitizeUrls(data.data));
     } catch (e) {
       console.error(e);
     }
