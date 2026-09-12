@@ -27,37 +27,47 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const API_BASE = 'https://fogo-store-api.onrender.com/api';
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Helper lấy ID user đang đăng nhập (từ localStorage hoặc cookie auth của bạn)
-  // Helper lấy chính xác ID của tài khoản đang đăng nhập
   const getActiveUserId = (): string | null => {
     if (typeof window === 'undefined') return null;
     try {
-      // Quét tất cả các key thường dùng khi đăng nhập
-      const rawUser = 
-        localStorage.getItem('fogo_user') || 
-        localStorage.getItem('user') || 
+      const rawUser =
+        localStorage.getItem('fogo_user') ||
+        localStorage.getItem('user') ||
         localStorage.getItem('currentUser') ||
         localStorage.getItem('auth');
 
       if (rawUser) {
         const parsed = JSON.parse(rawUser);
-        // Trả về id, _id, hoặc username/email tùy theo cấu trúc object lưu lúc login
-        return parsed.id || parsed._id || parsed.userId || parsed.email || parsed.username || null;
+        return parsed.id || parsed._id || parsed.userId || null;
       }
     } catch (e) {
-      console.error('Lỗi parse user từ localStorage:', e);
+      console.error('Lỗi parse user:', e);
     }
     return null;
   };
 
-  // Nạp giỏ hàng từ Database của đúng tài khoản đó
   const fetchCartFromDB = useCallback(async (userId: string) => {
     try {
-      const res = await fetch(`https://fogo-store-api.onrender.com/api/cart/${userId}`, { cache: 'no-store' });
+      const res = await fetch(`${API_BASE}/cart/${userId}`, { cache: 'no-store' });
+      
+      // Chặn lỗi parse HTML khi gặp 404 hoặc 500
+      if (!res.ok) {
+        setCartItems([]);
+        return;
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        setCartItems([]);
+        return;
+      }
+
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         const mapped: CartItem[] = json.data.map((item: any) => ({
@@ -66,7 +76,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           price: item.price,
           storage: item.storage,
           color: item.color,
-          imageUrl: item.imageUrl,
+          imageUrl: (item.imageUrl || '').replace('http://localhost:5000', 'https://fogo-store-api.onrender.com'),
           quantity: item.quantity,
         }));
         setCartItems(mapped);
@@ -74,37 +84,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCartItems([]);
       }
     } catch (e) {
-      console.error('Lỗi khi fetch giỏ hàng:', e);
+      console.error('Lỗi fetch giỏ hàng:', e);
       setCartItems([]);
     }
   }, []);
 
-  // Lắng nghe trạng thái đăng nhập / đăng xuất
   useEffect(() => {
     const checkAuthAndLoadCart = () => {
       const activeId = getActiveUserId();
       setCurrentUserId(activeId);
-
       if (activeId) {
         fetchCartFromDB(activeId);
       } else {
-        // Nếu đã đăng xuất, xóa sạch state trên màn hình
         setCartItems([]);
       }
     };
 
     checkAuthAndLoadCart();
-
-    // Lắng nghe sự kiện đăng nhập/đăng xuất giữa các tab
     window.addEventListener('storage', checkAuthAndLoadCart);
     return () => window.removeEventListener('storage', checkAuthAndLoadCart);
   }, [fetchCartFromDB]);
 
-  // 1. THÊM VÀO GIỎ
   const addToCart = async (item: CartItem) => {
     const userId = currentUserId || getActiveUserId();
 
-    // Cập nhật UI tạm thời ngay lập tức
     setCartItems((prev) => {
       const existing = prev.find((p) => String(p.id) === String(item.id));
       if (existing) {
@@ -115,10 +118,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return [...prev, item];
     });
 
-    // Nếu đã đăng nhập -> Lưu thẳng vào Database
     if (userId) {
       try {
-        await fetch('https://fogo-store-api.onrender.com/api/cart/add', {
+        await fetch(`${API_BASE}/cart/add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -128,7 +130,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             price: item.price,
             storage: item.storage || '',
             color: item.color || '',
-            imageUrl: item.imageUrl || '',
+            imageUrl: (item.imageUrl || '').replace('http://localhost:5000', 'https://fogo-store-api.onrender.com'),
             quantity: item.quantity,
           }),
         });
@@ -138,7 +140,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // 2. CẬP NHẬT SỐ LƯỢNG
   const updateQuantity = async (id: string | number, quantity: number) => {
     const userId = currentUserId || getActiveUserId();
 
@@ -153,7 +154,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (userId) {
       try {
-        await fetch('https://fogo-store-api.onrender.com/api/cart/update-quantity', {
+        await fetch(`${API_BASE}/cart/update-quantity`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, variantId: String(id), quantity }),
@@ -164,7 +165,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // 3. XÓA MÓN
   const removeFromCart = async (id: string | number) => {
     const userId = currentUserId || getActiveUserId();
 
@@ -172,7 +172,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (userId) {
       try {
-        await fetch('https://fogo-store-api.onrender.com/api/cart/remove', {
+        await fetch(`${API_BASE}/cart/remove`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, variantId: String(id) }),
@@ -183,14 +183,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // 4. XÓA TOÀN BỘ GIỎ
   const clearCart = async () => {
     const userId = currentUserId || getActiveUserId();
     setCartItems([]);
 
     if (userId) {
       try {
-        await fetch(`https://fogo-store-api.onrender.com/api/cart/clear/${userId}`, { method: 'DELETE' });
+        await fetch(`${API_BASE}/cart/clear/${userId}`, { method: 'DELETE' });
       } catch (err) {
         console.error(err);
       }
