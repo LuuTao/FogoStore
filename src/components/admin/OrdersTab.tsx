@@ -10,6 +10,18 @@ interface Props {
 export default function OrdersTab({ orders, onRefresh }: Props) {
   const [filter, setFilter] = useState('ALL');
 
+  // Hàm chuyển đổi an toàn mọi URL ảnh localhost sang domain Render HTTPS
+  const getSafeImageUrl = (url?: string | null) => {
+    if (!url) return 'https://placehold.co/100';
+    if (url.includes('localhost:5000')) {
+      return url.replace('http://localhost:5000', 'https://fogo-store-api.onrender.com');
+    }
+    if (url.startsWith('/uploads')) {
+      return `https://fogo-store-api.onrender.com${url}`;
+    }
+    return url;
+  };
+
   const handleUpdate = async (id: string, orderStatus: string, paymentStatus?: string) => {
     try {
       const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/orders/${id}/status`, {
@@ -60,7 +72,9 @@ export default function OrdersTab({ orders, onRefresh }: Props) {
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-gray-400">Không có đơn hàng nào</td>
+                <td colSpan={7} className="p-8 text-center text-gray-400">
+                  Không có đơn hàng nào
+                </td>
               </tr>
             ) : (
               filteredOrders.map((order) => (
@@ -71,11 +85,27 @@ export default function OrdersTab({ orders, onRefresh }: Props) {
                     <p className="text-gray-500 text-[11px]">{order.customerPhone}</p>
                   </td>
                   <td className="p-3.5">
-                    {order.items?.map((item: any) => (
-                      <p key={item.id} className="text-[11px] text-gray-700">
-                        • {item.productName} ({item.storage} - {item.color}) x{item.quantity}
-                      </p>
-                    ))}
+                    <div className="space-y-2">
+                      {order.items?.map((item: any) => (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <img
+                            src={getSafeImageUrl(item.imageUrl || item.variant?.images?.[0])}
+                            alt={item.productName || 'Sản phẩm'}
+                            className="w-9 h-9 object-contain rounded border border-gray-200 bg-white p-0.5 shrink-0"
+                            onError={(e) => {
+                              // Tránh bể layout nếu link ảnh bị hỏng
+                              (e.target as HTMLImageElement).src = 'https://placehold.co/100';
+                            }}
+                          />
+                          <div className="text-[11px] text-gray-700 leading-tight">
+                            <p className="font-medium text-gray-900">{item.productName}</p>
+                            <p className="text-gray-500 text-[10px]">
+                              {item.storage} • {item.color} • x{item.quantity}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </td>
                   <td className="p-3.5 font-bold text-emerald-600">
                     {order.totalAmount?.toLocaleString('vi-VN')} đ
@@ -83,7 +113,9 @@ export default function OrdersTab({ orders, onRefresh }: Props) {
                   <td className="p-3.5">
                     <span
                       className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        order.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        order.paymentStatus === 'PAID'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
                       }`}
                     >
                       {order.paymentStatus === 'PAID' ? 'Đã Thanh Toán' : 'Chưa Chuyển Tiền'}
