@@ -148,12 +148,12 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/chinh-sach-linh-kien-macbook" className="hover:text-[#d70018] transition-colors font-medium block">
+                <Link href="/chinh-sach-bao-hanh-linh-kien-sua-chua-macbook" className="hover:text-[#d70018] transition-colors font-medium block">
                   • Chính Sách Bảo Hành Linh Kiện Sửa Chữa Macbook
                 </Link>
               </li>
               <li>
-                <Link href="/fogo-care" className="hover:text-[#d70018] transition-colors font-medium block">
+                <Link href="/chinh-sach-bao-hanh-fogo-care" className="hover:text-[#d70018] transition-colors font-medium block">
                   • Chính sách bảo hành Fogo Care
                 </Link>
               </li>

@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0 -p 3000",
-    "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000",
-    "lint": "next lint"
-  },
+  "dev": "next dev -H 0.0.0.0 -p 3000",
+  "build": "next build",
+  "start": "next start",
+  "lint": "eslint",
+  "push": "git add . && git commit -m \"update code\" && git push origin main"
+},
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
     "lucide-react": "^1.42.0",

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -20,8 +20,6 @@ import { Footer } from '@/components/layout/Footer';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 
-const MACBOOK_STORAGES = ['256GB', '512GB', '1TB', '2TB'];
-
 interface Props {
   initialProduct: any;
   currentSlug: string;
@@ -36,9 +34,6 @@ export default function MacBookDetail({
   urlStorage,
 }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialProId = searchParams?.get('proid') || '';
-
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState<any>(initialProduct);
@@ -52,31 +47,18 @@ export default function MacBookDetail({
     message: '',
   });
 
+  // 1. Khởi tạo lựa chọn ban đầu từ variants thực tế
   useEffect(() => {
-    if (!product?.variants) return;
+    if (!product?.variants || product.variants.length === 0) return;
 
-    const activeSt = (urlStorage || product.variants[0]?.storage || '256GB').toUpperCase();
-
-    let initVar = null;
-    if (initialProId) {
-      initVar = product.variants.find((v: any) => String(v.id) === initialProId);
-    }
-    if (!initVar) {
-      initVar =
-        product.variants.find(
-          (v: any) => (v.storage || '').toUpperCase() === activeSt && Number(v.stock || 0) > 0
-        ) ||
-        product.variants.find((v: any) => (v.storage || '').toUpperCase() === activeSt) ||
-        product.variants[0];
-    }
-
-    setSelectedStorage(activeSt);
-    if (!selectedColor) {
-      setSelectedColor(initVar?.color || product.variants[0]?.color || '');
-    }
+    const firstVar = product.variants[0];
+    const initialSt = (urlStorage || firstVar.storage || 'Tiêu chuẩn').trim();
+    setSelectedStorage(initialSt);
+    setSelectedColor(firstVar.color || 'Tiêu chuẩn');
 
     // Lấy danh sách MacBook liên quan
-    fetch(`http://localhost:5000/api/products/filter?category=macbook`, { cache: 'no-store' })
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    fetch(`${apiUrl}/api/products/filter?category=macbook`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
         if (resJson.success && Array.isArray(resJson.data)) {
@@ -84,24 +66,20 @@ export default function MacBookDetail({
         }
       })
       .catch(() => setRelatedProducts([]));
-  }, [product, urlStorage, baseSlug, initialProId]);
+  }, [product, urlStorage]);
 
+  // 2. Danh sách dung lượng thực tế có trong sản phẩm
   const storageList = useMemo(() => {
-    if (!product?.variants) return MACBOOK_STORAGES;
-    const existing = product.variants.map((v: any) => (v.storage || '').trim()).filter(Boolean);
-    const merged = Array.from(new Set([...MACBOOK_STORAGES, ...existing]));
-
-    const parseSize = (s: string) => {
-      const upper = s.toUpperCase();
-      const num = parseInt(upper.replace(/[^0-9]/g, '')) || 0;
-      if (upper.includes('TB')) return num * 1024 * 1024;
-      if (upper.includes('GB')) return num * 1024;
-      return num;
-    };
-    return merged.sort((a, b) => parseSize(a) - parseSize(b));
+    if (!product?.variants) return [];
+    const set = new Set<string>();
+    product.variants.forEach((v: any) => {
+      if (v.storage) set.add(v.storage.trim());
+    });
+    return Array.from(set);
   }, [product]);
 
-  const allColorOptions = useMemo(() => {
+  // 3. Danh sách màu sắc thực tế có trong sản phẩm
+  const colorList = useMemo(() => {
     if (!product?.variants) return [];
     const map = new Map<string, any>();
     product.variants.forEach((v: any) => {
@@ -109,88 +87,46 @@ export default function MacBookDetail({
         map.set(v.color.trim(), v);
       }
     });
-    return Array.from(map.entries()).map(([colorName, sampleVariant]) => ({
+    return Array.from(map.entries()).map(([colorName, variant]) => ({
       color: colorName,
-      sampleVariant,
+      sampleVariant: variant,
     }));
   }, [product]);
 
+  // 4. Xác định biến thể hiện tại theo dung lượng và màu đã chọn
   const currentVariant = useMemo(() => {
-    if (!product?.variants) return null;
+    if (!product?.variants || product.variants.length === 0) return null;
+
+    // Tìm biến thể khớp cả dung lượng lẫn màu sắc
     const exact = product.variants.find(
       (v: any) =>
-        (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
-        v.color.toLowerCase() === selectedColor.toLowerCase()
+        (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
+        (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
     );
     if (exact) return exact;
 
-    const sample = product.variants.find(
-      (v: any) => v.color.toLowerCase() === selectedColor.toLowerCase()
+    // Dự phòng tìm theo màu
+    const byColor = product.variants.find(
+      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
     );
-    return {
-      id: `out-of-stock-${selectedStorage.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
-      storage: selectedStorage,
-      color: selectedColor,
-      price: sample?.price || product.variants[0]?.price || 0,
-      originalPrice: sample?.originalPrice || product.variants[0]?.originalPrice || 0,
-      stock: 0,
-      images: sample?.images || product.variants[0]?.images || [],
-    };
+    if (byColor) return byColor;
+
+    return product.variants[0];
   }, [product, selectedStorage, selectedColor]);
 
   const isOutOfStock = useMemo(() => {
     return !currentVariant || Number(currentVariant.stock || 0) <= 0;
   }, [currentVariant]);
 
-  const storageStatusMap = useMemo(() => {
-    const map: Record<string, { inStock: boolean; displayPrice: number }> = {};
-    if (!product?.variants) return map;
-
-    storageList.forEach((st) => {
-      const match = product.variants.find(
-        (v: any) =>
-          (v.storage || '').toUpperCase() === st.toUpperCase() &&
-          v.color.toLowerCase() === selectedColor.toLowerCase()
-      );
-      if (match) {
-        map[st] = {
-          inStock: Number(match.stock || 0) > 0,
-          displayPrice: match.price || 0,
-        };
-      } else {
-        map[st] = { inStock: false, displayPrice: 0 };
-      }
-    });
-    return map;
-  }, [product, storageList, selectedColor]);
-
+  // 5. Chuyển đổi dung lượng (Cập nhật tức thì không reload trang / không đổi URL rác)
   const handleSelectStorage = (st: string) => {
-    if (selectedStorage.toUpperCase() === st.toUpperCase()) return;
-    const matched = product.variants.find(
-      (v: any) =>
-        (v.storage || '').toUpperCase() === st.toUpperCase() &&
-        v.color.toLowerCase() === selectedColor.toLowerCase()
-    ) || product.variants.find((v: any) => (v.storage || '').toUpperCase() === st.toUpperCase());
-
-    const proidParam = matched ? `?proid=${matched.id}` : '';
-    router.push(`/san-pham/${baseSlug}-${st.toLowerCase()}${proidParam}`);
+    setSelectedStorage(st);
   };
 
+  // 6. Chuyển đổi màu sắc
   const handleSelectColor = (colorName: string) => {
     setSelectedColor(colorName);
     setCurrentImageIndex(0);
-
-    const matched = product.variants.find(
-      (v: any) =>
-        (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
-        v.color.toLowerCase() === colorName.toLowerCase()
-    );
-
-    const nextId = matched ? matched.id : `mock-${selectedStorage.toLowerCase()}-${encodeURIComponent(colorName)}`;
-
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `/san-pham/${baseSlug}-${selectedStorage.toLowerCase()}?proid=${nextId}`);
-    }
   };
 
   const imagesList: string[] = useMemo(() => {
@@ -198,7 +134,10 @@ export default function MacBookDetail({
     return product?.variants?.[0]?.images || ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600'];
   }, [currentVariant, product]);
 
-  const formatVnd = (num: number) => (!num || num <= 0 ? '0đ' : num.toLocaleString('vi-VN') + 'đ');
+  const formatVnd = (num: number) => {
+    if (!num || num <= 0) return 'Liên hệ';
+    return num.toLocaleString('vi-VN') + ' đ';
+  };
 
   const handleAddToCart = (redirectCart = false) => {
     if (!currentVariant || Number(currentVariant.stock || 0) <= 0) return;
@@ -206,7 +145,7 @@ export default function MacBookDetail({
     addToCart({
       id: currentVariant.id,
       name: `${cleanProductName} ${selectedStorage}`,
-      modelSlug: baseSlug,
+      modelSlug: product.slug || baseSlug,
       price: currentVariant.price,
       originalPrice: currentVariant.originalPrice || currentVariant.price,
       storage: selectedStorage,
@@ -225,7 +164,7 @@ export default function MacBookDetail({
     }
   };
 
-  const cleanProductName = product.name.replace(/\b(128GB|256GB|512GB|1TB|2TB)\b/gi, '').trim();
+  const cleanProductName = product?.name ? product.name.trim() : 'MacBook';
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
@@ -248,7 +187,7 @@ export default function MacBookDetail({
             <span>/</span>
             <Link href="/macbook" className="hover:text-[#d70018]">MacBook</Link>
             <span>/</span>
-            <span className="text-gray-900 font-semibold">{cleanProductName} {selectedStorage}</span>
+            <span className="text-gray-900 font-semibold">{cleanProductName}</span>
           </div>
         </div>
 
@@ -307,7 +246,7 @@ export default function MacBookDetail({
                    Authorized Reseller
                 </span>
                 <h1 className="text-xl md:text-2xl font-black text-gray-900 leading-snug mt-1">
-                  {cleanProductName} {selectedStorage} - Chính hãng Apple VN
+                  {cleanProductName} - Chính hãng Apple VN
                 </h1>
                 <div className="flex items-center gap-1 text-amber-400 mt-1">
                   {[...Array(5)].map((_, i) => (
@@ -318,7 +257,7 @@ export default function MacBookDetail({
 
               {/* Giá bán */}
               <div className="pt-2 border-t border-gray-100">
-                <span className="text-gray-500 block text-[11px]">Giá bán</span>
+                <span className="text-gray-500 block text-[11px]">Giá bán ưu đãi</span>
                 <div className="flex items-baseline gap-2.5 mt-0.5">
                   <span className="text-2xl md:text-3xl font-black text-[#d70018]">
                     {formatVnd(currentVariant?.price || 0)}
@@ -336,84 +275,72 @@ export default function MacBookDetail({
                 </div>
               </div>
 
-              {/* Dung lượng SSD */}
-              <div className="space-y-1.5 pt-2">
-                <span className="font-semibold text-gray-700">Bộ nhớ lưu trữ (SSD):</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {storageList.map((st) => {
-                    const isSelected = selectedStorage.toUpperCase() === st.toUpperCase();
-                    const info = storageStatusMap[st];
-                    const inStock = isSelected ? !isOutOfStock : (info?.inStock ?? false);
-                    const displayPrice = isSelected ? currentVariant?.price : (info?.displayPrice ?? 0);
-
-                    return (
-                      <button
-                        key={st}
-                        onClick={() => handleSelectStorage(st)}
-                        className={`relative p-2 border rounded-sm text-center transition-all cursor-pointer ${
-                          isSelected ? 'border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
-                        }`}
-                      >
-                        <span className={`block font-black text-xs ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
-                          {st}
-                        </span>
-                        <span className={`block text-[10px] font-medium mt-0.5 ${!inStock ? 'text-[#d70018] font-bold' : 'text-gray-500'}`}>
-                          {!inStock ? 'Liên hệ' : formatVnd(displayPrice)}
-                        </span>
-                        {isSelected && (
-                          <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
-                            ✓
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+              {/* Dung lượng SSD thực tế */}
+              {storageList.length > 0 && (
+                <div className="space-y-1.5 pt-2">
+                  <span className="font-semibold text-gray-700">Bộ nhớ lưu trữ (SSD):</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {storageList.map((st) => {
+                      const isSelected = selectedStorage.toLowerCase() === st.toLowerCase();
+                      return (
+                        <button
+                          key={st}
+                          onClick={() => handleSelectStorage(st)}
+                          className={`relative p-2 border rounded-sm text-center transition-all cursor-pointer ${
+                            isSelected ? 'border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                        >
+                          <span className={`block font-black text-xs ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
+                            {st}
+                          </span>
+                          {isSelected && (
+                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
+                              ✓
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Màu sắc */}
-              <div className="space-y-1.5 pt-2">
-                <span className="font-semibold text-gray-700">Màu sắc:</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {allColorOptions.map(({ color, sampleVariant }) => {
-                    const variantForColor = product.variants.find(
-                      (v: any) =>
-                        (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
-                        v.color.toLowerCase() === color.toLowerCase()
-                    );
-                    const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
-                    const inStockThisColor = variantForColor && Number(variantForColor.stock || 0) > 0;
-                    const displayImg = variantForColor?.images?.[0] || sampleVariant?.images?.[0] || imagesList[0];
+              {colorList.length > 0 && (
+                <div className="space-y-1.5 pt-2">
+                  <span className="font-semibold text-gray-700">Màu sắc:</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {colorList.map(({ color, sampleVariant }) => {
+                      const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
+                      const displayImg = sampleVariant?.images?.[0] || imagesList[0];
 
-                    return (
-                      <button
-                        key={color}
-                        onClick={() => handleSelectColor(color)}
-                        className={`relative p-1.5 border rounded-sm flex items-center gap-2 transition-all cursor-pointer ${
-                          isSelected ? 'border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
-                        }`}
-                      >
-                        <div className="w-9 h-9 shrink-0 border border-gray-100 rounded-xs p-0.5 bg-gray-50 flex items-center justify-center">
-                          <img src={displayImg} alt={color} className="w-full h-full object-contain" />
-                        </div>
-                        <div className="text-left overflow-hidden">
-                          <span className={`block font-bold text-[11px] truncate ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
-                            {color}
-                          </span>
-                          <span className={`block text-[10px] font-medium ${!inStockThisColor ? 'text-[#d70018] font-bold' : 'text-gray-500'}`}>
-                            {!inStockThisColor ? 'Liên hệ' : formatVnd(variantForColor?.price || 0)}
-                          </span>
-                        </div>
-                        {isSelected && (
-                          <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
-                            ✓
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => handleSelectColor(color)}
+                          className={`relative p-1.5 border rounded-sm flex items-center gap-2 transition-all cursor-pointer ${
+                            isSelected ? 'border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                        >
+                          <div className="w-9 h-9 shrink-0 border border-gray-100 rounded-xs p-0.5 bg-gray-50 flex items-center justify-center">
+                            <img src={displayImg} alt={color} className="w-full h-full object-contain" />
                           </div>
-                        )}
-                      </button>
-                    );
-                  })}
+                          <div className="text-left overflow-hidden">
+                            <span className={`block font-bold text-[11px] truncate ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
+                              {color}
+                            </span>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
+                              ✓
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Số lượng */}
               {!isOutOfStock && currentVariant && Number(currentVariant.stock || 0) > 0 && (
@@ -453,7 +380,7 @@ export default function MacBookDetail({
                 <div className="pt-2 space-y-2">
                   <div className="p-3 bg-red-50 border border-red-200 rounded-sm text-center">
                     <p className="text-xs font-bold text-[#d70018]">
-                      Cấu hình {cleanProductName} {selectedStorage} ({selectedColor}) hiện đang tạm hết hàng.
+                      Cấu hình {cleanProductName} ({selectedColor}) hiện đang tạm hết hàng.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -494,16 +421,20 @@ export default function MacBookDetail({
             </div>
           </div>
 
-          {/* Bài viết MacBook */}
+          {/* Mô tả chi tiết */}
           <div className="mt-12 bg-white p-6 rounded-sm border border-gray-200">
             <h2 className="text-base font-black text-gray-900 uppercase tracking-wide mb-4 pb-2 border-b border-gray-200 flex items-center gap-2">
               <FileText size={18} className="text-[#d70018]" />
               <span>Đặc Điểm Nổi Bật Của {cleanProductName}</span>
             </h2>
             <div className="text-xs text-gray-700 leading-relaxed space-y-4 max-w-4xl">
-              <p>
-                <strong className="text-gray-900">{cleanProductName}</strong> mang đến sức mạnh đột phá với dòng chip Apple M-Series thế hệ mới, thời lượng pin cả ngày dài và màn hình Liquid Retina sắc nét đáp ứng mọi tiêu chuẩn đồ họa chuyên nghiệp.
-              </p>
+              {product.description ? (
+                <div dangerouslySetInnerHTML={{ __html: product.description }} />
+              ) : (
+                <p>
+                  <strong className="text-gray-900">{cleanProductName}</strong> mang đến sức mạnh đột phá với dòng chip Apple M-Series thế hệ mới, thời lượng pin cả ngày dài và màn hình Liquid Retina sắc nét.
+                </p>
+              )}
             </div>
           </div>
 

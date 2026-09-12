@@ -528,7 +528,7 @@ export default function CheckoutPage() {
                     {cartItems.map((item) => (
                       <div key={item.id} className="py-3.5 flex gap-3 items-start">
                         <div className="w-16 h-16 shrink-0 bg-gray-50 border border-gray-200 rounded p-1 flex items-center justify-center">
-                          <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain" />
+                          <img src={item.imageUrl || '/placeholder.png'} alt={item.productName || 'Sản phẩm'} className="max-h-full max-w-full object-contain" />
                         </div>
 
                         <div className="flex-1 min-w-0">

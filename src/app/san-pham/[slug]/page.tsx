@@ -15,9 +15,12 @@ interface PageProps {
 
 export default async function ProductDetailPage(props: PageProps) {
   const resolvedParams = await props.params;
+  const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
+  
   const currentSlug = resolvedParams.slug;
+  const proid = typeof resolvedSearchParams?.proid === 'string' ? resolvedSearchParams.proid : '';
 
-  // Tách slug và dung lượng/kích cỡ (ví dụ: iphone-16-pro-max-256gb -> baseSlug: iphone-16-pro-max, storage: 256GB)
+  // 1. Tách slug và dung lượng/kích cỡ (ví dụ: iphone-16-pro-max-256gb -> baseSlug: iphone-16-pro-max)
   const storageMatch = currentSlug.match(/-(64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
   const urlStorage = storageMatch ? storageMatch[1].toUpperCase() : '';
   const baseSlug = storageMatch
@@ -25,22 +28,30 @@ export default async function ProductDetailPage(props: PageProps) {
     : currentSlug;
 
   let product: any = null;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  // 1. Fetch dữ liệu từ API Backend
+  // 2. Fetch Backend: Thử lần 1 với baseSlug (kèm proid nếu có)
   try {
-    const res = await fetch(`http://localhost:5000/api/products/${baseSlug}`, {
-      cache: 'no-store',
-    });
-    const resJson = await res.json();
+    const query = proid ? `?proid=${proid}` : '';
+    let res = await fetch(`${apiUrl}/api/products/${baseSlug}${query}`, { cache: 'no-store' });
+    let resJson = await res.json();
+
     if (resJson.success && resJson.data) {
       product = resJson.data;
+    } else if (baseSlug !== currentSlug) {
+      // Nếu baseSlug không thấy -> Thử lần 2 với currentSlug gốc
+      res = await fetch(`${apiUrl}/api/products/${currentSlug}${query}`, { cache: 'no-store' });
+      resJson = await res.json();
+      if (resJson.success && resJson.data) {
+        product = resJson.data;
+      }
     }
   } catch (err) {
     console.error('Không thể kết nối API sản phẩm:', err);
   }
 
-  // 2. Fallback tìm kiếm trong Catalog Phụ Kiện nếu API chưa tạo sản phẩm này trong DB
-  if (!product && ACCESSORY_CATALOG_ITEMS) {
+  // 3. Fallback tìm kiếm trong Catalog Phụ Kiện cục bộ nếu DB chưa có
+  if (!product && typeof ACCESSORY_CATALOG_ITEMS !== 'undefined' && ACCESSORY_CATALOG_ITEMS) {
     const fallbackItem = ACCESSORY_CATALOG_ITEMS.find((item: any) => {
       const itemSlug = item.slug || item.id || item.href?.replace(/^\/san-pham\//, '');
       return itemSlug === currentSlug || itemSlug === baseSlug;
@@ -67,7 +78,7 @@ export default async function ProductDetailPage(props: PageProps) {
     }
   }
 
-  // Nếu vẫn không có dữ liệu -> 404
+  // Nếu vẫn không có dữ liệu -> Báo 404
   if (!product) {
     notFound();
   }
@@ -79,7 +90,7 @@ export default async function ProductDetailPage(props: PageProps) {
 
   // ================= BỘ ĐIỀU PHỐI (DISPATCHER) CHUẨN THỨ TỰ =================
 
-  // 1. ƯU TIÊN SỐ 1: HÀNG CŨ / LIKE NEW (Tránh bị đè bởi iPhone/iPad mới)
+  // 1. ƯU TIÊN SỐ 1: HÀNG CŨ / LIKE NEW
   const isUsedProduct =
     catSlug === 'hang-cu' ||
     catSlug.includes('cu') ||
@@ -105,7 +116,7 @@ export default async function ProductDetailPage(props: PageProps) {
     );
   }
 
-  // 2. ƯU TIÊN SỐ 2: PHỤ KIỆN (Tránh phụ kiện Mac/iPad bị nhảy vào trang laptop/tablet)
+  // 2. ƯU TIÊN SỐ 2: PHỤ KIỆN
   const isAccessory =
     catSlug.includes('phu-kien') ||
     catSlug.includes('accessory') ||
