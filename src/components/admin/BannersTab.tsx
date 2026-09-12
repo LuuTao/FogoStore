@@ -70,6 +70,12 @@ export interface MenuItem {
   groups?: MenuGroup[];
 }
 
+// Helper tự động dọn sạch mọi link localhost:5000 chuyển sang Render HTTPS
+const cleanUrl = (url?: string | null): string => {
+  if (!url) return '';
+  return url.replace(/http:\/\/localhost:5000/g, 'https://fogo-store-api.onrender.com');
+};
+
 const INITIAL_ITEMS: ItemConfig[] = [
   // 1. BANNER LỚN ĐẦU TRANG
   {
@@ -174,13 +180,19 @@ export default function BannersTab({ onRefresh }: Props) {
   const [menuBadge, setMenuBadge] = useState('');
   const [menuIsNew, setMenuIsNew] = useState(false);
 
-  // Nạp cấu hình từ LocalStorage
+  // Nạp cấu hình từ LocalStorage kèm làm sạch URL
   useEffect(() => {
     try {
       const savedBanners = localStorage.getItem('fogo_banners_config');
       if (savedBanners) {
         const parsed = JSON.parse(savedBanners);
-        if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const sanitized = parsed.map((it: ItemConfig) => ({
+            ...it,
+            imageUrl: cleanUrl(it.imageUrl),
+          }));
+          setItems(sanitized);
+        }
       }
       const savedMenu = localStorage.getItem('fogo_menu_config');
       if (savedMenu) {
@@ -206,15 +218,21 @@ export default function BannersTab({ onRefresh }: Props) {
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     try {
-      localStorage.setItem('fogo_banners_config', JSON.stringify(items));
+      const cleanItems = items.map((it) => ({
+        ...it,
+        imageUrl: cleanUrl(it.imageUrl),
+      }));
+
+      localStorage.setItem('fogo_banners_config', JSON.stringify(cleanItems));
       localStorage.setItem('fogo_menu_config', JSON.stringify(menus));
 
       await fetch('https://fogo-store-api.onrender.com/api/admin/banners/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, menus }),
+        body: JSON.stringify({ items: cleanItems, menus }),
       }).catch(() => {});
 
+      setItems(cleanItems);
       setHasUnsavedChanges(false);
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3000);
@@ -250,7 +268,7 @@ export default function BannersTab({ onRefresh }: Props) {
   const handleOpenEdit = (it: ItemConfig) => {
     setEditingItem(it);
     setItemName(it.name);
-    setItemImageUrl(it.imageUrl);
+    setItemImageUrl(cleanUrl(it.imageUrl));
     setItemLink(it.link || '');
     setItemTag(it.tag || '');
     setItemSubtitle(it.subtitle || '');
@@ -274,8 +292,11 @@ export default function BannersTab({ onRefresh }: Props) {
       formData.append('image', file);
       const res = await fetch('https://fogo-store-api.onrender.com/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.success && data.imageUrl) setItemImageUrl(data.imageUrl);
-      else alert('Tải ảnh thất bại');
+      if (data.success && data.imageUrl) {
+        setItemImageUrl(cleanUrl(data.imageUrl));
+      } else {
+        alert('Tải ảnh thất bại');
+      }
     } catch {
       alert('Không thể kết nối máy chủ tải ảnh');
     } finally {
@@ -290,6 +311,8 @@ export default function BannersTab({ onRefresh }: Props) {
       return;
     }
 
+    const safeUrl = cleanUrl(itemImageUrl);
+
     if (editingItem) {
       setItems((prev) =>
         prev.map((it) =>
@@ -297,7 +320,7 @@ export default function BannersTab({ onRefresh }: Props) {
             ? {
                 ...it,
                 name: itemName,
-                imageUrl: itemImageUrl,
+                imageUrl: safeUrl,
                 link: itemLink,
                 tag: itemTag,
                 subtitle: itemSubtitle,
@@ -312,7 +335,7 @@ export default function BannersTab({ onRefresh }: Props) {
         name: itemName,
         link: itemLink,
         group: activeGroup,
-        imageUrl: itemImageUrl,
+        imageUrl: safeUrl,
         tag: itemTag,
         subtitle: itemSubtitle,
         priceText: itemPriceText,
@@ -451,7 +474,7 @@ export default function BannersTab({ onRefresh }: Props) {
         </div>
       </div>
 
-      {/* THANH TAB TRỰC QUAN (ĐÃ BỔ SUNG TAB QUẢN LÝ MENU NAVBAR) */}
+      {/* THANH TAB TRỰC QUAN */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-gray-200 text-xs">
         <button
           onClick={() => setActiveGroup('hero_banners')}
@@ -558,7 +581,6 @@ export default function BannersTab({ onRefresh }: Props) {
           </span>
         </button>
 
-        {/* TAB MỚI: QUẢN LÝ MENU NAVBAR ĐA CẤP */}
         <button
           onClick={() => setActiveGroup('nav_menu')}
           className={`px-4 py-2.5 rounded-t-lg font-black flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
@@ -583,7 +605,7 @@ export default function BannersTab({ onRefresh }: Props) {
                 key={item.id}
                 className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[21/9] flex flex-col justify-between group bg-gray-900"
               >
-                <img src={item.imageUrl} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-85" />
+                <img src={cleanUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-85" />
                 <div className="relative p-4 z-10 text-white space-y-1">
                   <h3 className="font-black text-sm md:text-base">{item.name}</h3>
                   {item.subtitle && <p className="text-xs text-gray-300">{item.subtitle}</p>}
@@ -609,7 +631,7 @@ export default function BannersTab({ onRefresh }: Props) {
                 key={item.id}
                 className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[2.8/1] flex flex-col justify-between group bg-gray-100"
               >
-                <img src={item.imageUrl} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={cleanUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="relative p-2 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-b from-black/60 to-transparent">
                   <span className="text-[10px] text-white font-bold mr-auto px-2 py-0.5 bg-black/40 rounded">{item.name}</span>
                   <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer">
@@ -629,7 +651,7 @@ export default function BannersTab({ onRefresh }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {currentItems.map((item) => (
               <div key={item.id} className="relative rounded-lg overflow-hidden border border-gray-200 aspect-square flex flex-col justify-between group">
-                <img src={item.imageUrl} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={cleanUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="relative p-4 z-10 text-center text-white space-y-1">
                   <span className="bg-[#d70018] text-white font-black text-xs px-2 py-0.5 rounded uppercase">{item.name}</span>
@@ -661,7 +683,7 @@ export default function BannersTab({ onRefresh }: Props) {
                   </button>
                 </div>
                 <div className="w-14 h-14 rounded-md bg-white p-1 border flex items-center justify-center my-auto">
-                  <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
+                  <img src={cleanUrl(item.imageUrl)} alt={item.name} className="max-w-full max-h-full object-contain" />
                 </div>
                 <span className="text-[11px] font-bold text-gray-800 line-clamp-2 leading-tight mt-2">{item.name}</span>
               </div>
@@ -899,7 +921,11 @@ export default function BannersTab({ onRefresh }: Props) {
                   </label>
                 </div>
                 {uploading && <p className="text-[10px] text-blue-600 font-bold">Đang tải ảnh...</p>}
-                {itemImageUrl && <div className="p-2 border rounded bg-gray-50 flex items-center justify-center h-28"><img src={itemImageUrl} alt="" className="max-h-full object-contain" /></div>}
+                {itemImageUrl && (
+                  <div className="p-2 border rounded bg-gray-50 flex items-center justify-center h-28">
+                    <img src={cleanUrl(itemImageUrl)} alt="" className="max-h-full object-contain" />
+                  </div>
+                )}
               </div>
               <div className="pt-3 flex justify-end gap-2 border-t">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded">Hủy</button>
