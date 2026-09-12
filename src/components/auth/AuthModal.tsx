@@ -22,8 +22,11 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-// Client ID mẫu dùng thử nghiệm OAuth Google (bạn có thể thay bằng Client ID của mình từ Google Cloud Console)
-const GOOGLE_CLIENT_ID = "318342665111-rogh6u40b8lg239aahkjbebp81s0apv6.apps.googleusercontent.com"
+// Lấy biến môi trường Backend API URL và Google Client ID
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+  '318342665111-rogh6u40b8lg239aahkjbebp81s0apv6.apps.googleusercontent.com';
 
 function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
@@ -50,7 +53,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ account, password }),
@@ -68,10 +71,10 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
         router.push('/admin/don-hang');
       }
     } catch (err: any) {
-      if (err.message.includes('fetch')) {
-        setError('Không thể kết nối đến máy chủ Backend (Port 5000). Hãy kiểm tra terminal backend!');
+      if (err.message && err.message.includes('fetch')) {
+        setError('Không thể kết nối đến máy chủ Backend. Vui lòng thử lại sau giây lát!');
       } else {
-        setError(err.message);
+        setError(err.message || 'Đăng nhập thất bại');
       }
     } finally {
       setLoading(false);
@@ -86,7 +89,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
     setSuccessMsg('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/send-zalo-otp', {
+      const res = await fetch(`${API_URL}/api/auth/send-zalo-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, fullName, password }),
@@ -97,10 +100,10 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
         throw new Error(data.error || 'Không thể gửi mã xác nhận');
       }
 
-      setSuccessMsg(`Mã OTP đã được gửi đến Zalo số ${phone}. Xem mã trên Terminal Backend.`);
+      setSuccessMsg(`Mã OTP đã được gửi đến Zalo số ${phone}.`);
       setRegisterStep('otp');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Lỗi gửi OTP');
     } finally {
       setLoading(false);
     }
@@ -113,7 +116,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/verify-zalo-otp', {
+      const res = await fetch(`${API_URL}/api/auth/verify-zalo-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp }),
@@ -128,25 +131,23 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
       alert('Đăng ký thành công!');
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Lỗi xác thực OTP');
     } finally {
       setLoading(false);
     }
   };
 
-  // 4. ĐĂNG NHẬP GOOGLE THẬT QUA CỬA SỔ POPUP
+  // 4. ĐĂNG NHẬP GOOGLE THẬT QUA POPUP
   const googleLoginHandler = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setLoading(true);
       try {
-        // Lấy thông tin tài khoản thật từ Google API
         const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         });
         const googleUser = await userInfoRes.json();
 
-        // Gửi thông tin về backend FoGo để tạo phiên đăng nhập
-        const res = await fetch('http://localhost:5000/api/auth/google', {
+        const res = await fetch(`${API_URL}/api/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -162,7 +163,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
         } else {
           setError(data.error || 'Đăng nhập Google thất bại');
         }
-      } catch (err) {
+      } catch {
         setError('Lỗi xác thực với tài khoản Google');
       } finally {
         setLoading(false);
@@ -172,14 +173,15 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
       setError('Hủy đăng nhập Google hoặc xảy ra lỗi.');
     },
   });
-// 5. ĐĂNG NHẬP QUA ZALO
+
+  // 5. ĐĂNG NHẬP QUA ZALO
   const handleZaloLogin = async () => {
     const zaloPhone = prompt('Nhập Số điện thoại Zalo của bạn:', '0987654321');
     if (!zaloPhone) return;
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/zalo', {
+      const res = await fetch(`${API_URL}/api/auth/zalo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -206,7 +208,6 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
       <div className="bg-white rounded-lg shadow-2xl max-w-[430px] w-full overflow-hidden relative">
-        
         {/* TAB HEADER */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 pt-4">
           <div className="flex gap-8 flex-1">
@@ -438,7 +439,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
             </form>
           )}
 
-          {/* KẾT NỐI GOOGLE & ZALO THẬT */}
+          {/* KẾT NỐI GOOGLE & ZALO */}
           {!(activeTab === 'register' && registerStep === 'otp') && (
             <div className="mt-5">
               <div className="relative flex items-center justify-center mb-4">
@@ -450,7 +451,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm font-semibold">
-                {/* NÚT GOOGLE CHÍNH THỨC */}
+                {/* NÚT GOOGLE */}
                 <button
                   type="button"
                   onClick={() => googleLoginHandler()}
@@ -465,7 +466,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
                   <span>Google</span>
                 </button>
 
-                {/* NÚT ZALO CHÍNH THỨC */}
+                {/* NÚT ZALO */}
                 <button
                   type="button"
                   onClick={handleZaloLogin}
@@ -479,14 +480,12 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>
   );
 }
 
-// Bọc Provider để hỗ trợ Google OAuth
 export function AuthModal(props: AuthModalProps) {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
