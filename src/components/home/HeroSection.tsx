@@ -43,13 +43,13 @@ const DEFAULT_PROMO_CARDS = [
   },
   {
     id: 'default-promo-3',
-    title: 'Apple Watch Series 10 - Siêu Phẩm Mới',
+    title: 'Apple Watch Series 10 - Đỉnh Cao Công Nghệ',
     imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=1000&auto=format&fit=crop',
     link: '/watch',
   },
   {
     id: 'default-promo-4',
-    title: 'AirPods 4 Chống Ồn Chủ Động',
+    title: 'AirPods 4 Âm Thanh Vòm Siêu Thực',
     imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=1000&auto=format&fit=crop',
     link: '/phu-kien',
   },
@@ -72,12 +72,13 @@ export const HeroSection: React.FC = () => {
   const [promoList, setPromoList] = useState<any[]>([]);
   const [topIndex, setTopIndex] = useState(0);
   const [bottomIndex, setBottomIndex] = useState(0);
+  const [activePromoDot, setActivePromoDot] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Lưu tọa độ cảm ứng riêng biệt cho banner trên và banner dưới
+  // Ref theo dõi thanh cuộn ngang banner nhỏ trên mobile
+  const promoScrollRef = useRef<HTMLDivElement>(null);
   const topTouchStartX = useRef<number | null>(null);
-  const bottomTouchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -118,6 +119,7 @@ export const HeroSection: React.FC = () => {
               setPromoList(
                 promos.map((b: any) => ({
                   id: b.id,
+                  title: b.title || b.name,
                   imageUrl: getFullImageUrl(b.imageUrl),
                   link: b.linkUrl || b.link || '/',
                 }))
@@ -142,7 +144,7 @@ export const HeroSection: React.FC = () => {
   const activeBanners = banners.length > 0 ? banners : DEFAULT_HERO_BANNERS;
   const activePromos = promoList.length > 0 ? promoList : DEFAULT_PROMO_CARDS;
 
-  // Tự động chuyển slider Hero
+  // Tự động chuyển slider Hero (Banner Lớn Trên)
   useEffect(() => {
     if (isHovered || activeBanners.length <= 1) return;
     const timerTop = setInterval(() => {
@@ -151,13 +153,13 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerTop);
   }, [isHovered, activeBanners.length]);
 
-  // Gom các banner phụ thành cặp 2
+  // Gom các banner phụ thành cặp 2 ảnh
   const promoPairs: any[][] = [];
   for (let i = 0; i < activePromos.length; i += 2) {
     promoPairs.push(activePromos.slice(i, i + 2));
   }
 
-  // Tự động chuyển cặp banner con
+  // Tự động chuyển cặp banner con trên Desktop
   useEffect(() => {
     if (isHovered || promoPairs.length <= 1) return;
     const timerBottom = setInterval(() => {
@@ -166,7 +168,7 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerBottom);
   }, [isHovered, promoPairs.length]);
 
-  // --- XỬ LÝ VUỐT CẢM ỨNG BANNER LỚN (TRÊN) ---
+  // Vuốt chạm cảm ứng cho Banner lớn ở trên
   const handleTopTouchStart = (e: React.TouchEvent) => {
     topTouchStartX.current = e.touches[0].clientX;
   };
@@ -184,27 +186,20 @@ export const HeroSection: React.FC = () => {
     topTouchStartX.current = null;
   };
 
-  // --- XỬ LÝ VUỐT CẢM ỨNG BANNER CON (DƯỚI) ---
-  const handleBottomTouchStart = (e: React.TouchEvent) => {
-    bottomTouchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleBottomTouchEnd = (e: React.TouchEvent) => {
-    if (bottomTouchStartX.current === null || promoPairs.length <= 1) return;
-    const diff = bottomTouchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 35) {
-      if (diff > 0) {
-        setBottomIndex((prev) => (prev + 1) % promoPairs.length);
-      } else {
-        setBottomIndex((prev) => (prev - 1 + promoPairs.length) % promoPairs.length);
-      }
+  // Cập nhật chấm tròn vị trí khi người dùng vuốt hàng 2 banner dưới trên mobile
+  const handlePromoScroll = () => {
+    if (!promoScrollRef.current) return;
+    const { scrollLeft, offsetWidth } = promoScrollRef.current;
+    if (offsetWidth > 0) {
+      const newIndex = Math.round(scrollLeft / offsetWidth);
+      setActivePromoDot(newIndex);
     }
-    bottomTouchStartX.current = null;
   };
 
   const currentTop = activeBanners[topIndex] || activeBanners[0];
-  const currentPair = promoPairs[bottomIndex] || promoPairs[0] || activePromos.slice(0, 2);
+  const currentPairDesktop = promoPairs[bottomIndex] || promoPairs[0] || activePromos.slice(0, 2);
 
+  // Skeleton chống giật hình khi đang tải
   if (loading && banners.length === 0) {
     return (
       <div className="w-full relative pb-6 lg:pb-16 animate-pulse">
@@ -236,27 +231,28 @@ export const HeroSection: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* ========================================================================= */}
-      {/* 1. GIAO DIỆN MOBILE (< 640px)                                             */}
+      {/* 1. GIAO DIỆN MOBILE (< 640px) - VUỐT CỰC MƯỢT CẢ 2 BANNER NHỎ DƯỚI       */}
       {/* ========================================================================= */}
       <div className="block sm:hidden px-3 pt-2 pb-4">
-        {/* Banner Lớn Mobile (Vuốt lướt qua lại) */}
+        {/* Banner Lớn Trên */}
         <div
           className="relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-gray-100 shadow-md"
           onTouchStart={handleTopTouchStart}
           onTouchEnd={handleTopTouchEnd}
         >
           {currentTop && (
-            <Link href={currentTop.link || '/'} className="block w-full h-full">
+            <Link href={currentTop.link || '/'} className="block w-full h-full select-none">
               <img
                 src={currentTop.imageUrl}
                 alt={currentTop.title || 'Banner'}
-                className="w-full h-full object-cover transition-opacity duration-300"
+                draggable={false}
+                className="w-full h-full object-cover pointer-events-none"
               />
             </Link>
           )}
 
           {activeBanners.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10 pointer-events-none">
               {activeBanners.map((_, idx) => (
                 <span
                   key={idx}
@@ -269,39 +265,58 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* Cặp Banner Nhỏ Bên Dưới (Hỗ trợ vuốt lướt mượt mà) */}
+        {/* HÀNG 2 BANNER NHỎ DƯỚI: VUỐT NGANG MƯỢT THEO CẶP (SCROLL SNAP) */}
         {promoPairs.length > 0 && (
-          <div
-            className="mt-2.5 relative"
-            onTouchStart={handleBottomTouchStart}
-            onTouchEnd={handleBottomTouchEnd}
-          >
-            <div className="grid grid-cols-2 gap-2">
-              {currentPair.map((promo: any, idx: number) => (
-                <Link
-                  key={promo.id || idx}
-                  href={promo.link || '/'}
-                  className="block relative aspect-[16/8] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white"
+          <div className="mt-2.5 relative">
+            <div
+              ref={promoScrollRef}
+              onScroll={handlePromoScroll}
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+              className="flex overflow-x-auto gap-3 snap-x snap-mandatory scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden py-0.5"
+            >
+              {promoPairs.map((pair: any[], pIdx: number) => (
+                <div
+                  key={pIdx}
+                  className="w-full shrink-0 snap-center grid grid-cols-2 gap-2"
                 >
-                  <img
-                    src={promo.imageUrl}
-                    alt="Promo"
-                    className="w-full h-full object-cover transition-opacity duration-300"
-                  />
-                </Link>
+                  {pair.map((promo: any, idx: number) => (
+                    <Link
+                      key={promo.id || idx}
+                      href={promo.link || '/'}
+                      className="block relative aspect-[16/8] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
+                    >
+                      <img
+                        src={promo.imageUrl}
+                        alt={promo.title || 'Promo'}
+                        draggable={false}
+                        className="w-full h-full object-cover pointer-events-none select-none"
+                      />
+                    </Link>
+                  ))}
+                </div>
               ))}
             </div>
 
-            {/* Chấm tròn báo trang cho banner dưới trên Mobile */}
+            {/* Dãy chấm tròn báo trang bên dưới */}
             {promoPairs.length > 1 && (
-              <div className="flex justify-center items-center gap-1 mt-2">
+              <div className="flex justify-center items-center gap-1.5 mt-2">
                 {promoPairs.map((_, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setBottomIndex(idx)}
-                    className={`h-1 rounded-full transition-all ${
-                      bottomIndex === idx ? 'w-3 bg-[#d70018]' : 'w-1 bg-gray-300'
+                    onClick={() => {
+                      if (promoScrollRef.current) {
+                        promoScrollRef.current.scrollTo({
+                          left: idx * promoScrollRef.current.offsetWidth,
+                          behavior: 'smooth',
+                        });
+                      }
+                    }}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      activePromoDot === idx ? 'w-4 bg-[#d70018]' : 'w-1.5 bg-gray-300'
                     }`}
                     aria-label={`Trang ${idx + 1}`}
                   />
@@ -322,11 +337,12 @@ export const HeroSection: React.FC = () => {
           onTouchEnd={handleTopTouchEnd}
         >
           {currentTop && (
-            <Link href={currentTop.link || '/'} className="block w-full h-full">
+            <Link href={currentTop.link || '/'} className="block w-full h-full select-none">
               <img
                 src={currentTop.imageUrl}
                 alt={currentTop.title || 'Banner'}
-                className="w-full h-full object-cover transition-all duration-500"
+                draggable={false}
+                className="w-full h-full object-cover transition-all duration-500 pointer-events-none"
               />
             </Link>
           )}
@@ -351,43 +367,32 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* Cặp banner con trên Tablet */}
+        {/* 2 Banner Dưới trên Tablet */}
         {promoPairs.length > 0 && (
-          <div
-            className="mt-3 relative"
-            onTouchStart={handleBottomTouchStart}
-            onTouchEnd={handleBottomTouchEnd}
-          >
-            <div className="grid grid-cols-2 gap-3">
-              {currentPair.map((promo: any, idx: number) => (
-                <Link
-                  key={promo.id || idx}
-                  href={promo.link || '/'}
-                  className="block relative h-[140px] rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white"
-                >
-                  <img
-                    src={promo.imageUrl}
-                    alt="Promo"
-                    className="w-full h-full object-cover"
-                  />
-                </Link>
+          <div className="mt-3 relative">
+            <div
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex overflow-x-auto gap-3 snap-x snap-mandatory scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden"
+            >
+              {promoPairs.map((pair: any[], pIdx: number) => (
+                <div key={pIdx} className="w-full shrink-0 snap-center grid grid-cols-2 gap-3">
+                  {pair.map((promo: any, idx: number) => (
+                    <Link
+                      key={promo.id || idx}
+                      href={promo.link || '/'}
+                      className="block relative h-[140px] rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
+                    >
+                      <img
+                        src={promo.imageUrl}
+                        alt="Promo"
+                        draggable={false}
+                        className="w-full h-full object-cover pointer-events-none"
+                      />
+                    </Link>
+                  ))}
+                </div>
               ))}
             </div>
-
-            {promoPairs.length > 1 && (
-              <div className="flex justify-center items-center gap-1.5 mt-2.5">
-                {promoPairs.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setBottomIndex(idx)}
-                    className={`h-1.5 rounded-full transition-all ${
-                      bottomIndex === idx ? 'w-4 bg-[#d70018]' : 'w-1.5 bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -427,15 +432,16 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {currentPair.length > 0 && (
+        {/* Cặp Banner Con Đè Dưới Desktop */}
+        {currentPairDesktop.length > 0 && (
           <div className="max-w-7xl mx-auto px-4 relative z-30 -mt-16 md:-mt-20">
             <div className="relative">
               <div
                 className={`grid gap-4 ${
-                  currentPair.length === 1 ? 'grid-cols-1 max-w-2xl mx-auto' : 'grid-cols-1 md:grid-cols-2'
+                  currentPairDesktop.length === 1 ? 'grid-cols-1 max-w-2xl mx-auto' : 'grid-cols-1 md:grid-cols-2'
                 }`}
               >
-                {currentPair.map((promo: any, idx: number) => (
+                {currentPairDesktop.map((promo: any, idx: number) => (
                   <Link
                     key={promo.id || idx}
                     href={promo.link || '/'}
