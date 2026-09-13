@@ -72,14 +72,12 @@ export const HeroSection: React.FC = () => {
   const [promoList, setPromoList] = useState<any[]>([]);
   const [topIndex, setTopIndex] = useState(0);
   const [bottomIndex, setBottomIndex] = useState(0);
-  const [activePromoDot, setActivePromoDot] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Ref theo dõi thanh cuộn ngang banner nhỏ trên mobile & tablet
-  const promoScrollRef = useRef<HTMLDivElement>(null);
-  const promoTabletScrollRef = useRef<HTMLDivElement>(null);
+  // Ref tính toán vuốt tay
   const topTouchStartX = useRef<number | null>(null);
+  const bottomTouchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -145,7 +143,7 @@ export const HeroSection: React.FC = () => {
   const activeBanners = banners.length > 0 ? banners : DEFAULT_HERO_BANNERS;
   const activePromos = promoList.length > 0 ? promoList : DEFAULT_PROMO_CARDS;
 
-  // Gom banner phụ thành từng cặp 2
+  // Gom banner nhỏ phụ thành từng cặp 2
   const promoPairs: any[][] = [];
   for (let i = 0; i < activePromos.length; i += 2) {
     promoPairs.push(activePromos.slice(i, i + 2));
@@ -160,36 +158,18 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerTop);
   }, [isHovered, activeBanners.length]);
 
-  // 2. TỰ ĐỘNG CHUYỂN 2 BANNER NHỎ DƯỚI SAU 5 GIÂY (ĐỒNG BỘ CẢ MOBILE & DESKTOP)
+  // 2. TỰ ĐỘNG CHUYỂN 2 BANNER NHỎ SAU 5 GIÂY (CHẠY 100% CẢ MOBILE VÀ DESKTOP)
   useEffect(() => {
     if (isHovered || promoPairs.length <= 1) return;
 
     const timerBottom = setInterval(() => {
-      const nextIndex = (bottomIndex + 1) % promoPairs.length;
-      setBottomIndex(nextIndex);
-      setActivePromoDot(nextIndex);
-
-      // Tự trượt trên màn hình Mobile
-      if (promoScrollRef.current) {
-        promoScrollRef.current.scrollTo({
-          left: nextIndex * promoScrollRef.current.offsetWidth,
-          behavior: 'smooth',
-        });
-      }
-
-      // Tự trượt trên màn hình Tablet
-      if (promoTabletScrollRef.current) {
-        promoTabletScrollRef.current.scrollTo({
-          left: nextIndex * promoTabletScrollRef.current.offsetWidth,
-          behavior: 'smooth',
-        });
-      }
+      setBottomIndex((prev) => (prev + 1) % promoPairs.length);
     }, 5000);
 
     return () => clearInterval(timerBottom);
-  }, [isHovered, promoPairs.length, bottomIndex]);
+  }, [isHovered, promoPairs.length]);
 
-  // Vuốt chạm cảm ứng cho Banner lớn ở trên
+  // --- XỬ LÝ VUỐT CẢM ỨNG BANNER LỚN (TRÊN) ---
   const handleTopTouchStart = (e: React.TouchEvent) => {
     setIsHovered(true);
     topTouchStartX.current = e.touches[0].clientX;
@@ -209,15 +189,24 @@ export const HeroSection: React.FC = () => {
     topTouchStartX.current = null;
   };
 
-  // Cập nhật trang khi người dùng chủ động lấy ngón tay vuốt 2 banner nhỏ
-  const handlePromoScroll = () => {
-    if (!promoScrollRef.current) return;
-    const { scrollLeft, offsetWidth } = promoScrollRef.current;
-    if (offsetWidth > 0) {
-      const newIndex = Math.round(scrollLeft / offsetWidth);
-      setActivePromoDot(newIndex);
-      setBottomIndex(newIndex);
+  // --- XỬ LÝ VUỐT CẢM ỨNG 2 BANNER NHỎ (DƯỚI) ---
+  const handleBottomTouchStart = (e: React.TouchEvent) => {
+    setIsHovered(true);
+    bottomTouchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleBottomTouchEnd = (e: React.TouchEvent) => {
+    setIsHovered(false);
+    if (bottomTouchStartX.current === null || promoPairs.length <= 1) return;
+    const diff = bottomTouchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 35) {
+      if (diff > 0) {
+        setBottomIndex((prev) => (prev + 1) % promoPairs.length);
+      } else {
+        setBottomIndex((prev) => (prev - 1 + promoPairs.length) % promoPairs.length);
+      }
     }
+    bottomTouchStartX.current = null;
   };
 
   const currentTop = activeBanners[topIndex] || activeBanners[0];
@@ -288,41 +277,42 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* Hàng 2 Banner Nhỏ Dưới: Tự động lướt 5s & hỗ trợ vuốt tay cực nhạy */}
+        {/* Hàng 2 Banner Nhỏ Dưới: Chuyển động bằng Transform mượt mà 100%, tự chạy 5s & vuốt được */}
         {promoPairs.length > 0 && (
           <div className="mt-2.5 relative">
             <div
-              ref={promoScrollRef}
-              onScroll={handlePromoScroll}
-              onTouchStart={() => setIsHovered(true)}
-              onTouchEnd={() => setIsHovered(false)}
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
-              className="flex overflow-x-auto gap-3 snap-x snap-mandatory scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden py-0.5"
+              className="overflow-hidden rounded-lg"
+              onTouchStart={handleBottomTouchStart}
+              onTouchEnd={handleBottomTouchEnd}
             >
-              {promoPairs.map((pair: any[], pIdx: number) => (
-                <div
-                  key={pIdx}
-                  className="w-full shrink-0 snap-center grid grid-cols-2 gap-2"
-                >
-                  {pair.map((promo: any, idx: number) => (
-                    <Link
-                      key={promo.id || idx}
-                      href={promo.link || '/'}
-                      className="block relative aspect-[16/8] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
-                    >
-                      <img
-                        src={promo.imageUrl}
-                        alt={promo.title || 'Promo'}
-                        draggable={false}
-                        className="w-full h-full object-cover pointer-events-none select-none"
-                      />
-                    </Link>
-                  ))}
-                </div>
-              ))}
+              <div
+                className="flex transition-transform duration-500 ease-out"
+                style={{
+                  transform: `translateX(-${bottomIndex * 100}%)`,
+                }}
+              >
+                {promoPairs.map((pair: any[], pIdx: number) => (
+                  <div
+                    key={pIdx}
+                    className="w-full shrink-0 grid grid-cols-2 gap-2"
+                  >
+                    {pair.map((promo: any, idx: number) => (
+                      <Link
+                        key={promo.id || idx}
+                        href={promo.link || '/'}
+                        className="block relative aspect-[16/8] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
+                      >
+                        <img
+                          src={promo.imageUrl}
+                          alt={promo.title || 'Promo'}
+                          draggable={false}
+                          className="w-full h-full object-cover pointer-events-none select-none"
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Dãy chấm tròn hiển thị trang */}
@@ -332,18 +322,9 @@ export const HeroSection: React.FC = () => {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => {
-                      setBottomIndex(idx);
-                      setActivePromoDot(idx);
-                      if (promoScrollRef.current) {
-                        promoScrollRef.current.scrollTo({
-                          left: idx * promoScrollRef.current.offsetWidth,
-                          behavior: 'smooth',
-                        });
-                      }
-                    }}
+                    onClick={() => setBottomIndex(idx)}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
-                      activePromoDot === idx ? 'w-4 bg-[#d70018]' : 'w-1.5 bg-gray-300'
+                      bottomIndex === idx ? 'w-4 bg-[#d70018]' : 'w-1.5 bg-gray-300'
                     }`}
                     aria-label={`Trang ${idx + 1}`}
                   />
@@ -398,28 +379,35 @@ export const HeroSection: React.FC = () => {
         {promoPairs.length > 0 && (
           <div className="mt-3 relative">
             <div
-              ref={promoTabletScrollRef}
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              className="flex overflow-x-auto gap-3 snap-x snap-mandatory scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden"
+              className="overflow-hidden rounded-xl"
+              onTouchStart={handleBottomTouchStart}
+              onTouchEnd={handleBottomTouchEnd}
             >
-              {promoPairs.map((pair: any[], pIdx: number) => (
-                <div key={pIdx} className="w-full shrink-0 snap-center grid grid-cols-2 gap-3">
-                  {pair.map((promo: any, idx: number) => (
-                    <Link
-                      key={promo.id || idx}
-                      href={promo.link || '/'}
-                      className="block relative h-[140px] rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
-                    >
-                      <img
-                        src={promo.imageUrl}
-                        alt="Promo"
-                        draggable={false}
-                        className="w-full h-full object-cover pointer-events-none"
-                      />
-                    </Link>
-                  ))}
-                </div>
-              ))}
+              <div
+                className="flex transition-transform duration-500 ease-out"
+                style={{
+                  transform: `translateX(-${bottomIndex * 100}%)`,
+                }}
+              >
+                {promoPairs.map((pair: any[], pIdx: number) => (
+                  <div key={pIdx} className="w-full shrink-0 grid grid-cols-2 gap-3">
+                    {pair.map((promo: any, idx: number) => (
+                      <Link
+                        key={promo.id || idx}
+                        href={promo.link || '/'}
+                        className="block relative h-[140px] rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
+                      >
+                        <img
+                          src={promo.imageUrl}
+                          alt="Promo"
+                          draggable={false}
+                          className="w-full h-full object-cover pointer-events-none"
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
