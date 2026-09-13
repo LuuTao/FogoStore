@@ -41,6 +41,18 @@ const DEFAULT_PROMO_CARDS = [
     imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=1000&auto=format&fit=crop',
     link: '/phu-kien',
   },
+  {
+    id: 'default-promo-3',
+    title: 'Apple Watch Series 10 - Siêu Phẩm Mới',
+    imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=1000&auto=format&fit=crop',
+    link: '/watch',
+  },
+  {
+    id: 'default-promo-4',
+    title: 'AirPods 4 Chống Ồn Chủ Động',
+    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=1000&auto=format&fit=crop',
+    link: '/phu-kien',
+  },
 ];
 
 const getFullImageUrl = (url?: string | null): string => {
@@ -63,7 +75,9 @@ export const HeroSection: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const touchStartX = useRef<number | null>(null);
+  // Lưu tọa độ cảm ứng riêng biệt cho banner trên và banner dưới
+  const topTouchStartX = useRef<number | null>(null);
+  const bottomTouchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -83,7 +97,6 @@ export const HeroSection: React.FC = () => {
           if (json.success && Array.isArray(json.data) && json.data.length > 0) {
             if (!isMounted) return;
 
-            // Lọc các banner thuộc nhóm Hero
             const heroList = json.data.filter(
               (b: any) => b.group === 'hero_banners' || b.position === 'hero_banners' || b.position === 'HOME_TOP'
             );
@@ -98,7 +111,6 @@ export const HeroSection: React.FC = () => {
               );
             }
 
-            // Lọc các promo cards con
             const promos = json.data.filter(
               (b: any) => b.group === 'promo_cards' || b.position === 'promo_cards' || b.position === 'HOME_MIDDLE'
             );
@@ -130,6 +142,7 @@ export const HeroSection: React.FC = () => {
   const activeBanners = banners.length > 0 ? banners : DEFAULT_HERO_BANNERS;
   const activePromos = promoList.length > 0 ? promoList : DEFAULT_PROMO_CARDS;
 
+  // Tự động chuyển slider Hero
   useEffect(() => {
     if (isHovered || activeBanners.length <= 1) return;
     const timerTop = setInterval(() => {
@@ -138,11 +151,13 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerTop);
   }, [isHovered, activeBanners.length]);
 
+  // Gom các banner phụ thành cặp 2
   const promoPairs: any[][] = [];
   for (let i = 0; i < activePromos.length; i += 2) {
     promoPairs.push(activePromos.slice(i, i + 2));
   }
 
+  // Tự động chuyển cặp banner con
   useEffect(() => {
     if (isHovered || promoPairs.length <= 1) return;
     const timerBottom = setInterval(() => {
@@ -151,13 +166,14 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerBottom);
   }, [isHovered, promoPairs.length]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+  // --- XỬ LÝ VUỐT CẢM ỨNG BANNER LỚN (TRÊN) ---
+  const handleTopTouchStart = (e: React.TouchEvent) => {
+    topTouchStartX.current = e.touches[0].clientX;
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || activeBanners.length <= 1) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
+  const handleTopTouchEnd = (e: React.TouchEvent) => {
+    if (topTouchStartX.current === null || activeBanners.length <= 1) return;
+    const diff = topTouchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 35) {
       if (diff > 0) {
         setTopIndex((prev) => (prev + 1) % activeBanners.length);
@@ -165,11 +181,29 @@ export const HeroSection: React.FC = () => {
         setTopIndex((prev) => (prev - 1 + activeBanners.length) % activeBanners.length);
       }
     }
-    touchStartX.current = null;
+    topTouchStartX.current = null;
+  };
+
+  // --- XỬ LÝ VUỐT CẢM ỨNG BANNER CON (DƯỚI) ---
+  const handleBottomTouchStart = (e: React.TouchEvent) => {
+    bottomTouchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleBottomTouchEnd = (e: React.TouchEvent) => {
+    if (bottomTouchStartX.current === null || promoPairs.length <= 1) return;
+    const diff = bottomTouchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 35) {
+      if (diff > 0) {
+        setBottomIndex((prev) => (prev + 1) % promoPairs.length);
+      } else {
+        setBottomIndex((prev) => (prev - 1 + promoPairs.length) % promoPairs.length);
+      }
+    }
+    bottomTouchStartX.current = null;
   };
 
   const currentTop = activeBanners[topIndex] || activeBanners[0];
-  const currentPair = promoPairs[bottomIndex] || activePromos.slice(0, 2);
+  const currentPair = promoPairs[bottomIndex] || promoPairs[0] || activePromos.slice(0, 2);
 
   if (loading && banners.length === 0) {
     return (
@@ -200,18 +234,23 @@ export const HeroSection: React.FC = () => {
       className="w-full select-none relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
     >
-      {/* 1. MOBILE */}
+      {/* ========================================================================= */}
+      {/* 1. GIAO DIỆN MOBILE (< 640px)                                             */}
+      {/* ========================================================================= */}
       <div className="block sm:hidden px-3 pt-2 pb-4">
-        <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-gray-100 shadow-md">
+        {/* Banner Lớn Mobile (Vuốt lướt qua lại) */}
+        <div
+          className="relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-gray-100 shadow-md"
+          onTouchStart={handleTopTouchStart}
+          onTouchEnd={handleTopTouchEnd}
+        >
           {currentTop && (
             <Link href={currentTop.link || '/'} className="block w-full h-full">
               <img
                 src={currentTop.imageUrl}
                 alt={currentTop.title || 'Banner'}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-opacity duration-300"
               />
             </Link>
           )}
@@ -230,28 +269,58 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {activePromos.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 mt-2.5">
-            {activePromos.slice(0, 2).map((promo: any, idx: number) => (
-              <Link
-                key={promo.id || idx}
-                href={promo.link || '/'}
-                className="block relative aspect-[16/8] rounded-lg overflow-hidden shadow-sm border border-gray-100 bg-white"
-              >
-                <img
-                  src={promo.imageUrl}
-                  alt="Promo"
-                  className="w-full h-full object-cover"
-                />
-              </Link>
-            ))}
+        {/* Cặp Banner Nhỏ Bên Dưới (Hỗ trợ vuốt lướt mượt mà) */}
+        {promoPairs.length > 0 && (
+          <div
+            className="mt-2.5 relative"
+            onTouchStart={handleBottomTouchStart}
+            onTouchEnd={handleBottomTouchEnd}
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {currentPair.map((promo: any, idx: number) => (
+                <Link
+                  key={promo.id || idx}
+                  href={promo.link || '/'}
+                  className="block relative aspect-[16/8] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white"
+                >
+                  <img
+                    src={promo.imageUrl}
+                    alt="Promo"
+                    className="w-full h-full object-cover transition-opacity duration-300"
+                  />
+                </Link>
+              ))}
+            </div>
+
+            {/* Chấm tròn báo trang cho banner dưới trên Mobile */}
+            {promoPairs.length > 1 && (
+              <div className="flex justify-center items-center gap-1 mt-2">
+                {promoPairs.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setBottomIndex(idx)}
+                    className={`h-1 rounded-full transition-all ${
+                      bottomIndex === idx ? 'w-3 bg-[#d70018]' : 'w-1 bg-gray-300'
+                    }`}
+                    aria-label={`Trang ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* 2. TABLET */}
+      {/* ========================================================================= */}
+      {/* 2. GIAO DIỆN TABLET (640px -> 1023px)                                     */}
+      {/* ========================================================================= */}
       <div className="hidden sm:block lg:hidden px-4 pt-3 pb-6">
-        <div className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden bg-gray-100 shadow-lg">
+        <div
+          className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden bg-gray-100 shadow-lg"
+          onTouchStart={handleTopTouchStart}
+          onTouchEnd={handleTopTouchEnd}
+        >
           {currentTop && (
             <Link href={currentTop.link || '/'} className="block w-full h-full">
               <img
@@ -267,14 +336,14 @@ export const HeroSection: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTopIndex((prev) => (prev - 1 + activeBanners.length) % activeBanners.length)}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-[#d70018] text-white flex items-center justify-center backdrop-blur-xs shadow"
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-[#d70018] text-white flex items-center justify-center backdrop-blur-xs shadow cursor-pointer"
               >
                 <ChevronLeft size={20} />
               </button>
               <button
                 type="button"
                 onClick={() => setTopIndex((prev) => (prev + 1) % activeBanners.length)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-[#d70018] text-white flex items-center justify-center backdrop-blur-xs shadow"
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-[#d70018] text-white flex items-center justify-center backdrop-blur-xs shadow cursor-pointer"
               >
                 <ChevronRight size={20} />
               </button>
@@ -282,26 +351,50 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {activePromos.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            {activePromos.slice(0, 2).map((promo: any, idx: number) => (
-              <Link
-                key={promo.id || idx}
-                href={promo.link || '/'}
-                className="block relative h-[140px] rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white"
-              >
-                <img
-                  src={promo.imageUrl}
-                  alt="Promo"
-                  className="w-full h-full object-cover"
-                />
-              </Link>
-            ))}
+        {/* Cặp banner con trên Tablet */}
+        {promoPairs.length > 0 && (
+          <div
+            className="mt-3 relative"
+            onTouchStart={handleBottomTouchStart}
+            onTouchEnd={handleBottomTouchEnd}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              {currentPair.map((promo: any, idx: number) => (
+                <Link
+                  key={promo.id || idx}
+                  href={promo.link || '/'}
+                  className="block relative h-[140px] rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white"
+                >
+                  <img
+                    src={promo.imageUrl}
+                    alt="Promo"
+                    className="w-full h-full object-cover"
+                  />
+                </Link>
+              ))}
+            </div>
+
+            {promoPairs.length > 1 && (
+              <div className="flex justify-center items-center gap-1.5 mt-2.5">
+                {promoPairs.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setBottomIndex(idx)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      bottomIndex === idx ? 'w-4 bg-[#d70018]' : 'w-1.5 bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* 3. DESKTOP */}
+      {/* ========================================================================= */}
+      {/* 3. GIAO DIỆN DESKTOP (>= 1024px)                                          */}
+      {/* ========================================================================= */}
       <div className="hidden lg:block pb-16">
         <div className="relative w-full h-[480px] lg:h-[540px] overflow-hidden bg-gray-100 flex items-center justify-center">
           {currentTop && (
