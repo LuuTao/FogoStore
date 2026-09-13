@@ -23,6 +23,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { MENU_DATA } from '@/data/navigation';
+import { API_BASE, getFullImageUrl } from '@/lib/imageHelper';
+
 
 interface Props {
   banners?: any[];
@@ -214,36 +216,50 @@ export default function BannersTab({ onRefresh }: Props) {
       ? activeLevel1.groups[selectedLevel2Idx]
       : null;
 
-  // LƯU TẤT CẢ VÀO HỆ THỐNG
+
+// Khi bấm nút "LƯU CẤU HÌNH"
+// LƯU TẤT CẢ VÀO HỆ THỐNG
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     try {
-      const cleanItems = items.map((it) => ({
-        ...it,
-        imageUrl: cleanUrl(it.imageUrl),
-      }));
+      // Chuẩn hóa URL ảnh trước khi lưu: bóc tách domain cứng, chỉ giữ /uploads/...
+      const cleanItems = items.map((it, idx) => {
+        let rawUrl = it.imageUrl || '';
+        if (rawUrl.includes('/uploads/')) {
+          rawUrl = '/uploads/' + rawUrl.split('/uploads/').pop();
+        }
+        return {
+          id: it.id,
+          title: it.name || it.title || 'Banner',
+          imageUrl: rawUrl,
+          link: it.link || '/',
+          group: it.group || activeGroup || 'hero_banners',
+          order: idx,
+        };
+      });
 
-      localStorage.setItem('fogo_banners_config', JSON.stringify(cleanItems));
-      localStorage.setItem('fogo_menu_config', JSON.stringify(menus));
-
-      await fetch('https://fogo-store-api.onrender.com/api/admin/banners/sync', {
+      // Lưu đồng bộ thẳng vào Database qua API
+      const res = await fetch(`${API_BASE}/api/admin/banners/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: cleanItems, menus }),
-      }).catch(() => {});
+      });
+
+      if (!res.ok) {
+        throw new Error('Không thể kết nối đến máy chủ API');
+      }
 
       setItems(cleanItems);
       setHasUnsavedChanges(false);
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3000);
       if (onRefresh) onRefresh();
-    } catch {
-      alert('Đã xảy ra lỗi khi lưu cấu hình.');
+    } catch (err: any) {
+      alert('Đã xảy ra lỗi khi lưu vào cơ sở dữ liệu: ' + err.message);
     } finally {
       setIsSaving(false);
     }
   };
-
   const handleResetDefault = () => {
     if (!confirm('Khôi phục toàn bộ cấu hình Banner & Menu về mặc định?')) return;
     setItems(INITIAL_ITEMS);

@@ -169,14 +169,14 @@ export const Footer: React.FC = () => {
       </div>
 
       {/* Widget chat góc phải (Zalo & Facebook Messenger) */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col gap-2.5 sm:gap-3">
         {/* Nút Zalo */}
         <a
           href="https://zalo.me/0566003333"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat Zalo Fogo Store"
-          className="w-12 h-12 rounded-full bg-[#0068ff] text-white flex items-center justify-center shadow-xl hover:scale-110 transition-transform font-black text-xs md:text-sm"
+          className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#0068ff] text-white flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform font-black text-xs md:text-sm"
         >
           Zalo
         </a>
@@ -187,12 +187,12 @@ export const Footer: React.FC = () => {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat Messenger Fogo Store"
-          className="w-12 h-12 rounded-full bg-[#0084ff] hover:bg-[#0073e6] text-white flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+          className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#0084ff] hover:bg-[#0073e6] text-white flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform"
           title="Chat Facebook Messenger"
         >
           {/* Icon Messenger chuẩn */}
-          <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.91 1.455 5.513 3.736 7.189v3.553a.75.75 0 0 0 1.157.633l3.208-1.782c.62.1 1.255.155 1.899.155 5.523 0 10-4.145 10-9.258C22 6.145 17.523 2 12 2zm1.066 12.352-2.611-2.785-5.094 2.785a.375.375 0 0 1-.523-.483l5.586-7.857a.75.75 0 0 1 1.144-.078l2.611 2.785 5.094-2.785a.375.375 0 0 1 .523.483l-5.586 7.857a.75.75 0 0 1-1.144.078z" />
+          <svg className="w-5 h-5 sm:w-6 sm:h-6 fill-current" viewBox="0 0 24 24">
+            <path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.91 1.455 5.513 3.736 7.189v3.553a.75.75 0 0 0 1.157.633l3.208-1.782c.62.17 1.272.262 1.942.262 5.523 0 10-4.145 10-9.258C22 6.145 17.523 2 12 2zm1.066 12.44-2.57-2.742-5.013 2.742 5.513-5.854 2.634 2.742 4.95-2.742-5.514 5.854z" />
           </svg>
         </a>
       </div>

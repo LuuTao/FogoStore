@@ -13,3 +13,14 @@ body {
 input, button, select, textarea {
   font-family: inherit;
 }
+
+/* Ẩn scrollbar nhưng vẫn vuốt trượt ngang mượt mà */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

@@ -12,155 +12,108 @@ export const MobileBottomNav: React.FC = () => {
   const { totalQuantity } = useCart();
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
-  // Đọc danh mục đồng bộ từ admin nếu có
-  const [navData, setNavData] = useState(MENU_DATA);
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem('fogo_menu_config');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setNavData(parsed);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
+  // Ẩn thanh điều hướng dưới cùng khi ở trang Quản trị Admin
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <>
-      {/* 1. THANH BOTTOM BAR CỐ ĐỊNH Ở ĐÁY MÀN HÌNH (Chỉ hiện trên Mobile & Tablet < 1024px) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around select-none">
-        {/* Nút Trang chủ */}
-        <Link
-          href="/"
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg transition-colors ${
-            pathname === '/' ? 'text-[#d70018]' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Home size={19} className={pathname === '/' ? 'stroke-[2.5]' : ''} />
-          <span className="text-[10px] font-bold">Trang chủ</span>
-        </Link>
+      {/* 1. THANH ĐIỀU HƯỚNG DƯỚI CÙNG CHO MOBILE/IPAD (ẨN TRÊN PC >= 1024px) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg lg:hidden select-none">
+        <div className="grid grid-cols-5 h-14 items-center max-w-md mx-auto">
+          {/* Trang chủ */}
+          <Link
+            href="/"
+            className={`flex flex-col items-center justify-center py-1 text-[11px] font-medium transition-colors ${
+              pathname === '/' ? 'text-[#d70018] font-bold' : 'text-gray-600 hover:text-[#d70018]'
+            }`}
+          >
+            <Home size={20} className={pathname === '/' ? 'stroke-[2.5]' : ''} />
+            <span className="mt-0.5">Trang chủ</span>
+          </Link>
 
-        {/* Nút Danh mục (Bấm mở drawer) */}
-        <button
-          onClick={() => setIsCategoryOpen(true)}
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg transition-colors cursor-pointer ${
-            isCategoryOpen ? 'text-[#d70018]' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Grid size={19} />
-          <span className="text-[10px] font-bold">Danh mục</span>
-        </button>
+          {/* Danh mục Popup */}
+          <button
+            type="button"
+            onClick={() => setIsCategoryOpen(true)}
+            className="flex flex-col items-center justify-center py-1 text-[11px] font-medium text-gray-600 hover:text-[#d70018] cursor-pointer"
+          >
+            <Grid size={20} />
+            <span className="mt-0.5">Danh mục</span>
+          </button>
 
-        {/* Nút Khuyến mãi */}
-        <Link
-          href="/khuyen-mai"
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg transition-colors ${
-            pathname === '/khuyen-mai' ? 'text-[#d70018]' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Flame size={19} className="text-amber-500" />
-          <span className="text-[10px] font-bold">Sale sốc</span>
-        </Link>
+          {/* Khuyến mãi Hot */}
+          <Link
+            href="/hang-cu"
+            className={`flex flex-col items-center justify-center py-1 text-[11px] font-medium transition-colors ${
+              pathname === '/hang-cu' ? 'text-[#d70018] font-bold' : 'text-gray-600 hover:text-[#d70018]'
+            }`}
+          >
+            <Flame size={20} className={pathname === '/hang-cu' ? 'stroke-[2.5]' : ''} />
+            <span className="mt-0.5">Giá sốc</span>
+          </Link>
 
-        {/* Nút Giỏ hàng (Có Badge số lượng) */}
-        <Link
-          href="/gio-hang"
-          className={`relative flex flex-col items-center gap-1 py-1 px-2 rounded-lg transition-colors ${
-            pathname === '/gio-hang' ? 'text-[#d70018]' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <div className="relative">
-            <ShoppingBag size={19} className={pathname === '/gio-hang' ? 'stroke-[2.5]' : ''} />
-            {totalQuantity > 0 && (
-              <span className="absolute -top-1.5 -right-2.5 bg-[#d70018] text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
-                {totalQuantity > 99 ? '99+' : totalQuantity}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-bold">Giỏ hàng</span>
-        </Link>
+          {/* Hotline */}
+          <a
+            href="tel:0566003333"
+            className="flex flex-col items-center justify-center py-1 text-[11px] font-medium text-gray-600 hover:text-[#d70018]"
+          >
+            <PhoneCall size={20} />
+            <span className="mt-0.5">Gọi mua</span>
+          </a>
 
-        {/* Nút Hotline / Liên hệ */}
-        <a
-          href="tel:0566003333"
-          className="flex flex-col items-center gap-1 py-1 px-2 rounded-lg text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <PhoneCall size={19} />
-          <span className="text-[10px] font-bold">Hotline</span>
-        </a>
-      </div>
+          {/* Giỏ hàng */}
+          <Link
+            href="/gio-hang"
+            className={`flex flex-col items-center justify-center py-1 text-[11px] font-medium relative transition-colors ${
+              pathname === '/gio-hang' ? 'text-[#d70018] font-bold' : 'text-gray-600 hover:text-[#d70018]'
+            }`}
+          >
+            <div className="relative">
+              <ShoppingBag size={20} className={pathname === '/gio-hang' ? 'stroke-[2.5]' : ''} />
+              {totalQuantity > 0 && (
+                <span className="absolute -top-1.5 -right-2.5 bg-[#d70018] text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                  {totalQuantity > 99 ? '99+' : totalQuantity}
+                </span>
+              )}
+            </div>
+            <span className="mt-0.5">Giỏ hàng</span>
+          </Link>
+        </div>
+      </nav>
 
-      {/* 2. DRAWER DANH MỤC TRƯỢT DÀNH RIÊNG CHO MOBILE & TABLET */}
+      {/* 2. POPUP MENU DANH MỤC NHANH KHI BẤM NÚT DANH MỤC TRÊN MOBILE */}
       {isCategoryOpen && (
-        <div className="lg:hidden fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex">
-          {/* Vùng Backdrop click đóng */}
-          <div className="flex-1" onClick={() => setIsCategoryOpen(false)} />
-
-          {/* Khung Drawer trượt từ bên phải qua */}
-          <div className="w-[85%] sm:w-[380px] bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
-            {/* Header Drawer */}
-            <div className="bg-[#d70018] text-white p-4 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-2">
-                <Grid size={20} />
-                <h3 className="text-sm font-black uppercase tracking-wide">Danh Mục Sản Phẩm</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end lg:hidden">
+          <div className="bg-white rounded-t-2xl p-4 max-h-[75vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900 text-base">Danh mục sản phẩm</h3>
               <button
+                type="button"
                 onClick={() => setIsCategoryOpen(false)}
-                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Danh sách danh mục cuộn dọc */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {navData.map((item) => (
-                <div key={item.id} className="border border-gray-100 rounded-lg p-2.5 bg-gray-50/70">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <Link
-                      href={item.href}
-                      onClick={() => setIsCategoryOpen(false)}
-                      className="font-black text-sm text-gray-900 hover:text-[#d70018] flex items-center gap-1.5"
-                    >
-                      <span>{item.title}</span>
-                      {item.badge && (
-                        <span className="bg-[#d70018] text-white text-[9px] px-1 py-0.5 rounded font-bold">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </div>
-
-                  {/* Nhóm submodel con */}
-                  {item.groups && item.groups.length > 0 && (
-                    <div className="grid grid-cols-2 gap-1.5 pt-1">
-                      {item.groups.map((grp, gIdx) => (
-                        <Link
-                          key={gIdx}
-                          href={grp.href}
-                          onClick={() => setIsCategoryOpen(false)}
-                          className="text-xs font-semibold text-gray-600 bg-white hover:text-[#d70018] hover:border-red-200 border border-gray-200/80 rounded px-2.5 py-2 truncate transition-colors shadow-2xs"
-                        >
-                          {grp.groupTitle}
-                        </Link>
-                      ))}
-                    </div>
+            <div className="grid grid-cols-3 gap-3 py-4">
+              {MENU_DATA.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={() => setIsCategoryOpen(false)}
+                  className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-red-50 text-center transition-colors border border-gray-100"
+                >
+                  <span className="text-xs font-bold text-gray-800">{item.title}</span>
+                  {item.badge && (
+                    <span className="mt-1 bg-[#d70018] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded">
+                      {item.badge}
+                    </span>
                   )}
-                </div>
+                </Link>
               ))}
-            </div>
-
-            {/* Footer Drawer */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between text-xs font-bold text-gray-600">
-              <span>Hotline: <strong className="text-[#d70018]">0566.003.333</strong></span>
-              <Link
-                href="/admin/don-hang"
-                onClick={() => setIsCategoryOpen(false)}
-                className="text-gray-500 hover:text-gray-900"
-              >
-                Quản trị
-              </Link>
             </div>
           </div>
         </div>

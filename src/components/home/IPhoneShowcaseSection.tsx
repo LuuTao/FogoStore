@@ -8,10 +8,9 @@ interface TabItem {
   id: string;
   name: string;
   imageUrl: string;
-  queryValue: string | null; // Giá trị dùng để so khớp lọc sản phẩm
+  queryValue: string | null;
 }
 
-// Dữ liệu ban đầu làm fallback nếu Admin chưa lưu
 const DEFAULT_TABS: TabItem[] = [
   {
     id: 'sub-ip-1',
@@ -51,7 +50,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<TabItem | null>(null);
 
-  // 1. Nạp Tabs động từ Admin (nhóm sub_iphone)
+  // 1. Nạp Tabs động từ Admin
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_banners_config');
@@ -63,8 +62,6 @@ export const IPhoneShowcaseSection: React.FC = () => {
             const dynamicTabs: TabItem[] = adminSubIphones.map((it: any) => {
               const nameLower = (it.name || '').trim().toLowerCase();
               const isAll = nameLower === 'tất cả' || nameLower === 'all';
-              
-              // Tự động rút trích số Series từ tên tab (ví dụ: "iPhone 17 Series" -> "17")
               const matchNum = it.name.match(/\d+/);
               const queryValue = isAll ? null : matchNum ? matchNum[0] : it.name.trim();
 
@@ -80,11 +77,11 @@ export const IPhoneShowcaseSection: React.FC = () => {
         }
       }
     } catch (e) {
-      console.error('Lỗi nạp submodel iphone từ cấu hình Admin:', e);
+      console.error('Lỗi nạp submodel iphone:', e);
     }
   }, []);
 
-  // 2. Fetch dữ liệu sản phẩm từ Database
+  // 2. Fetch dữ liệu từ API
   useEffect(() => {
     const fetchIPhones = async () => {
       try {
@@ -104,7 +101,6 @@ export const IPhoneShowcaseSection: React.FC = () => {
               id: item.id,
               name: item.name,
               slug: item.slug,
-              // Gộp tên đầy đủ để tìm kiếm thông minh
               searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
               href: `/iphone/${item.slug}`,
               currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
@@ -125,7 +121,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
           setProducts(sorted);
         }
       } catch (err) {
-        console.error('Lỗi nạp sản phẩm iPhone trang chủ:', err);
+        console.error('Lỗi nạp sản phẩm iPhone:', err);
       } finally {
         setLoading(false);
       }
@@ -136,13 +132,12 @@ export const IPhoneShowcaseSection: React.FC = () => {
 
   const handleTabClick = (tab: TabItem) => {
     if (!tab.queryValue) {
-      setSelectedTab(null); // Click 'Tất cả'
+      setSelectedTab(null);
     } else {
       setSelectedTab((prev) => (prev?.id === tab.id ? null : tab));
     }
   };
 
-  // 3. Logic lọc thông minh: Bắt khớp bất kỳ số Series nào trong tên sản phẩm
   const displayedItems = useMemo(() => {
     if (!selectedTab || !selectedTab.queryValue) {
       return products.slice(0, 10);
@@ -156,11 +151,11 @@ export const IPhoneShowcaseSection: React.FC = () => {
   if (loading || products.length === 0) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-4 mt-12 select-none">
-      <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-md p-5 md:p-8 shadow-sm">
+    <section className="max-w-7xl mx-auto px-2 sm:px-4 mt-6 sm:mt-10 select-none w-full overflow-hidden">
+      <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-xl p-3 sm:p-5 md:p-8 shadow-xs">
         
-        {/* ================= 1. HÀNG ICON SERIES ĐỒNG BỘ ADMIN ================= */}
-        <div className="flex items-center justify-center gap-6 md:gap-12 mb-8 overflow-x-auto pb-2 scrollbar-none">
+        {/* ================= 1. HÀNG ICON SERIES: TỰ XUỐNG HÀNG & CĂN GIỮA MỤC DƯ ================= */}
+        <div className="flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-4 md:gap-x-8 gap-y-3 mb-6 sm:mb-8">
           {tabs.map((tab) => {
             const isSelected =
               (!selectedTab && !tab.queryValue) || selectedTab?.id === tab.id;
@@ -169,10 +164,10 @@ export const IPhoneShowcaseSection: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab)}
-                className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-105"
+                className="flex flex-col items-center gap-1 group cursor-pointer w-[68px] sm:w-[84px] md:w-[96px] transition-transform active:scale-95"
               >
                 <div
-                  className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-white p-1.5 shadow-sm flex items-center justify-center border-2 transition-all ${
+                  className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white p-1 shadow-xs flex items-center justify-center border-2 transition-all ${
                     isSelected
                       ? 'border-[#d70018] shadow-md scale-105 ring-2 ring-red-100'
                       : 'border-transparent group-hover:border-red-200'
@@ -182,7 +177,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
                 </div>
 
                 <span
-                  className={`text-xs md:text-sm transition-colors whitespace-nowrap ${
+                  className={`text-[11px] sm:text-xs md:text-sm text-center line-clamp-1 transition-colors w-full ${
                     isSelected
                       ? 'text-[#d70018] font-black'
                       : 'text-gray-700 font-semibold group-hover:text-[#d70018]'
@@ -195,95 +190,101 @@ export const IPhoneShowcaseSection: React.FC = () => {
           })}
         </div>
 
-        {/* ================= 2. LƯỚI SẢN PHẨM ================= */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+        {/* 2. LƯỚI SẢN PHẨM: 2 cột Mobile | 3 cột Tablet/iPad | 5 cột Desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3.5">
           {displayedItems.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-200/80 min-h-[420px]"
+              className="bg-white rounded-lg p-2.5 sm:p-3 flex flex-col justify-between shadow-xs hover:shadow-xl transition-all duration-300 group border border-gray-200/80"
             >
-              <div className="flex items-center justify-between h-6">
-                <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-none">
-                  -{product.discountPercent}%
-                </span>
-                <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
-                  <span></span>
-                  <span className="scale-90 origin-right">Authorized Reseller</span>
+              <div>
+                <div className="flex items-center justify-between h-5 sm:h-6">
+                  <span className="bg-[#d70018] text-white text-[9px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-sm">
+                    -{product.discountPercent}%
+                  </span>
+                  <div className="flex items-center gap-0.5 text-[8px] sm:text-[9px] font-bold text-gray-400">
+                    <span></span>
+                    <span className="scale-90 origin-right truncate">VN/A</span>
+                  </div>
                 </div>
+
+                {/* Khung ảnh vuông chuẩn, chống méo tỉ lệ */}
+                <Link
+                  href={product.href}
+                  className="w-full aspect-square my-2 flex items-center justify-center overflow-hidden"
+                >
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-xs"
+                  />
+                </Link>
+
+                <Link
+                  href={product.href}
+                  className="font-bold text-xs sm:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[34px] sm:min-h-[38px] leading-snug"
+                >
+                  {product.name}
+                </Link>
               </div>
 
-              <Link
-                href={product.href}
-                className="w-full h-40 my-2 flex items-center justify-center overflow-hidden cursor-pointer"
-              >
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
-                />
-              </Link>
-
-              <Link
-                href={product.href}
-                className="font-bold text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors h-[38px] leading-snug cursor-pointer"
-              >
-                {product.name}
-              </Link>
-
-              {/* Box Trả góp 0% */}
-              <div className="mt-2.5 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 text-center relative">
-                <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
-                  <span>Trả Góp</span>
-                  <span>•</span>
-                  <span>Trả Trước</span>
-                  <span>•</span>
-                  <span>Phí</span>
+              <div>
+                {/* Box Trả góp 0% tinh gọn cho mobile */}
+                <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-1.5 text-center">
+                  <div className="text-[8px] sm:text-[9px] font-bold text-gray-500 flex items-center justify-around">
+                    <span>Trả Góp</span>
+                    <span>•</span>
+                    <span>Trả Trước</span>
+                    <span>•</span>
+                    <span>Phí</span>
+                  </div>
+                  <div className="text-[10px] sm:text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
+                    <span>0%</span>
+                    <span>0đ</span>
+                    <span>0đ</span>
+                  </div>
                 </div>
-                <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
-                  <span>0%</span>
-                  <span>0đ</span>
-                  <span>0đ</span>
+
+                {/* Giá tiền */}
+                <div className="mt-2 sm:mt-2.5 flex flex-wrap items-baseline gap-1">
+                  <span className="text-xs sm:text-sm md:text-base font-black text-[#d70018]">
+                    {product.currentPrice}
+                  </span>
+                  <span className="text-[9px] sm:text-[11px] text-gray-400 line-through">
+                    {product.originalPrice}
+                  </span>
                 </div>
-              </div>
 
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-sm md:text-base font-black text-[#d70018]">
-                  {product.currentPrice}
-                </span>
-                <span className="text-[11px] text-gray-400 line-through">
-                  {product.originalPrice}
-                </span>
-              </div>
+                <div className="text-[9px] sm:text-[11px] text-gray-500 font-medium mt-0.5 truncate">
+                  Trả trước <strong className="text-gray-900">{product.downPayment}</strong>
+                </div>
 
-              <div className="text-[11px] text-gray-600 font-medium mt-0.5">
-                Hoặc trả trước <strong className="text-gray-900">{product.downPayment}</strong>
-              </div>
-
-              <div className="flex items-center gap-0.5 mt-2 text-amber-400 h-3">
-                {[...Array(product.rating || 5)].map((_, i) => (
-                  <Star key={i} size={11} className="fill-amber-400" />
-                ))}
+                <div className="flex items-center gap-0.5 mt-1.5 text-amber-400">
+                  {[...Array(product.rating || 5)].map((_, i) => (
+                    <Star key={i} size={10} className="fill-amber-400" />
+                  ))}
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ================= 3. NÚT XEM TOÀN BỘ SẢN PHẨM ================= */}
-        <div className="flex justify-center items-center mt-8">
+        {/* 3. NÚT XEM TẤT CẢ */}
+        <div className="flex justify-center items-center mt-6 sm:mt-8">
           <Link
             href={
               selectedTab?.queryValue
                 ? `/iphone?series=${selectedTab.queryValue}`
                 : '/iphone'
             }
-            className="inline-flex items-center gap-2 bg-[#d70018] hover:bg-red-700 text-white font-extrabold text-sm px-8 py-2.5 rounded-sm shadow hover:shadow-md transition-transform active:scale-95"
+            className="inline-flex items-center gap-1.5 sm:gap-2 bg-[#d70018] hover:bg-red-700 text-white font-extrabold text-xs sm:text-sm px-6 sm:px-8 py-2 sm:py-2.5 rounded-md shadow-xs hover:shadow-md transition-transform active:scale-95"
           >
             <span>
               {selectedTab?.queryValue
-                ? `Xem toàn bộ sản phẩm ${selectedTab.name}`
-                : 'Xem toàn bộ sản phẩm iPhone'}
+                ? `Xem toàn bộ iPhone ${selectedTab.name}`
+                : 'Xem toàn bộ iPhone'}
             </span>
-            <ArrowRight size={16} />
+            <ArrowRight size={15} />
           </Link>
         </div>
       </div>
