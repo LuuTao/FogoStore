@@ -76,8 +76,9 @@ export const HeroSection: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Ref theo dõi thanh cuộn ngang banner nhỏ trên mobile
+  // Ref theo dõi thanh cuộn ngang banner nhỏ trên mobile & tablet
   const promoScrollRef = useRef<HTMLDivElement>(null);
+  const promoTabletScrollRef = useRef<HTMLDivElement>(null);
   const topTouchStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -144,7 +145,13 @@ export const HeroSection: React.FC = () => {
   const activeBanners = banners.length > 0 ? banners : DEFAULT_HERO_BANNERS;
   const activePromos = promoList.length > 0 ? promoList : DEFAULT_PROMO_CARDS;
 
-  // Tự động chuyển slider Hero (Banner Lớn Trên)
+  // Gom banner phụ thành từng cặp 2
+  const promoPairs: any[][] = [];
+  for (let i = 0; i < activePromos.length; i += 2) {
+    promoPairs.push(activePromos.slice(i, i + 2));
+  }
+
+  // 1. TỰ ĐỘNG CHUYỂN BANNER LỚN SAU 5 GIÂY
   useEffect(() => {
     if (isHovered || activeBanners.length <= 1) return;
     const timerTop = setInterval(() => {
@@ -153,27 +160,43 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerTop);
   }, [isHovered, activeBanners.length]);
 
-  // Gom các banner phụ thành cặp 2 ảnh
-  const promoPairs: any[][] = [];
-  for (let i = 0; i < activePromos.length; i += 2) {
-    promoPairs.push(activePromos.slice(i, i + 2));
-  }
-
-  // Tự động chuyển cặp banner con trên Desktop
+  // 2. TỰ ĐỘNG CHUYỂN 2 BANNER NHỎ DƯỚI SAU 5 GIÂY (ĐỒNG BỘ CẢ MOBILE & DESKTOP)
   useEffect(() => {
     if (isHovered || promoPairs.length <= 1) return;
+
     const timerBottom = setInterval(() => {
-      setBottomIndex((prev) => (prev + 1) % promoPairs.length);
-    }, 4500);
+      const nextIndex = (bottomIndex + 1) % promoPairs.length;
+      setBottomIndex(nextIndex);
+      setActivePromoDot(nextIndex);
+
+      // Tự trượt trên màn hình Mobile
+      if (promoScrollRef.current) {
+        promoScrollRef.current.scrollTo({
+          left: nextIndex * promoScrollRef.current.offsetWidth,
+          behavior: 'smooth',
+        });
+      }
+
+      // Tự trượt trên màn hình Tablet
+      if (promoTabletScrollRef.current) {
+        promoTabletScrollRef.current.scrollTo({
+          left: nextIndex * promoTabletScrollRef.current.offsetWidth,
+          behavior: 'smooth',
+        });
+      }
+    }, 5000);
+
     return () => clearInterval(timerBottom);
-  }, [isHovered, promoPairs.length]);
+  }, [isHovered, promoPairs.length, bottomIndex]);
 
   // Vuốt chạm cảm ứng cho Banner lớn ở trên
   const handleTopTouchStart = (e: React.TouchEvent) => {
+    setIsHovered(true);
     topTouchStartX.current = e.touches[0].clientX;
   };
 
   const handleTopTouchEnd = (e: React.TouchEvent) => {
+    setIsHovered(false);
     if (topTouchStartX.current === null || activeBanners.length <= 1) return;
     const diff = topTouchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 35) {
@@ -186,20 +209,20 @@ export const HeroSection: React.FC = () => {
     topTouchStartX.current = null;
   };
 
-  // Cập nhật chấm tròn vị trí khi người dùng vuốt hàng 2 banner dưới trên mobile
+  // Cập nhật trang khi người dùng chủ động lấy ngón tay vuốt 2 banner nhỏ
   const handlePromoScroll = () => {
     if (!promoScrollRef.current) return;
     const { scrollLeft, offsetWidth } = promoScrollRef.current;
     if (offsetWidth > 0) {
       const newIndex = Math.round(scrollLeft / offsetWidth);
       setActivePromoDot(newIndex);
+      setBottomIndex(newIndex);
     }
   };
 
   const currentTop = activeBanners[topIndex] || activeBanners[0];
   const currentPairDesktop = promoPairs[bottomIndex] || promoPairs[0] || activePromos.slice(0, 2);
 
-  // Skeleton chống giật hình khi đang tải
   if (loading && banners.length === 0) {
     return (
       <div className="w-full relative pb-6 lg:pb-16 animate-pulse">
@@ -231,7 +254,7 @@ export const HeroSection: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* ========================================================================= */}
-      {/* 1. GIAO DIỆN MOBILE (< 640px) - VUỐT CỰC MƯỢT CẢ 2 BANNER NHỎ DƯỚI       */}
+      {/* 1. GIAO DIỆN MOBILE (< 640px)                                             */}
       {/* ========================================================================= */}
       <div className="block sm:hidden px-3 pt-2 pb-4">
         {/* Banner Lớn Trên */}
@@ -265,12 +288,14 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* HÀNG 2 BANNER NHỎ DƯỚI: VUỐT NGANG MƯỢT THEO CẶP (SCROLL SNAP) */}
+        {/* Hàng 2 Banner Nhỏ Dưới: Tự động lướt 5s & hỗ trợ vuốt tay cực nhạy */}
         {promoPairs.length > 0 && (
           <div className="mt-2.5 relative">
             <div
               ref={promoScrollRef}
               onScroll={handlePromoScroll}
+              onTouchStart={() => setIsHovered(true)}
+              onTouchEnd={() => setIsHovered(false)}
               style={{
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
@@ -300,7 +325,7 @@ export const HeroSection: React.FC = () => {
               ))}
             </div>
 
-            {/* Dãy chấm tròn báo trang bên dưới */}
+            {/* Dãy chấm tròn hiển thị trang */}
             {promoPairs.length > 1 && (
               <div className="flex justify-center items-center gap-1.5 mt-2">
                 {promoPairs.map((_, idx) => (
@@ -308,6 +333,8 @@ export const HeroSection: React.FC = () => {
                     key={idx}
                     type="button"
                     onClick={() => {
+                      setBottomIndex(idx);
+                      setActivePromoDot(idx);
                       if (promoScrollRef.current) {
                         promoScrollRef.current.scrollTo({
                           left: idx * promoScrollRef.current.offsetWidth,
@@ -371,6 +398,7 @@ export const HeroSection: React.FC = () => {
         {promoPairs.length > 0 && (
           <div className="mt-3 relative">
             <div
+              ref={promoTabletScrollRef}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               className="flex overflow-x-auto gap-3 snap-x snap-mandatory scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden"
             >
