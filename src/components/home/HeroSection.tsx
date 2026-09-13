@@ -7,7 +7,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 const API_BASE = `${API_URL}/api`;
 
-// DANH SÁCH BANNER DỰ PHÒNG CHUẨN KHI DATABASE CHƯA CÓ HOẶC API BỊ LỖI
 const DEFAULT_HERO_BANNERS = [
   {
     id: 'default-hero-1',
@@ -46,7 +45,7 @@ const DEFAULT_PROMO_CARDS = [
 
 const getFullImageUrl = (url?: string | null): string => {
   if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) {
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
     if (url.includes('localhost:')) {
       return url.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
     }
@@ -84,32 +83,38 @@ export const HeroSection: React.FC = () => {
           if (json.success && Array.isArray(json.data) && json.data.length > 0) {
             if (!isMounted) return;
 
-            const heroList = json.data.filter((b: any) => b.group === 'hero_banners');
+            // Lọc các banner thuộc nhóm Hero
+            const heroList = json.data.filter(
+              (b: any) => b.group === 'hero_banners' || b.position === 'hero_banners' || b.position === 'HOME_TOP'
+            );
             if (heroList.length > 0) {
               setBanners(
                 heroList.map((b: any) => ({
                   id: b.id,
                   title: b.title || b.name,
                   imageUrl: getFullImageUrl(b.imageUrl),
-                  link: b.link || '/',
+                  link: b.linkUrl || b.link || '/',
                 }))
               );
             }
 
-            const promos = json.data.filter((b: any) => b.group === 'promo_cards');
+            // Lọc các promo cards con
+            const promos = json.data.filter(
+              (b: any) => b.group === 'promo_cards' || b.position === 'promo_cards' || b.position === 'HOME_MIDDLE'
+            );
             if (promos.length > 0) {
               setPromoList(
                 promos.map((b: any) => ({
                   id: b.id,
                   imageUrl: getFullImageUrl(b.imageUrl),
-                  link: b.link || '/',
+                  link: b.linkUrl || b.link || '/',
                 }))
               );
             }
           }
         }
       } catch (err) {
-        console.error('Lỗi nạp banner từ Database, sử dụng banner mặc định:', err);
+        console.error('Lỗi nạp banner từ Database:', err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -122,11 +127,9 @@ export const HeroSection: React.FC = () => {
     };
   }, []);
 
-  // Ưu tiên banner từ Database, nếu rỗng thì dùng banner mặc định ngay lập tức
   const activeBanners = banners.length > 0 ? banners : DEFAULT_HERO_BANNERS;
   const activePromos = promoList.length > 0 ? promoList : DEFAULT_PROMO_CARDS;
 
-  // Tự động chuyển slider Hero
   useEffect(() => {
     if (isHovered || activeBanners.length <= 1) return;
     const timerTop = setInterval(() => {
@@ -135,13 +138,11 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerTop);
   }, [isHovered, activeBanners.length]);
 
-  // Gom promo thành cặp 2
   const promoPairs: any[][] = [];
   for (let i = 0; i < activePromos.length; i += 2) {
     promoPairs.push(activePromos.slice(i, i + 2));
   }
 
-  // Tự động chuyển slider Promo Cards
   useEffect(() => {
     if (isHovered || promoPairs.length <= 1) return;
     const timerBottom = setInterval(() => {
@@ -170,7 +171,6 @@ export const HeroSection: React.FC = () => {
   const currentTop = activeBanners[topIndex] || activeBanners[0];
   const currentPair = promoPairs[bottomIndex] || activePromos.slice(0, 2);
 
-  // SKELETON KHI ĐANG TẢI DỮ LIỆU BAN ĐẦU
   if (loading && banners.length === 0) {
     return (
       <div className="w-full relative pb-6 lg:pb-16 animate-pulse">
@@ -203,7 +203,7 @@ export const HeroSection: React.FC = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* 1. GIAO DIỆN MOBILE (< 640px) */}
+      {/* 1. MOBILE */}
       <div className="block sm:hidden px-3 pt-2 pb-4">
         <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-gray-100 shadow-md">
           {currentTop && (
@@ -249,7 +249,7 @@ export const HeroSection: React.FC = () => {
         )}
       </div>
 
-      {/* 2. GIAO DIỆN TABLET (640px -> 1023px) */}
+      {/* 2. TABLET */}
       <div className="hidden sm:block lg:hidden px-4 pt-3 pb-6">
         <div className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden bg-gray-100 shadow-lg">
           {currentTop && (
@@ -301,7 +301,7 @@ export const HeroSection: React.FC = () => {
         )}
       </div>
 
-      {/* 3. GIAO DIỆN DESKTOP (>= 1024px) */}
+      {/* 3. DESKTOP */}
       <div className="hidden lg:block pb-16">
         <div className="relative w-full h-[480px] lg:h-[540px] overflow-hidden bg-gray-100 flex items-center justify-center">
           {currentTop && (

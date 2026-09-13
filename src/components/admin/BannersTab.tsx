@@ -17,14 +17,11 @@ import {
   RotateCcw,
   Sliders,
   CreditCard,
-  ExternalLink,
   X,
   Menu as MenuIcon,
   ChevronRight,
 } from 'lucide-react';
 import { MENU_DATA } from '@/data/navigation';
-import { API_BASE, getFullImageUrl } from '@/lib/imageHelper';
-
 
 interface Props {
   banners?: any[];
@@ -72,14 +69,22 @@ export interface MenuItem {
   groups?: MenuGroup[];
 }
 
-// Helper tự động dọn sạch mọi link localhost:5000 chuyển sang Render HTTPS
-const cleanUrl = (url?: string | null): string => {
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+// Hàm xử lý link ảnh an toàn (hỗ trợ cả Base64, CDN ngoài và đường dẫn /uploads)
+const resolveImageUrl = (url?: string | null): string => {
   if (!url) return '';
-  return url.replace(/http:\/\/localhost:5000/g, 'https://fogo-store-api.onrender.com');
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('localhost:')) {
+      return url.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+    }
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${API_URL}${cleanPath}`;
 };
 
 const INITIAL_ITEMS: ItemConfig[] = [
-  // 1. BANNER LỚN ĐẦU TRANG
   {
     id: 'hero-1',
     name: 'Đại Tiệc Mua Sắm Apple - Giảm Sốc Đến 40%',
@@ -98,8 +103,6 @@ const INITIAL_ITEMS: ItemConfig[] = [
     tag: 'TRỢ GIÁ',
     subtitle: 'Bảo hành chính hãng 12 tháng 1 đổi 1',
   },
-
-  // 2. 2 BANNER NHỎ ĐÈ HERO
   {
     id: 'promo-1',
     name: 'AirPods 4',
@@ -120,37 +123,23 @@ const INITIAL_ITEMS: ItemConfig[] = [
     group: 'promo_cards',
     imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=300&q=80',
   },
-
-  // 3. TẤT CẢ DANH MỤC
   { id: 'cat-1', name: 'iPhone 18 Pro Max', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=300&q=80' },
   { id: 'cat-2', name: 'iPhone 17 Pro Max', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=300&q=80' },
   { id: 'cat-3', name: 'iPhone 17', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=300&q=80' },
   { id: 'cat-4', name: 'iPhone 17 Air', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=300&q=80' },
   { id: 'cat-5', name: 'iPhone 16 Series', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=300&q=80' },
-
-  // 4. SUBMODELS
   { id: 'sub-ip-1', name: 'Tất cả', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=200&q=80' },
   { id: 'sub-ip-2', name: 'iPhone 16 Series', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=200&q=80' },
   { id: 'sub-ip-3', name: 'iPhone 15 Series', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-ip-4', name: 'iPhone 14 Series', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-ip-5', name: 'iPhone 13 Series', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=200&q=80' },
-
   { id: 'sub-ipad-1', name: 'Tất cả', group: 'sub_ipad', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=200&q=80' },
   { id: 'sub-ipad-2', name: 'iPad Pro', group: 'sub_ipad', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-ipad-3', name: 'iPad Air', group: 'sub_ipad', imageUrl: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=200&q=80' },
-
   { id: 'sub-mac-1', name: 'Tất cả', group: 'sub_macbook', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80' },
   { id: 'sub-mac-2', name: 'MacBook Pro', group: 'sub_macbook', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-mac-3', name: 'MacBook Air', group: 'sub_macbook', imageUrl: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=200&q=80' },
-
-  // 5. 4 Ô CAM KẾT
   { id: 'commit-1', name: 'BẢO HÀNH VÀ HẬU MÃI', tag: 'ĐI ĐẦU VỀ CHẾ ĐỘ', subtitle: 'BẢO HÀNH VÀ HẬU MÃI', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=400&q=80' },
   { id: 'commit-2', name: 'SẢN PHẨM MINH BẠCH', tag: 'MINH BẠCH', subtitle: 'GIÁ BÁN NIÊM YẾT', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=400&q=80' },
-  { id: 'commit-3', name: 'TẬN TÂM PHỤC VỤ', tag: 'PHỤC VỤ TẬN TÂM', subtitle: 'TƯ VẤN CHÍNH XÁC', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556742111-a301076d9d18?auto=format&fit=crop&w=400&q=80' },
-  { id: 'commit-4', name: 'CHÍNH HÃNG 100%', tag: 'CAM KẾT', subtitle: 'CHÍNH HÃNG 100%', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=400&q=80' },
 ];
 
-export default function BannersTab({ onRefresh }: Props) {
+export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const [activeGroup, setActiveGroup] = useState<BannerGroup>('hero_banners');
   const [items, setItems] = useState<ItemConfig[]>(INITIAL_ITEMS);
   const [menus, setMenus] = useState<MenuItem[]>(MENU_DATA);
@@ -158,11 +147,9 @@ export default function BannersTab({ onRefresh }: Props) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveToast, setSaveToast] = useState(false);
 
-  // Quản lý cấp chọn của Menu Navbar
   const [selectedLevel1Id, setSelectedLevel1Id] = useState<string>(MENU_DATA[0]?.id || '');
   const [selectedLevel2Idx, setSelectedLevel2Idx] = useState<number | null>(0);
 
-  // Modal State cho Banner / Danh mục
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemConfig | null>(null);
   const [itemName, setItemName] = useState('');
@@ -173,7 +160,6 @@ export default function BannersTab({ onRefresh }: Props) {
   const [itemPriceText, setItemPriceText] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // Modal State cho Menu
   const [menuModalType, setMenuModalType] = useState<'level1' | 'level2' | 'level3' | null>(null);
   const [menuIsEdit, setMenuIsEdit] = useState(false);
   const [menuEditIndex, setMenuEditIndex] = useState<number | null>(null);
@@ -182,20 +168,33 @@ export default function BannersTab({ onRefresh }: Props) {
   const [menuBadge, setMenuBadge] = useState('');
   const [menuIsNew, setMenuIsNew] = useState(false);
 
-  // Nạp cấu hình từ LocalStorage kèm làm sạch URL
+  // Nạp dữ liệu từ Database / Props hoặc LocalStorage
   useEffect(() => {
-    try {
-      const savedBanners = localStorage.getItem('fogo_banners_config');
-      if (savedBanners) {
-        const parsed = JSON.parse(savedBanners);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const sanitized = parsed.map((it: ItemConfig) => ({
-            ...it,
-            imageUrl: cleanUrl(it.imageUrl),
-          }));
-          setItems(sanitized);
+    if (propBanners && Array.isArray(propBanners) && propBanners.length > 0) {
+      const mapped = propBanners.map((b: any) => ({
+        id: b.id,
+        name: b.title || b.name || 'Banner',
+        link: b.linkUrl || b.link || '/',
+        group: (b.position || b.group || 'hero_banners') as BannerGroup,
+        imageUrl: resolveImageUrl(b.imageUrl),
+        order: b.order,
+      }));
+      setItems(mapped);
+    } else {
+      try {
+        const savedBanners = localStorage.getItem('fogo_banners_config');
+        if (savedBanners) {
+          const parsed = JSON.parse(savedBanners);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setItems(parsed.map((it: ItemConfig) => ({ ...it, imageUrl: resolveImageUrl(it.imageUrl) })));
+          }
         }
+      } catch (e) {
+        console.error(e);
       }
+    }
+
+    try {
       const savedMenu = localStorage.getItem('fogo_menu_config');
       if (savedMenu) {
         const parsedMenu = JSON.parse(savedMenu);
@@ -207,7 +206,7 @@ export default function BannersTab({ onRefresh }: Props) {
     } catch (e) {
       console.error(e);
     }
-  }, []);
+  }, [propBanners]);
 
   const currentItems = items.filter((it) => it.group === activeGroup);
   const activeLevel1 = menus.find((m) => m.id === selectedLevel1Id) || menus[0];
@@ -216,40 +215,38 @@ export default function BannersTab({ onRefresh }: Props) {
       ? activeLevel1.groups[selectedLevel2Idx]
       : null;
 
-
-// Khi bấm nút "LƯU CẤU HÌNH"
-// LƯU TẤT CẢ VÀO HỆ THỐNG
+  // LƯU TOÀN BỘ VÀO NEON DATABASE
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     try {
-      // Chuẩn hóa URL ảnh trước khi lưu: bóc tách domain cứng, chỉ giữ /uploads/...
-      const cleanItems = items.map((it, idx) => {
-        let rawUrl = it.imageUrl || '';
-        if (rawUrl.includes('/uploads/')) {
-          rawUrl = '/uploads/' + rawUrl.split('/uploads/').pop();
-        }
-        return {
-          id: it.id,
-          title: it.name || it.title || 'Banner',
-          imageUrl: rawUrl,
-          link: it.link || '/',
-          group: it.group || activeGroup || 'hero_banners',
-          order: idx,
-        };
-      });
+      const payloadItems = items.map((it, idx) => ({
+        id: it.id,
+        title: it.name,
+        name: it.name,
+        imageUrl: it.imageUrl, // Lưu trực tiếp chuỗi Base64 hoặc link CDN vào DB Neon
+        linkUrl: it.link || '/',
+        link: it.link || '/',
+        position: it.group,
+        group: it.group,
+        isActive: true,
+        order: idx,
+      }));
 
-      // Lưu đồng bộ thẳng vào Database qua API
-      const res = await fetch(`${API_BASE}/api/admin/banners/sync`, {
+      // Gọi đồng bộ trực tiếp vào Database
+      const res = await fetch(`${API_URL}/api/admin/banners/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cleanItems, menus }),
+        body: JSON.stringify({ items: payloadItems }),
       });
 
       if (!res.ok) {
-        throw new Error('Không thể kết nối đến máy chủ API');
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Lỗi máy chủ (${res.status})`);
       }
 
-      setItems(cleanItems);
+      localStorage.setItem('fogo_banners_config', JSON.stringify(items));
+      localStorage.setItem('fogo_menu_config', JSON.stringify(menus));
+
       setHasUnsavedChanges(false);
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3000);
@@ -260,8 +257,9 @@ export default function BannersTab({ onRefresh }: Props) {
       setIsSaving(false);
     }
   };
+
   const handleResetDefault = () => {
-    if (!confirm('Khôi phục toàn bộ cấu hình Banner & Menu về mặc định?')) return;
+    if (!confirm('Khôi phục toàn bộ cấu hình Banner về mặc định?')) return;
     setItems(INITIAL_ITEMS);
     setMenus(MENU_DATA);
     localStorage.removeItem('fogo_banners_config');
@@ -269,7 +267,6 @@ export default function BannersTab({ onRefresh }: Props) {
     setHasUnsavedChanges(true);
   };
 
-  // Mở modal thêm/sửa Banner
   const handleOpenAdd = () => {
     setEditingItem(null);
     setItemName('');
@@ -284,7 +281,7 @@ export default function BannersTab({ onRefresh }: Props) {
   const handleOpenEdit = (it: ItemConfig) => {
     setEditingItem(it);
     setItemName(it.name);
-    setItemImageUrl(cleanUrl(it.imageUrl));
+    setItemImageUrl(it.imageUrl);
     setItemLink(it.link || '');
     setItemTag(it.tag || '');
     setItemSubtitle(it.subtitle || '');
@@ -298,41 +295,36 @@ export default function BannersTab({ onRefresh }: Props) {
     setHasUnsavedChanges(true);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
+  // NÉN VÀ ĐỌC FILE ẢNH THÀNH BASE64 - LƯU VĨNH VIỄN VÀO DATABASE
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      const res = await fetch('https://fogo-store-api.onrender.com/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.success && data.imageUrl) {
-        // ÉP BUỘC CHUYỂN ĐỔI NGAY TẠI ĐÂY NẾU BACKEND VẪN TRẢ VỀ LOCALHOST
-        const forceHttpsUrl = String(data.imageUrl).replace(
-          /http:\/\/localhost:[0-9]+/g,
-          'https://fogo-store-api.onrender.com'
-        );
-        setItemImageUrl(forceHttpsUrl);
-      } else {
-        alert('Tải ảnh thất bại');
-      }
-    } catch {
-      alert('Không thể kết nối máy chủ tải ảnh');
-    } finally {
-      setUploading(false);
+    if (file.size > 3 * 1024 * 1024) {
+      alert('Vui lòng chọn file ảnh có dung lượng dưới 3MB để tải nhanh!');
+      return;
     }
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setItemImageUrl(base64);
+      setUploading(false);
+    };
+    reader.onerror = () => {
+      alert('Lỗi khi đọc file ảnh');
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim() || !itemImageUrl.trim()) {
-      alert('Vui lòng nhập tên và tải ảnh');
+      alert('Vui lòng nhập tên và chọn ảnh');
       return;
     }
-
-    const safeUrl = cleanUrl(itemImageUrl);
 
     if (editingItem) {
       setItems((prev) =>
@@ -341,7 +333,7 @@ export default function BannersTab({ onRefresh }: Props) {
             ? {
                 ...it,
                 name: itemName,
-                imageUrl: safeUrl,
+                imageUrl: itemImageUrl,
                 link: itemLink,
                 tag: itemTag,
                 subtitle: itemSubtitle,
@@ -356,7 +348,7 @@ export default function BannersTab({ onRefresh }: Props) {
         name: itemName,
         link: itemLink,
         group: activeGroup,
-        imageUrl: safeUrl,
+        imageUrl: itemImageUrl,
         tag: itemTag,
         subtitle: itemSubtitle,
         priceText: itemPriceText,
@@ -368,7 +360,6 @@ export default function BannersTab({ onRefresh }: Props) {
     setIsModalOpen(false);
   };
 
-  // QUẢN LÝ MENU MODAL SUBMIT
   const handleSaveMenuModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!menuTitle.trim()) return;
@@ -439,17 +430,16 @@ export default function BannersTab({ onRefresh }: Props) {
 
   return (
     <div className="space-y-6 select-none relative">
-      {/* TOAST LƯU THÀNH CÔNG */}
       {saveToast && (
         <div className="fixed top-20 right-8 z-[99999] animate-in slide-in-from-top-4 duration-300">
           <div className="bg-[#00a859] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-2.5 font-bold text-xs border border-emerald-400">
             <CheckCircle2 size={18} />
-            <span>Đã lưu thành công toàn bộ cấu hình Banner &amp; Menu Website!</span>
+            <span>Đã lưu thành công toàn bộ cấu hình Banner &amp; Menu vào Database!</span>
           </div>
         </div>
       )}
 
-      {/* HEADER TỔNG */}
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-2xs">
         <div>
           <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
@@ -457,7 +447,7 @@ export default function BannersTab({ onRefresh }: Props) {
             <span>Quản Lý Banner, Danh Mục, Submodel &amp; Menu</span>
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Thay đổi hình ảnh, cấu trúc Navbar đa cấp và bấm <b>LƯU CẤU HÌNH</b> để cập nhật trực tiếp ra Website.
+            Mọi hình ảnh tải lên sẽ được lưu trữ vĩnh viễn trong <b>Database Neon</b> và tự động hiển thị ra Trang Chủ.
           </p>
         </div>
 
@@ -490,12 +480,12 @@ export default function BannersTab({ onRefresh }: Props) {
             }`}
           >
             <Save size={16} className={isSaving ? 'animate-spin' : ''} />
-            <span>{isSaving ? 'ĐANG LƯU...' : 'LƯU CẤU HÌNH'}</span>
+            <span>{isSaving ? 'ĐANG LƯU VÀO DB...' : 'LƯU CẤU HÌNH'}</span>
           </button>
         </div>
       </div>
 
-      {/* THANH TAB TRỰC QUAN */}
+      {/* TABS */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-gray-200 text-xs">
         <button
           onClick={() => setActiveGroup('hero_banners')}
@@ -615,10 +605,8 @@ export default function BannersTab({ onRefresh }: Props) {
         </button>
       </div>
 
-      {/* NỘI DUNG TỪNG NHÓM */}
+      {/* DANH SÁCH BANNER */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        
-        {/* NHÓM 1: BANNER LỚN */}
         {activeGroup === 'hero_banners' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentItems.map((item) => (
@@ -626,7 +614,7 @@ export default function BannersTab({ onRefresh }: Props) {
                 key={item.id}
                 className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[21/9] flex flex-col justify-between group bg-gray-900"
               >
-                <img src={cleanUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-85" />
+                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-85" />
                 <div className="relative p-4 z-10 text-white space-y-1">
                   <h3 className="font-black text-sm md:text-base">{item.name}</h3>
                   {item.subtitle && <p className="text-xs text-gray-300">{item.subtitle}</p>}
@@ -644,7 +632,6 @@ export default function BannersTab({ onRefresh }: Props) {
           </div>
         )}
 
-        {/* NHÓM 2: 2 BANNER CON THUẦN ẢNH */}
         {activeGroup === 'promo_cards' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentItems.map((item) => (
@@ -652,7 +639,7 @@ export default function BannersTab({ onRefresh }: Props) {
                 key={item.id}
                 className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[2.8/1] flex flex-col justify-between group bg-gray-100"
               >
-                <img src={cleanUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="relative p-2 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-b from-black/60 to-transparent">
                   <span className="text-[10px] text-white font-bold mr-auto px-2 py-0.5 bg-black/40 rounded">{item.name}</span>
                   <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer">
@@ -667,12 +654,11 @@ export default function BannersTab({ onRefresh }: Props) {
           </div>
         )}
 
-        {/* NHÓM 3: 4 Ô CAM KẾT */}
         {activeGroup === 'commit_cards' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {currentItems.map((item) => (
               <div key={item.id} className="relative rounded-lg overflow-hidden border border-gray-200 aspect-square flex flex-col justify-between group">
-                <img src={cleanUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="relative p-4 z-10 text-center text-white space-y-1">
                   <span className="bg-[#d70018] text-white font-black text-xs px-2 py-0.5 rounded uppercase">{item.name}</span>
@@ -690,7 +676,6 @@ export default function BannersTab({ onRefresh }: Props) {
           </div>
         )}
 
-        {/* NHÓM 4, 5, 6, 7: DANH MỤC & SUBMODELS */}
         {['all_categories', 'sub_iphone', 'sub_ipad', 'sub_macbook'].includes(activeGroup) && (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
             {currentItems.map((item) => (
@@ -704,7 +689,7 @@ export default function BannersTab({ onRefresh }: Props) {
                   </button>
                 </div>
                 <div className="w-14 h-14 rounded-md bg-white p-1 border flex items-center justify-center my-auto">
-                  <img src={cleanUrl(item.imageUrl)} alt={item.name} className="max-w-full max-h-full object-contain" />
+                  <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="max-w-full max-h-full object-contain" />
                 </div>
                 <span className="text-[11px] font-bold text-gray-800 line-clamp-2 leading-tight mt-2">{item.name}</span>
               </div>
@@ -712,7 +697,7 @@ export default function BannersTab({ onRefresh }: Props) {
           </div>
         )}
 
-        {/* NHÓM 8: QUẢN LÝ MENU NAVBAR ĐA CẤP (3 CỘT TRỰC QUAN) */}
+        {/* MENU NAVBAR CẤP 1 - 2 - 3 */}
         {activeGroup === 'nav_menu' && (
           <div className="space-y-4">
             <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center justify-between">
@@ -732,7 +717,7 @@ export default function BannersTab({ onRefresh }: Props) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-              {/* CỘT 1: CẤP 1 */}
+              {/* CỘT 1 */}
               <div className="md:col-span-4 bg-[#f8f9fa] border border-gray-200 rounded-lg p-3 space-y-2">
                 <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                   <span className="font-black text-xs uppercase text-gray-800">Cấp 1 (Thanh Menu)</span>
@@ -789,7 +774,7 @@ export default function BannersTab({ onRefresh }: Props) {
                 </div>
               </div>
 
-              {/* CỘT 2: CẤP 2 */}
+              {/* CỘT 2 */}
               <div className="md:col-span-4 bg-[#f8f9fa] border border-gray-200 rounded-lg p-3 space-y-2">
                 <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                   <span className="font-black text-xs uppercase text-blue-700">Cấp 2 (Nhóm Dropdown)</span>
@@ -855,7 +840,7 @@ export default function BannersTab({ onRefresh }: Props) {
                 </div>
               </div>
 
-              {/* CỘT 3: CẤP 3 */}
+              {/* CỘT 3 */}
               <div className="md:col-span-4 bg-[#f8f9fa] border border-gray-200 rounded-lg p-3 space-y-2">
                 <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                   <span className="font-black text-xs uppercase text-emerald-700">Cấp 3 (Phiên Bản Con)</span>
@@ -915,13 +900,13 @@ export default function BannersTab({ onRefresh }: Props) {
         )}
       </div>
 
-      {/* MODAL SỬA/THÊM BANNER */}
+      {/* MODAL SỬA/THÊM BANNER KÈM PREVIEW CHUẨN */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-xs max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-sm text-gray-900">{editingItem ? 'Chỉnh Sửa Mục' : 'Thêm Mục Mới'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
             </div>
             <form onSubmit={handleSaveModal} className="space-y-3">
               <div>
@@ -933,31 +918,48 @@ export default function BannersTab({ onRefresh }: Props) {
                 <input type="text" value={itemLink} onChange={(e) => setItemLink(e.target.value)} className="w-full border rounded p-2 outline-none font-mono text-xs" />
               </div>
               <div className="space-y-2">
-                <label className="font-bold text-gray-700 block">Hình ảnh *</label>
+                <label className="font-bold text-gray-700 block">Hình ảnh (Đường dẫn hoặc tải trực tiếp) *</label>
                 <div className="flex gap-2">
-                  <input type="text" required value={itemImageUrl} onChange={(e) => setItemImageUrl(e.target.value)} className="flex-1 border rounded p-2 outline-none text-xs" />
+                  <input
+                    type="text"
+                    required
+                    value={itemImageUrl}
+                    onChange={(e) => setItemImageUrl(e.target.value)}
+                    placeholder="Nhập URL ảnh hoặc bấm Tải Ảnh"
+                    className="flex-1 border rounded p-2 outline-none text-xs truncate"
+                  />
                   <label className="bg-gray-100 hover:bg-gray-200 border px-3 py-2 rounded font-bold cursor-pointer flex items-center gap-1 shrink-0">
-                    <UploadCloud size={14} /><span>Tải Ảnh</span>
+                    <UploadCloud size={14} />
+                    <span>Tải Ảnh</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
                   </label>
                 </div>
-                {uploading && <p className="text-[10px] text-blue-600 font-bold">Đang tải ảnh...</p>}
-                {itemImageUrl && (
-                  <div className="p-2 border rounded bg-gray-50 flex items-center justify-center h-28">
-                    <img src={cleanUrl(itemImageUrl)} alt="" className="max-h-full object-contain" />
-                  </div>
-                )}
+                {uploading && <p className="text-[11px] text-blue-600 font-bold">Đang tải và xử lý hình ảnh...</p>}
+                
+                {/* KHUNG PREVIEW LUÔN HIỆN ẢNH KỂ CẢ BASE64 */}
+                <div className="p-2 border rounded-lg bg-gray-50 flex items-center justify-center h-36 overflow-hidden">
+                  {itemImageUrl ? (
+                    <img
+                      src={resolveImageUrl(itemImageUrl)}
+                      alt="Preview"
+                      className="max-h-full max-w-full object-contain rounded"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-xs italic">Xem trước hình ảnh sẽ xuất hiện tại đây</span>
+                  )}
+                </div>
               </div>
+
               <div className="pt-3 flex justify-end gap-2 border-t">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded">Hủy</button>
-                <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded shadow-sm">Xác Nhận</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded cursor-pointer">Hủy</button>
+                <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded shadow-sm cursor-pointer">Xác Nhận</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL SỬA/THÊM MENU NAVBAR */}
+      {/* MODAL MENU NAVBAR */}
       {menuModalType && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl text-xs">
@@ -965,7 +967,7 @@ export default function BannersTab({ onRefresh }: Props) {
               <h3 className="font-extrabold text-sm text-gray-900">
                 {menuIsEdit ? 'Chỉnh Sửa' : 'Thêm'} Menu {menuModalType === 'level1' ? 'Cấp 1' : menuModalType === 'level2' ? 'Cấp 2' : 'Cấp 3'}
               </h3>
-              <button onClick={() => setMenuModalType(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <button onClick={() => setMenuModalType(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
             </div>
             <form onSubmit={handleSaveMenuModal} className="space-y-3">
               <div>
@@ -989,8 +991,8 @@ export default function BannersTab({ onRefresh }: Props) {
                 </div>
               )}
               <div className="pt-3 flex justify-end gap-2 border-t">
-                <button type="button" onClick={() => setMenuModalType(null)} className="px-4 py-2 border rounded">Hủy</button>
-                <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded">Xác Nhận</button>
+                <button type="button" onClick={() => setMenuModalType(null)} className="px-4 py-2 border rounded cursor-pointer">Hủy</button>
+                <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded cursor-pointer">Xác Nhận</button>
               </div>
             </form>
           </div>
