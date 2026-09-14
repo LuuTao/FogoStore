@@ -6,6 +6,7 @@ import MacBookDetail from '@/components/products/MacBookDetail';
 import UsedProductDetail from '@/components/products/UsedProductDetail';
 import WatchDetail from '@/components/products/WatchDetail';
 import AccessoryDetail from '@/components/products/AccessoryDetail';
+import TrackRecentViewed from '@/components/products/TrackRecentViewed'; // <-- Import component theo dõi
 import { ACCESSORY_CATALOG_ITEMS } from '@/data/accessoryCatalog';
 
 interface PageProps {
@@ -14,7 +15,6 @@ interface PageProps {
 }
 
 export default async function ProductDetailPage(props: PageProps) {
-  // Giải quyết Promise params an toàn cho cả Next.js 14 và Next.js 15
   const rawParams = props.params instanceof Promise ? await props.params : props.params;
   const rawSearchParams = props.searchParams instanceof Promise ? await props.searchParams : props.searchParams;
 
@@ -50,7 +50,6 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
 
-    // Thử lại với currentSlug nếu baseSlug không ra kết quả
     if (!product && baseSlug !== currentSlug) {
       res = await fetch(`${apiUrl}/api/products/${currentSlug}${query}`, {
         cache: 'no-store',
@@ -95,7 +94,7 @@ export default async function ProductDetailPage(props: PageProps) {
     }
   }
 
-  // 4. Fallback khẩn cấp toàn bộ sản phẩm: Tự tạo Mock Data thông minh từ Slug để không bao giờ bị 404
+  // 4. Fallback khẩn cấp toàn bộ sản phẩm
   if (!product) {
     const cleanWords = currentSlug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     
@@ -169,12 +168,15 @@ export default async function ProductDetailPage(props: PageProps) {
 
   if (isUsedProduct) {
     return (
-      <UsedProductDetail
-        initialProduct={product}
-        currentSlug={currentSlug}
-        baseSlug={baseSlug}
-        urlStorage={urlStorage}
-      />
+      <>
+        <TrackRecentViewed product={product} />
+        <UsedProductDetail
+          initialProduct={product}
+          currentSlug={currentSlug}
+          baseSlug={baseSlug}
+          urlStorage={urlStorage}
+        />
+      </>
     );
   }
 
@@ -201,12 +203,15 @@ export default async function ProductDetailPage(props: PageProps) {
 
   if (isAccessory) {
     return (
-      <AccessoryDetail
-        initialProduct={product}
-        currentSlug={currentSlug}
-        baseSlug={baseSlug}
-        urlStorage={urlStorage}
-      />
+      <>
+        <TrackRecentViewed product={product} />
+        <AccessoryDetail
+          initialProduct={product}
+          currentSlug={currentSlug}
+          baseSlug={baseSlug}
+          urlStorage={urlStorage}
+        />
+      </>
     );
   }
 
@@ -220,12 +225,15 @@ export default async function ProductDetailPage(props: PageProps) {
 
   if (isWatch) {
     return (
-      <WatchDetail
-        initialProduct={product}
-        currentSlug={currentSlug}
-        baseSlug={baseSlug}
-        urlStorage={urlStorage}
-      />
+      <>
+        <TrackRecentViewed product={product} />
+        <WatchDetail
+          initialProduct={product}
+          currentSlug={currentSlug}
+          baseSlug={baseSlug}
+          urlStorage={urlStorage}
+        />
+      </>
     );
   }
 
@@ -238,12 +246,15 @@ export default async function ProductDetailPage(props: PageProps) {
 
   if (isMacBook) {
     return (
-      <MacBookDetail
-        initialProduct={product}
-        currentSlug={currentSlug}
-        baseSlug={baseSlug}
-        urlStorage={urlStorage}
-      />
+      <>
+        <TrackRecentViewed product={product} />
+        <MacBookDetail
+          initialProduct={product}
+          currentSlug={currentSlug}
+          baseSlug={baseSlug}
+          urlStorage={urlStorage}
+        />
+      </>
     );
   }
 
@@ -255,23 +266,29 @@ export default async function ProductDetailPage(props: PageProps) {
 
   if (isIPad) {
     return (
-      <IPadDetail
-        initialProduct={product}
-        currentSlug={currentSlug}
-        baseSlug={baseSlug}
-        urlStorage={urlStorage}
-      />
+      <>
+        <TrackRecentViewed product={product} />
+        <IPadDetail
+          initialProduct={product}
+          currentSlug={currentSlug}
+          baseSlug={baseSlug}
+          urlStorage={urlStorage}
+        />
+      </>
     );
   }
 
   // 6. MẶC ĐỊNH: IPHONE
   return (
-    <IPhoneDetail
-      initialProduct={product}
-      currentSlug={currentSlug}
-      baseSlug={baseSlug}
-      urlStorage={urlStorage}
-    />
+    <>
+      <TrackRecentViewed product={product} />
+      <IPhoneDetail
+        initialProduct={product}
+        currentSlug={currentSlug}
+        baseSlug={baseSlug}
+        urlStorage={urlStorage}
+      />
+    </>
   );
 }
 
