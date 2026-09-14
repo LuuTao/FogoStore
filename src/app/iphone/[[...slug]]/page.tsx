@@ -195,34 +195,40 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
-  // 3. Logic lọc tự động
+  // 3. Logic lọc tự động thông minh (Hỗ trợ bắt mọi dòng số và tên biến thể)
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
     if (currentFilter) {
-      const numMatch = currentFilter.match(/\d+/);
+      const lowerFilter = currentFilter.toLowerCase();
+      // Tách lấy toàn bộ chuỗi số có trong bộ lọc (Ví dụ: "17", "16",...)
+      const numMatch = lowerFilter.match(/\d+/);
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
+        // Lọc tất cả sản phẩm có tên chứa con số đó (Ví dụ: chứa số "17")
         items = items.filter((i) => i.searchIndex.includes(targetNumber));
 
-        if (currentFilter.includes('pro-max')) {
-          items = items.filter((i) => i.searchIndex.includes('pro max'));
-        } else if (currentFilter.includes('pro')) {
-          items = items.filter((i) => i.searchIndex.includes('pro') && !i.searchIndex.includes('pro max'));
-        } else if (currentFilter.includes('plus')) {
+        // Lọc tinh chỉnh theo các phiên bản Pro Max, Pro, Plus, Thường nếu có yêu cầu
+        if (lowerFilter.includes('pro-max') || lowerFilter.includes('promax')) {
+          items = items.filter((i) => i.searchIndex.includes('pro max') || i.searchIndex.includes('promax'));
+        } else if (lowerFilter.includes('pro') && !lowerFilter.includes('max')) {
+          items = items.filter((i) => i.searchIndex.includes('pro') && !i.searchIndex.includes('max'));
+        } else if (lowerFilter.includes('plus')) {
           items = items.filter((i) => i.searchIndex.includes('plus'));
-        } else if (currentFilter.includes('thuong')) {
+        } else if (lowerFilter.includes('thuong') || lowerFilter.includes('standard')) {
           items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('plus'));
         }
       } else {
-        const cleanTag = currentFilter.replace(/iphone|-|series/g, ' ').trim();
+        // Trường hợp lọc bằng chữ (ví dụ: "hang-cu", "chinh-hang")
+        const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
           items = items.filter((i) => i.searchIndex.includes(cleanTag));
         }
       }
     }
 
+    // Sắp xếp sản phẩm theo tiêu chí
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
