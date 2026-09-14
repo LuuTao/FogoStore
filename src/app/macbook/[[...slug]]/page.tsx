@@ -15,17 +15,17 @@ const MACBOOK_SERIES_LIST = [
   {
     name: 'MacBook Pro',
     slug: 'macbook-pro',
-    img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'MacBook Air',
     slug: 'macbook-air',
-    img: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/hinh_anh_3_ae4b6b83d56744018803cb8c1211dc15_large_2b8556643ad34d4bbc8c1aae0d5e25ce_master.jpg?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'MacBook Neo',
     slug: 'macbook-neo',
-    img: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/mbn-vang_01c8b19230654bdbb81f87daae826525_master.jpg?auto=format&fit=crop&w=150&q=80',
   },
 ];
 
@@ -38,61 +38,61 @@ const MACBOOK_SUBMODELS_MAP: Record<
     {
       name: 'MacBook Pro M5',
       slug: 'macbook-pro-m5',
-      img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Pro M4',
       slug: 'macbook-pro-m4',
-      img: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Pro M3',
       slug: 'macbook-pro-m3',
-      img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Pro M2',
       slug: 'macbook-pro-m2',
-      img: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=150&q=80',
+      img: 'https://product.hstatic.net/200000768357/product/color_64cbaa85726e49dab23ec2a848b54521_master.png?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Pro M1',
       slug: 'macbook-pro-m1',
-      img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+      img: 'https://product.hstatic.net/200000768357/product/gray_9303e56f1307413da72dfe5a4826b5f2_master.png?auto=format&fit=crop&w=150&q=80',
     },
   ],
   'macbook-air': [
     {
       name: 'MacBook Air M5',
       slug: 'macbook-air-m5',
-      img: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/hinh_anh_3_ae4b6b83d56744018803cb8c1211dc15_large_2b8556643ad34d4bbc8c1aae0d5e25ce_master.jpg?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Air M4',
       slug: 'macbook-air-m4',
-      img: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/acbook-air-m5-starlight-gia-re_60f0d7d0a60f4ce3af41eecce1fb680c_master_1ac5ec3477844421bb8fb62b6a3af448_master.png?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Air M3',
       slug: 'macbook-air-m3',
-      img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/hinh_anh_10_792652cbafb04dfba6e6ca428ebf159b_large_95b5ce2b3ecc4ad8947d823544eff163_master.jpeg?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Air M2',
       slug: 'macbook-air-m2',
-      img: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=150&q=80',
+      img: 'https://product.hstatic.net/200000768357/product/hinh_anh_17_d0d916bb3df444d0aa6b013449985c07_master.jpeg?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'MacBook Air M1',
       slug: 'macbook-air-m1',
-      img: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=150&q=80',
+      img: 'https://product.hstatic.net/200000768357/product/gray_643bc60631144e5690acfcc271e05901_master.png?auto=format&fit=crop&w=150&q=80',
     },
   ],
   'macbook-neo': [
     {
       name: 'MacBook NEO (2026)',
       slug: 'macbook-neo-2026',
-      img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/mbn-vang_01c8b19230654bdbb81f87daae826525_master.jpg?auto=format&fit=crop&w=150&q=80',
     },
   ],
 };

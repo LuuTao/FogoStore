@@ -19,28 +19,33 @@ interface SeriesTabItem {
 
 const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   {
+    name: 'Tất cả',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w100',
+    queryTag: null,
+  },
+  {
+    name: 'iPhone Dou Series',
+    slug: 'iphone-dou',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w100',
+    queryTag: 'dou',
+  },
+  {
+    name: 'iPhone 18 Series',
+    slug: 'iphone-18',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
+    queryTag: '18',
+  },
+  {
+    name: 'iPhone 17 Series',
+    slug: 'iphone-17',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w100',
+    queryTag: '17',
+  },
+  {
     name: 'iPhone 16 Series',
     slug: 'iphone-16',
-    img: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
     queryTag: '16',
-  },
-  {
-    name: 'iPhone 15 Series',
-    slug: 'iphone-15',
-    img: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=150&q=80',
-    queryTag: '15',
-  },
-  {
-    name: 'iPhone 14 Series',
-    slug: 'iphone-14',
-    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=150&q=80',
-    queryTag: '14',
-  },
-  {
-    name: 'iPhone 13 Series',
-    slug: 'iphone-13',
-    img: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=150&q=80',
-    queryTag: '13',
   },
 ];
 

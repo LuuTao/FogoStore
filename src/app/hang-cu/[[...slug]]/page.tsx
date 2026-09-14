@@ -12,44 +12,29 @@ import { FilterAndSortBar, SortType, FilterState } from '@/components/category/F
 
 // 1. Danh mục cấp 1: 3 Nhóm lớn Hàng Cũ
 const USED_CATEGORIES = [
-  {
-    name: 'iPhone Cũ',
-    slug: 'iphone-cu',
-    img: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=150&q=80',
-  },
-  {
-    name: 'iPad Cũ',
-    slug: 'ipad-cu',
-    img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
-  },
-  {
-    name: 'MacBook Cũ',
-    slug: 'macbook-cu',
-    img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
-  },
 ];
 
 // 2. Danh mục cấp 2: Phân loại theo đời máy
 const USED_SUBMODELS_MAP: Record<string, { name: string; slug: string; img: string }[]> = {
   'iphone-cu': [
     {
+      name: 'iPhone 17 Series Cũ',
+      slug: 'iphone-17-series-cu',
+      img: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=150&q=80',
+    },
+    {
       name: 'iPhone 16 Series Cũ',
       slug: 'iphone-16-series-cu',
-      img: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=150&q=80',
+      img: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'iPhone 15 Series Cũ',
       slug: 'iphone-15-series-cu',
-      img: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=150&q=80',
+      img: 'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'iPhone 14 Series Cũ',
       slug: 'iphone-14-series-cu',
-      img: 'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'iPhone 13 Series Cũ',
-      slug: 'iphone-13-series-cu',
       img: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=150&q=80',
     },
   ],

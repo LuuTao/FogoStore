@@ -5,6 +5,36 @@ import Link from 'next/link';
 import { Star, ArrowRight } from 'lucide-react';
 
 const IPAD_SERIES_TABS = [
+  {
+    id: 'ALL',
+    series: null,
+    name: 'Tất cả',
+    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100',
+  },
+  {
+    id: 'pro',
+    series: 'pro',
+    name: 'iPad Pro',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_7_3c20405a12184c8fbbaf9293b657d6d7_master.jpeg?w=100',
+  },
+  {
+    id: 'air',
+    series: 'air',
+    name: 'iPad Air',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/ipad-air-8-all_4c5134002be44d24853b114b4bdf3267_master.jpg?w=100',
+  },
+  {
+    id: 'gen',
+    series: 'gen',
+    name: 'iPad Gen',
+    imageUrl: 'https://product.hstatic.net/200000768357/product/hinh_anh_30_ccd323ad778440debc77bf4741fc266b_master.jpeg?w=100',
+  },
+  {
+    id: 'mini',
+    series: 'mini',
+    name: 'iPad Mini',
+    imageUrl: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?w=100',
+  },
 ];
 
 export const IPadShowcaseSection: React.FC = () => {

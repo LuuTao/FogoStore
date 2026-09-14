@@ -14,27 +14,17 @@ const ACCESSORY_CATEGORIES = [
   {
     name: 'Củ & Cáp Sạc',
     slug: 'sac-cap',
-    img: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/mw2l3_geo_vn_de11bc805a154184b143c3eb18f4da05_master.jpeg?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'AirPods & Âm Thanh',
     slug: 'tai-nghe',
-    img: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=150&q=80',
-  },
-  {
-    name: 'Ốp Lưng & Bao Da',
-    slug: 'op-lung',
-    img: 'https://images.unsplash.com/photo-1601593346740-925612772716?auto=format&fit=crop&w=150&q=80',
-  },
-  {
-    name: 'Kính Cường Lực',
-    slug: 'cuong-luc',
-    img: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&w=150&q=80',
+    img: 'https://product.hstatic.net/200000768357/product/a3_1_42b1bd6f73de43ea8152bb40d71e610d_997dc83fdca54d0fb00c189095d50e21_master.png?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'Bút Pencil & Phím',
     slug: 'phu-kien-mac',
-    img: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=150&q=80',
+    img: 'https://product.hstatic.net/200000768357/product/magic-keyboard-for-ipad-pro-11-inch-m4-white-4-square_medium_344b97d0559244a485169928d75bb5a7_master.jpg?auto=format&fit=crop&w=150&q=80',
   },
 ];
 

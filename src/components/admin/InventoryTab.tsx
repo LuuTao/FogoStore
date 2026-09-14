@@ -34,12 +34,12 @@ interface Props {
 
 // 1. Bổ sung 3 danh mục máy cũ vào cấu trúc phân cấp khi đăng sản phẩm
 const SUB_SERIES_PRESETS: Record<string, string[]> = {
-  iPhone: ['iPhone 16 Series', 'iPhone 15 Series', 'iPhone 14 Series', 'iPhone 13 Series'],
+  iPhone: ['iPhone Dou Series', 'iPhone 18 Series', 'iPhone 17 Series', 'iPhone 16 Series'],
   iPad: ['iPad Pro', 'iPad Air', 'iPad Gen', 'iPad Mini'],
   MacBook: ['MacBook Pro', 'MacBook Air', 'MacBook Neo'],
   Watch: ['Apple Watch Ultra', 'Apple Watch Series', 'Apple Watch SE'],
-  'Phụ kiện': ['Củ sạc & Cáp', 'Tai nghe AirPods', 'Ốp lưng & Bao da', 'Kính cường lực', 'Bút & Bàn phím'],
-  'iPhone Cũ': ['iPhone 16 Series Cũ', 'iPhone 15 Series Cũ', 'iPhone 14 Series Cũ', 'iPhone 13 Series Cũ'],
+  'Phụ kiện': ['Củ sạc & Cáp', 'Tai nghe AirPods', 'Bút & Bàn phím'],
+  'iPhone Cũ': ['iPhone 17 Series Cũ', 'iPhone 16 Series Cũ', 'iPhone 15 Series Cũ', 'iPhone 14 Series Cũ'],
   'iPad Cũ': ['iPad Pro Cũ', 'iPad Air Cũ', 'iPad Gen Cũ', 'iPad Mini Cũ'],
   'MacBook Cũ': ['MacBook Pro Cũ', 'MacBook Air Cũ'],
 };

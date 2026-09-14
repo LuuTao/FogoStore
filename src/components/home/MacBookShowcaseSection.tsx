@@ -6,7 +6,30 @@ import { Star, ArrowRight } from 'lucide-react';
 
 // Dàn icon series MacBook chuẩn giao diện Apple
 const MACBOOK_SERIES_TABS = [
-
+  {
+    id: 'ALL',
+    series: null,
+    name: 'Tất cả',
+    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100',
+  },
+  {
+    id: 'pro',
+    series: 'pro',
+    name: 'MacBook Pro',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?w=100',
+  },
+  {
+    id: 'air',
+    series: 'air',
+    name: 'MacBook Air',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/hinh_anh_3_ae4b6b83d56744018803cb8c1211dc15_large_2b8556643ad34d4bbc8c1aae0d5e25ce_master.jpg?w=100',
+  },
+  {
+    id: 'neo',
+    series: 'neo',
+    name: 'MacBook Neo',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/mbn-vang_01c8b19230654bdbb81f87daae826525_master.jpg?w=100',
+  },
 ];
 
 export const MacBookShowcaseSection: React.FC = () => {

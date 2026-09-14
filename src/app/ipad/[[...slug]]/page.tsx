@@ -15,22 +15,22 @@ const IPAD_SERIES_LIST = [
   {
     name: 'iPad Pro',
     slug: 'ipad-pro',
-    img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp0?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'iPad Air',
     slug: 'ipad-air',
-    img: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'iPad Gen',
     slug: 'ipad-gen',
-    img: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'iPad Mini',
     slug: 'ipad-mini',
-    img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+    img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?auto=format&fit=crop&w=150&q=80',
   },
 ];
 
@@ -43,53 +43,53 @@ const IPAD_SUBMODELS_MAP: Record<
     {
       name: 'iPad Pro M5',
       slug: 'ipad-pro-m5',
-      img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'iPad Pro M4',
       slug: 'ipad-pro-m4',
-      img: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'iPad Pro M2',
       slug: 'ipad-pro-m2',
-      img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+      img: 'https://product.hstatic.net/200000768357/product/ipad_pro_m2_-_11_inch__colors__c4189cc924bb40b181351e979df29f64_master.png?auto=format&fit=crop&w=150&q=80',
     },
   ],
   'ipad-air': [
     {
       name: 'iPad Air M4',
       slug: 'ipad-air-m4',
-      img: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'iPad Air 7',
       slug: 'ipad-air-7',
-      img: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'iPad Air 6',
       slug: 'ipad-air-6',
-      img: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80'
     },
     {
       name: 'iPad Air 5',
       slug: 'ipad-air-5',
-      img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+      img: 'https://product.hstatic.net/200000768357/product/ipad_air_5__colors__06251c7b63d5478188404b205b5b5fdb_master.png?auto=format&fit=crop&w=150&q=80'
     },
   ],
   'ipad-gen': [
     {
       name: 'iPad Gen 11',
       slug: 'ipad-gen-11',
-      img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?auto=format&fit=crop&w=150&q=80',
     },
   ],
   'ipad-mini': [
     {
       name: 'iPad Mini 7',
       slug: 'ipad-mini-7',
-      img: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=150&q=80',
+      img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?auto=format&fit=crop&w=150&q=80',
     },
   ],
 };
