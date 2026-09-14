@@ -8,24 +8,51 @@ interface Props {
 }
 
 export default function AnalyticsTab({ analytics }: Props) {
-  // Lọc chỉ tính các đơn hàng ở trạng thái hoàn tất (hoặc dùng trực tiếp từ dữ liệu trả về nếu backend đã lọc)
-  const completedOrdersList = useMemo(() => {
+  // Lọc các đơn hàng hợp lệ: Hoàn tất HOẶC Đã thanh toán QR/Online
+  const validOrders = useMemo(() => {
     const rawOrders = analytics?.rawOrders || analytics?.orders || [];
     if (!Array.isArray(rawOrders)) return [];
+
     return rawOrders.filter((o: any) => {
-      const st = (o.status || o.orderStatus || '').toLowerCase();
-      return st === 'hoàn tất' || st === 'completed' || st === 'delivered' || st === 'success';
+      const status = (o.status || o.orderStatus || '').toLowerCase();
+      const paymentMethod = (o.paymentMethod || o.ptThanhToan || '').toLowerCase();
+      const paymentStatus = (o.paymentStatus || o.trangThaiThanhToan || '').toLowerCase();
+
+      const isCompleted = status === 'hoàn tất' || status === 'completed' || status === 'delivered' || status === 'success';
+      
+      // Kiểm tra xem đã quét mã QR hoặc thanh toán online chưa
+      const isPaidOnline = 
+        paymentStatus.includes('đã thanh toán') || 
+        paymentStatus.includes('paid') || 
+        paymentMethod.includes('momo') || 
+        paymentMethod.includes('vnpay') || 
+        paymentMethod.includes('qr') ||
+        paymentMethod.includes('chuyển khoản');
+
+      return isCompleted || isPaidOnline;
     });
   }, [analytics]);
 
-  // Tính toán Top sản phẩm bán chạy và Khách hàng mua nhiều nhất từ đơn hoàn tất
-  const { topProducts, topCustomer } = useMemo(() => {
+  // Tính toán doanh thu, top sản phẩm và khách hàng VIP
+  const { totalRevenue, totalProductsCount, dailyRevenueList, topProducts, topCustomer } = useMemo(() => {
+    let revenue = 0;
+    let prodCount = 0;
     const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
     const customerMap: Record<string, { name: string; phone: string; totalSpent: number; orderCount: number }> = {};
+    const dateMap: Record<string, { orders: number; revenue: number }> = {};
 
-    completedOrdersList.forEach((order: any) => {
+    validOrders.forEach((order: any) => {
       const orderTotal = Number(order.totalPrice || order.total || order.amount) || 0;
-      
+      revenue += orderTotal;
+
+      // Gom nhóm doanh thu theo ngày (7 ngày gần nhất)
+      const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'Hôm nay';
+      if (!dateMap[orderDate]) {
+        dateMap[orderDate] = { orders: 0, revenue: 0 };
+      }
+      dateMap[orderDate].orders += 1;
+      dateMap[orderDate].revenue += orderTotal;
+
       // Khách hàng
       const custName = order.customerName || order.shippingAddress?.fullName || order.name || 'Khách lẻ';
       const custPhone = order.customerPhone || order.phone || order.shippingAddress?.phone || 'Chưa có SĐT';
@@ -41,6 +68,8 @@ export default function AnalyticsTab({ analytics }: Props) {
       const items = order.items || order.orderItems || order.products || [];
       items.forEach((item: any) => {
         const qty = Number(item.quantity || item.qty) || 1;
+        prodCount += qty;
+
         const prodName = item.product?.name || item.name || 'Sản phẩm Apple';
         if (!productMap[prodName]) {
           productMap[prodName] = { name: prodName, qty: 0, revenue: 0 };
@@ -52,17 +81,26 @@ export default function AnalyticsTab({ analytics }: Props) {
 
     const sortedProducts = Object.values(productMap).sort((a, b) => b.qty - a.qty);
     const sortedCustomers = Object.values(customerMap).sort((a, b) => b.totalSpent - a.totalSpent);
+    
+    const formattedDaily = Object.entries(dateMap).map(([date, data]) => ({
+      date,
+      orders: data.orders,
+      revenue: data.revenue,
+    }));
 
     return {
+      totalRevenue: revenue,
+      totalProductsCount: prodCount,
+      dailyRevenueList: formattedDaily,
       topProducts: sortedProducts.slice(0, 5),
       topCustomer: sortedCustomers.length > 0 ? sortedCustomers[0] : null,
     };
-  }, [completedOrdersList]);
+  }, [validOrders]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-lg sm:text-xl font-extrabold text-gray-800">
-        Tổng Quan Báo Cáo Doanh Thu (Đơn Hoàn Tất)
+        Tổng Quan Báo Cáo Doanh Thu (Đơn Hoàn Tất &amp; Đã Thanh Toán QR)
       </h2>
 
       {/* Thống kê: 1 cột trên Mobile, 3 cột từ tablet/desktop */}
@@ -70,26 +108,26 @@ export default function AnalyticsTab({ analytics }: Props) {
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-xs border border-gray-100 flex sm:flex-col justify-between items-center sm:items-start">
           <p className="text-xs text-gray-500 font-bold uppercase">Tổng Doanh Thu</p>
           <p className="text-xl sm:text-2xl font-black text-emerald-600 sm:mt-2">
-            {analytics?.totalRevenue?.toLocaleString('vi-VN') || 0} đ
+            {totalRevenue.toLocaleString('vi-VN')} đ
           </p>
         </div>
 
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-xs border border-gray-100 flex sm:flex-col justify-between items-center sm:items-start">
-          <p className="text-xs text-gray-500 font-bold uppercase">Tổng Số Đơn Hàng</p>
+          <p className="text-xs text-gray-500 font-bold uppercase">Tổng Số Đơn Hợp Lệ</p>
           <p className="text-xl sm:text-2xl font-black text-blue-600 sm:mt-2">
-            {analytics?.totalOrders || 0}
+            {validOrders.length}
           </p>
         </div>
 
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-xs border border-gray-100 flex sm:flex-col justify-between items-center sm:items-start">
           <p className="text-xs text-gray-500 font-bold uppercase">Số Lượng Sản Phẩm</p>
           <p className="text-xl sm:text-2xl font-black text-purple-600 sm:mt-2">
-            {analytics?.totalProducts || 0}
+            {totalProductsCount}
           </p>
         </div>
       </div>
 
-      {/* BỔ SUNG: TOP SẢN PHẨM BÁN CHẠY & KHÁCH HÀNG MUA NHIỀU NHẤT */}
+      {/* TOP SẢN PHẨM BÁN CHẠY & KHÁCH HÀNG MUA NHIỀU NHẤT */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Top sản phẩm */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-xs border border-gray-100 space-y-3">
@@ -154,10 +192,10 @@ export default function AnalyticsTab({ analytics }: Props) {
         </div>
       </div>
 
-      {/* Bảng báo cáo 7 ngày gần nhất có cuộn ngang an toàn */}
+      {/* Bảng báo cáo doanh thu */}
       <div className="bg-white p-4 sm:p-6 rounded-xl shadow-xs border border-gray-100">
         <h3 className="text-sm font-bold text-gray-700 mb-3">
-          Doanh Thu 7 Ngày Gần Nhất
+          Báo Cáo Giao Dịch
         </h3>
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left text-xs sm:text-sm">
@@ -169,15 +207,17 @@ export default function AnalyticsTab({ analytics }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {analytics?.dailyRevenue?.map((row: any, idx: number) => (
-                <tr key={idx} className="hover:bg-gray-50/80">
-                  <td className="py-2.5 px-3 font-medium text-gray-700">{row.date}</td>
-                  <td className="py-2.5 px-3 text-gray-600">{row.orders} đơn</td>
-                  <td className="py-2.5 px-3 font-bold text-emerald-600">
-                    {row.revenue?.toLocaleString('vi-VN')} đ
-                  </td>
-                </tr>
-              )) || (
+              {dailyRevenueList.length > 0 ? (
+                dailyRevenueList.map((row: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-gray-50/80">
+                    <td className="py-2.5 px-3 font-medium text-gray-700">{row.date}</td>
+                    <td className="py-2.5 px-3 text-gray-600">{row.orders} đơn</td>
+                    <td className="py-2.5 px-3 font-bold text-emerald-600">
+                      {row.revenue?.toLocaleString('vi-VN')} đ
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
                   <td colSpan={3} className="text-center py-4 text-gray-400">
                     Chưa có dữ liệu giao dịch
