@@ -34,6 +34,7 @@ export default function AnalyticsTab({ analytics }: Props) {
   }, [analytics]);
 
   // Tính toán doanh thu, top sản phẩm và khách hàng VIP
+  // Tính toán doanh thu, top sản phẩm và khách hàng VIP
   const { totalRevenue, totalProductsCount, dailyRevenueList, topProducts, topCustomer } = useMemo(() => {
     let revenue = 0;
     let prodCount = 0;
@@ -42,10 +43,18 @@ export default function AnalyticsTab({ analytics }: Props) {
     const dateMap: Record<string, { orders: number; revenue: number }> = {};
 
     validOrders.forEach((order: any) => {
-      const orderTotal = Number(order.totalPrice || order.total || order.amount) || 0;
+      // Tự động quét tất cả các tên trường tổng tiền có thể có trong API database
+      const orderTotal = 
+        Number(order.totalPrice) || 
+        Number(order.total) || 
+        Number(order.finalTotal) || 
+        Number(order.amount) || 
+        Number(order.totalAmount) || 
+        Number(order.subTotal) || 0;
+
       revenue += orderTotal;
 
-      // Gom nhóm doanh thu theo ngày (7 ngày gần nhất)
+      // Gom nhóm doanh thu theo ngày
       const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'Hôm nay';
       if (!dateMap[orderDate]) {
         dateMap[orderDate] = { orders: 0, revenue: 0 };
@@ -70,12 +79,14 @@ export default function AnalyticsTab({ analytics }: Props) {
         const qty = Number(item.quantity || item.qty) || 1;
         prodCount += qty;
 
+        const itemPrice = Number(item.price || item.productPrice) || 0;
         const prodName = item.product?.name || item.name || 'Sản phẩm Apple';
+        
         if (!productMap[prodName]) {
           productMap[prodName] = { name: prodName, qty: 0, revenue: 0 };
         }
         productMap[prodName].qty += qty;
-        productMap[prodName].revenue += (Number(item.price) || 0) * qty;
+        productMap[prodName].revenue += itemPrice * qty;
       });
     });
 
