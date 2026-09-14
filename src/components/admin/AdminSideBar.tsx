@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   TrendingUp,
   ShoppingCart,
@@ -11,34 +13,25 @@ import {
   X,
 } from 'lucide-react';
 
-export type AdminTab = 'analytics' | 'orders' | 'inventory' | 'products' | 'posts' | 'banners';
-
 interface Props {
-  activeTab: AdminTab;
-  setActiveTab: (tab: AdminTab) => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
 }
 
+const MENU_ITEMS = [
+  { href: '/admin/thong-ke', label: 'Doanh Thu & Thống Kê', icon: TrendingUp },
+  { href: '/admin/don-hang', label: 'Quản Lý Đơn Hàng', icon: ShoppingCart },
+  { href: '/admin/ton-kho', label: 'Quản Lý Tồn Kho', icon: Layers },
+  { href: '/admin/nhap-excel', label: 'Nhập Sản Phẩm Excel', icon: FileSpreadsheet },
+  { href: '/admin/blog', label: 'Bài Viết & SEO Blog', icon: FileText },
+  { href: '/admin/menu', label: 'Quản Lý Banner', icon: ImageIcon },
+];
+
 export default function AdminSidebar({
-  activeTab,
-  setActiveTab,
   isOpenMobile = false,
   onCloseMobile,
 }: Props) {
-  const menuItems = [
-    { key: 'analytics', label: 'Doanh Thu & Thống Kê', icon: TrendingUp },
-    { key: 'orders', label: 'Quản Lý Đơn Hàng', icon: ShoppingCart },
-    { key: 'inventory', label: 'Quản Lý Tồn Kho', icon: Layers },
-    { key: 'products', label: 'Nhập Sản Phẩm Excel', icon: FileSpreadsheet },
-    { key: 'posts', label: 'Bài Viết & SEO Blog', icon: FileText },
-    { key: 'banners', label: 'Quản Lý Banner', icon: ImageIcon },
-  ];
-
-  const handleSelect = (key: AdminTab) => {
-    setActiveTab(key);
-    if (onCloseMobile) onCloseMobile();
-  };
+  const pathname = usePathname();
 
   return (
     <>
@@ -66,22 +59,25 @@ export default function AdminSidebar({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 divide-y divide-gray-100">
-              {menuItems.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleSelect(key as AdminTab)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeTab === key
-                      ? 'bg-[#d70018] text-white shadow-sm'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon size={16} />
-                  <span>{label}</span>
-                </button>
-              ))}
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+              {MENU_ITEMS.map(({ href, label, icon: Icon }) => {
+                const isActive = pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onCloseMobile}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-[#d70018] text-white shadow-sm'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    <span>{label}</span>
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="p-3 bg-gray-50 border-t border-gray-200 text-[11px] text-gray-500 text-center">
@@ -96,21 +92,23 @@ export default function AdminSidebar({
         <div className="text-[11px] font-extrabold uppercase text-gray-400 px-3 py-1 tracking-wider">
           Menu Điều Hành
         </div>
-        {menuItems.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key as AdminTab)}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === key
-                ? 'bg-[#d70018] text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Icon size={16} />
-            <span>{label}</span>
-          </button>
-        ))}
+        {MENU_ITEMS.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-[#d70018] text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Icon size={16} />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
       </aside>
     </>
   );
