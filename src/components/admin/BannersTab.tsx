@@ -69,7 +69,7 @@ const resolveImageUrl = (url?: string | null): string => {
   return `${API_URL}${cleanPath}`;
 };
 
-// Hàm nén ảnh bằng HTML5 Canvas: Giảm dung lượng từ vài MB xuống còn ~60-90KB
+// Hàm nén ảnh giữ nguyên tỉ lệ gốc (không bao giờ bị bè hay méo ảnh)
 const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -77,23 +77,30 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        let width = img.naturalWidth || img.width;
-        let height = img.naturalHeight || img.height;
+        const origWidth = img.naturalWidth || img.width;
+        const origHeight = img.naturalHeight || img.height;
+        const ratio = origHeight / origWidth;
 
-        // Tối ưu kích thước dựa trên nhóm mục tiêu
+        let width = origWidth;
+        let height = origHeight;
+
         if (targetGroup === 'hero_banners') {
+          // Riêng Hero Banner lớn giữ chuẩn 1920x540
           width = 1920;
           height = 540;
         } else if (targetGroup === 'promo_cards') {
           width = 800;
-          height = 300;
+          height = Math.round(800 * ratio);
+        } else if (targetGroup === 'commit_cards') {
+          // 4 banner cam kết: Giữ nguyên tỉ lệ ảnh dọc gốc, giới hạn chiều rộng 600px
+          width = Math.min(origWidth, 600);
+          height = Math.round(width * ratio);
         } else if (targetGroup.startsWith('sub_') || targetGroup === 'all_categories') {
           width = 300;
           height = 300;
         } else {
-          // Các banner danh mục trang
-          width = 1200;
-          height = 400;
+          width = Math.min(origWidth, 1200);
+          height = Math.round(width * ratio);
         }
 
         canvas.width = width;
@@ -105,11 +112,11 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        // Nén định dạng webp chất lượng 0.78, dung lượng siêu nhẹ
-        const compressedBase64 = canvas.toDataURL('image/webp', 0.78);
+        // Xuất file WebP siêu nhẹ, không bị vỡ hạt và không bị méo tỉ lệ
+        const compressedBase64 = canvas.toDataURL('image/webp', 0.82);
         resolve(compressedBase64);
       };
-      img.onerror = () => reject(new Error('Lỗi load ảnh vào canvas'));
+      img.onerror = () => reject(new Error('Lỗi tải ảnh vào canvas'));
       img.src = event.target?.result as string;
     };
     reader.onerror = () => reject(new Error('Lỗi đọc file ảnh'));
