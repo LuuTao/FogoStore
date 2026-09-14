@@ -5,7 +5,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export interface User {
   id: string;
   email: string;
-  fullName: string;
+  fullName?: string;
+  name?: string;
   role: 'CUSTOMER' | 'ADMIN';
   phone?: string;
 }
@@ -24,8 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('fogo_token');
-    const savedUser = localStorage.getItem('fogo_user');
+    const savedToken = localStorage.getItem('fogo_token') || localStorage.getItem('token');
+    const savedUser = localStorage.getItem('fogo_user') || localStorage.getItem('user');
     if (savedToken && savedUser) {
       try {
         setToken(savedToken);
@@ -38,10 +39,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (newToken: string, newUser: User) => {
+    const formattedUser = {
+      ...newUser,
+      name: newUser.fullName || newUser.name, // Đảm bảo luôn có name
+    };
     setToken(newToken);
-    setUser(newUser);
+    setUser(formattedUser);
+    
+    // Đồng bộ tất cả các key mà các component đang dùng
     localStorage.setItem('fogo_token', newToken);
-    localStorage.setItem('fogo_user', JSON.stringify(newUser));
+    localStorage.setItem('fogo_user', JSON.stringify(formattedUser));
+    localStorage.setItem('user', JSON.stringify(formattedUser));
+    localStorage.setItem('token', newToken);
+
+    // Kích hoạt sự kiện storage để CartContext tự động load giỏ của user này
+    window.dispatchEvent(new Event('storage'));
   };
 
   const logout = () => {
@@ -49,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem('fogo_token');
     localStorage.removeItem('fogo_user');
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    window.dispatchEvent(new Event('storage'));
     window.location.href = '/';
   };
 

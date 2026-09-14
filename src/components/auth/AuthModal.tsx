@@ -22,7 +22,8 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+// Gán trực tiếp domain Render để không bị ăn cache biến môi trường
+const API_URL = 'https://fogo-store-api.onrender.com';
 const GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
   '318342665111-rogh6u40b8lg239aahkjbebp81s0apv6.apps.googleusercontent.com';
