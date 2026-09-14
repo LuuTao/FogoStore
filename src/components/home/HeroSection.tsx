@@ -147,23 +147,25 @@ export const HeroSection: React.FC = () => {
     promoPairs.push(activePromos.slice(i, i + 2));
   }
 
-  // Tự động trượt Banner lớn sau 5s
+  // =========================================================================
+  // ĐỒNG BỘ: CỨ 5 GIÂY LƯỚT CHUYỂN CẢ BANNER TRÊN VÀ DƯỚI CÙNG LÚC
+  // =========================================================================
   useEffect(() => {
-    if (isHovered || activeBanners.length <= 1) return;
-    const timerTop = setInterval(() => {
-      setTopIndex((prev) => (prev + 1) % activeBanners.length);
-    }, 5000);
-    return () => clearInterval(timerTop);
-  }, [isHovered, activeBanners.length]);
+    if (isHovered) return;
 
-  // Tự động trượt 2 Banner nhỏ sau 5s
-  useEffect(() => {
-    if (isHovered || promoPairs.length <= 1) return;
-    const timerBottom = setInterval(() => {
-      setBottomIndex((prev) => (prev + 1) % promoPairs.length);
+    const timer = setInterval(() => {
+      // 1. Chuyển Banner lớn
+      if (activeBanners.length > 1) {
+        setTopIndex((prev) => (prev + 1) % activeBanners.length);
+      }
+      // 2. Chuyển đồng thời cặp Banner nhỏ phía dưới
+      if (promoPairs.length > 1) {
+        setBottomIndex((prev) => (prev + 1) % promoPairs.length);
+      }
     }, 5000);
-    return () => clearInterval(timerBottom);
-  }, [isHovered, promoPairs.length]);
+
+    return () => clearInterval(timer);
+  }, [isHovered, activeBanners.length, promoPairs.length]);
 
   // Touch handlers cho Banner lớn
   const handleTopTouchStart = (e: React.TouchEvent) => {
@@ -238,7 +240,7 @@ export const HeroSection: React.FC = () => {
       {/* 1. GIAO DIỆN MOBILE (< 640px)                                             */}
       {/* ========================================================================= */}
       <div className="block sm:hidden px-3 pt-2 pb-4">
-        {/* Banner Lớn Trên: Thanh trượt ngang chuyển động siêu êm */}
+        {/* Banner Lớn: Trượt ngang mượt mà */}
         <div
           className="relative w-full aspect-[1920/540] rounded-xl overflow-hidden bg-gray-100 shadow-md"
           onTouchStart={handleTopTouchStart}
@@ -276,7 +278,7 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* 2 Banner Nhỏ Dưới Mobile */}
+        {/* 2 Banner Nhỏ Dưới: Cùng trượt êm ái */}
         {promoPairs.length > 0 && (
           <div className="mt-2.5 relative">
             <div
@@ -415,7 +417,7 @@ export const HeroSection: React.FC = () => {
       {/* 3. GIAO DIỆN DESKTOP (>= 1024px)                                          */}
       {/* ========================================================================= */}
       <div className="hidden lg:block pb-16">
-        {/* Banner Hero: Trượt ngang mượt mà */}
+        {/* Banner Hero: Trượt ngang êm ái */}
         <div className="relative w-full aspect-[1920/540] max-h-[540px] overflow-hidden bg-gray-100">
           <div
             className="flex h-full w-full transition-transform duration-700 ease-in-out"
@@ -451,7 +453,7 @@ export const HeroSection: React.FC = () => {
                 <ChevronRight size={24} />
               </button>
 
-              {/* Chấm tròn chỉ số trang cho Desktop */}
+              {/* Dấu chấm tròn điều hướng */}
               <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
                 {activeBanners.map((_, idx) => (
                   <button
@@ -468,7 +470,7 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* 2 Banner Nhỏ Đè Lên Hero Banner Dưới Desktop: Trượt ngang mượt mà */}
+        {/* 2 Banner Nhỏ Dưới: Trượt ngang đồng bộ nhịp 5 giây */}
         {promoPairs.length > 0 && (
           <div className="max-w-7xl mx-auto px-4 relative z-30 -mt-12 md:-mt-16">
             <div className="relative overflow-hidden rounded-md">
