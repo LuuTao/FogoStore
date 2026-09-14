@@ -12,9 +12,14 @@ import { IPhoneSeoContent } from '@/components/category/IPhoneSeoContent';
 
 interface SeriesTabItem {
   name: string;
-  slug: string;
-  img: string;
-  queryTag: string;
+  slug?: string;
+  imageUrl: string;
+  queryTag: string | null;
+}
+
+interface SubModelItem {
+  name: string;
+  tag: string;
 }
 
 const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
@@ -48,6 +53,37 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
     queryTag: '16',
   },
 ];
+
+// Danh sách các model con nhảy theo từng Series
+const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
+  '18': [
+    { name: 'Tất cả 18', tag: '18' },
+    { name: 'iPhone 18 Pro Max', tag: '18-pro-max' },
+    { name: 'iPhone 18 Pro', tag: '18-pro' },
+    { name: 'iPhone 18 Plus', tag: '18-plus' },
+    { name: 'iPhone 18', tag: '18-standard' },
+  ],
+  '17': [
+    { name: 'Tất cả 17', tag: '17' },
+    { name: 'iPhone 17 Pro Max', tag: '17-pro-max' },
+    { name: 'iPhone 17 Pro', tag: '17-pro' },
+    { name: 'iPhone 17 Plus', tag: '17-plus' },
+    { name: 'iPhone 17 Air', tag: '17-air' },
+    { name: 'iPhone 17', tag: '17-standard' },
+  ],
+  '16': [
+    { name: 'Tất cả 16', tag: '16' },
+    { name: 'iPhone 16 Pro Max', tag: '16-pro-max' },
+    { name: 'iPhone 16 Pro', tag: '16-pro' },
+    { name: 'iPhone 16 Plus', tag: '16-plus' },
+    { name: 'iPhone 16', tag: '16-standard' },
+  ],
+  'dou': [
+    { name: 'Tất cả Dou', tag: 'dou' },
+    { name: 'iPhone Dou Fold', tag: 'dou-fold' },
+    { name: 'iPhone Dou Flip', tag: 'dou-flip' },
+  ],
+};
 
 const IPHONE_HELPFUL_NEWS = [
   {
@@ -93,6 +129,17 @@ export default function DynamicIPhonePage() {
     '';
   const currentFilter = (rawFilter || '').toLowerCase().trim();
 
+  // Nhận diện series cha đang chọn (18, 17, 16, dou)
+  const currentSeriesTag = useMemo(() => {
+    if (!currentFilter) return null;
+    if (currentFilter.includes('dou')) return 'dou';
+    const num = currentFilter.match(/\d+/);
+    return num ? num[0] : null;
+  }, [currentFilter]);
+
+  // Đọc danh sách model con tương ứng
+  const subModels = currentSeriesTag ? SUB_MODELS_MAP[currentSeriesTag] || [] : [];
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
@@ -112,16 +159,20 @@ export default function DynamicIPhonePage() {
             (it: any) => it.group === 'sub_iphone' && it.name.toLowerCase() !== 'tất cả'
           );
           if (adminSubs.length > 0) {
-            const mapped: SeriesTabItem[] = adminSubs.map((it: any) => {
-              const numMatch = it.name.match(/\d+/);
-              const fallbackSlug = it.name.toLowerCase().replace(/\s+/g, '-');
-              return {
-                name: it.name,
-                slug: numMatch ? `iphone-${numMatch[0]}` : fallbackSlug,
-                img: it.imageUrl,
-                queryTag: numMatch ? numMatch[0] : it.name.toLowerCase(),
-              };
-            });
+            const mapped: SeriesTabItem[] = [
+              DEFAULT_IPHONE_SERIES[0],
+              ...adminSubs.map((it: any) => {
+                const numMatch = it.name.match(/\d+/);
+                const isDou = it.name.toLowerCase().includes('dou');
+                const fallbackSlug = it.name.toLowerCase().replace(/\s+/g, '-');
+                return {
+                  name: it.name,
+                  slug: isDou ? 'iphone-dou' : numMatch ? `iphone-${numMatch[0]}` : fallbackSlug,
+                  imageUrl: it.imageUrl,
+                  queryTag: isDou ? 'dou' : numMatch ? numMatch[0] : it.name.toLowerCase(),
+                };
+              }),
+            ];
             setSeriesTabs(mapped);
           }
         }
@@ -211,9 +262,15 @@ export default function DynamicIPhonePage() {
           items = items.filter((i) => i.searchIndex.includes('pro') && !i.searchIndex.includes('max'));
         } else if (lowerFilter.includes('plus')) {
           items = items.filter((i) => i.searchIndex.includes('plus'));
-        } else if (lowerFilter.includes('thuong') || lowerFilter.includes('standard')) {
-          items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('plus'));
+        } else if (lowerFilter.includes('air')) {
+          items = items.filter((i) => i.searchIndex.includes('air'));
+        } else if (lowerFilter.includes('standard') || lowerFilter.includes('thuong')) {
+          items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('plus') && !i.searchIndex.includes('air'));
         }
+      } else if (lowerFilter.includes('dou')) {
+        items = items.filter((i) => i.searchIndex.includes('dou'));
+        if (lowerFilter.includes('fold')) items = items.filter((i) => i.searchIndex.includes('fold'));
+        if (lowerFilter.includes('flip')) items = items.filter((i) => i.searchIndex.includes('flip'));
       } else {
         const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
@@ -251,12 +308,6 @@ export default function DynamicIPhonePage() {
       );
     }
 
-    if (activeFilters.demand && activeFilters.demand.length > 0) {
-      items = items.filter((item) =>
-        activeFilters.demand!.some((d) => item.searchIndex.includes(d.toLowerCase()))
-      );
-    }
-
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -279,8 +330,15 @@ export default function DynamicIPhonePage() {
       if (currentFilter.includes('pro-max')) return `iPhone ${num} Pro Max`;
       if (currentFilter.includes('pro')) return `iPhone ${num} Pro`;
       if (currentFilter.includes('plus')) return `iPhone ${num} Plus`;
-      if (currentFilter.includes('thuong')) return `iPhone ${num}`;
+      if (currentFilter.includes('air')) return `iPhone ${num} Air`;
+      if (currentFilter.includes('standard')) return `iPhone ${num}`;
       return `iPhone ${num} Series`;
+    }
+
+    if (currentFilter.includes('dou')) {
+      if (currentFilter.includes('fold')) return 'iPhone Dou Fold';
+      if (currentFilter.includes('flip')) return 'iPhone Dou Flip';
+      return 'iPhone Dou Series';
     }
 
     return currentFilter
@@ -359,41 +417,20 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* HÀNG ICON TRÒN LỚN 80PX (CHUẨN 2 SIZE BO TRÒN) */}
-          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
-            <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
-              {/* Nút Tất cả: Sử dụng ảnh máy iPhone và viền đỏ bo tròn khi chọn */}
-              <Link
-                href="/iphone"
-                className="group flex flex-col items-center gap-2 cursor-pointer"
-              >
-                <div
-                  className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
-                    !currentFilter
-                      ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
-                      : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200'
-                  }`}
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=200&q=80"
-                    alt="Tất cả iPhone"
-                    className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
-                  />
-                </div>
-                <span className={`text-xs sm:text-sm font-semibold transition-colors ${!currentFilter ? 'text-[#d70018] font-bold' : 'text-gray-800'}`}>
-                  Tất cả
-                </span>
-              </Link>
-
-              {seriesTabs.map((series) => {
-                const isSelected =
-                  currentFilter === series.slug ||
-                  (series.queryTag && currentFilter.includes(series.queryTag));
+          {/* HÀNG ICON TRÒN SERIES CẤP 2 (80PX BO TRÒN) */}
+          <div className="my-6 py-2 overflow-x-auto scrollbar-none">
+            <div className="flex items-center justify-center gap-5 sm:gap-8 min-w-max px-2">
+              {seriesTabs.map((series, idx) => {
+                const isAllButton = series.queryTag === null;
+                const isSelected = isAllButton
+                  ? !currentFilter
+                  : currentFilter === series.slug ||
+                    (series.queryTag && currentFilter.includes(series.queryTag));
 
                 return (
                   <Link
-                    key={series.slug}
-                    href={`/iphone?series=${series.queryTag}`}
+                    key={series.slug || idx}
+                    href={isAllButton ? '/iphone' : `/iphone?series=${series.queryTag}`}
                     className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
                   >
                     <div
@@ -404,7 +441,7 @@ export default function DynamicIPhonePage() {
                       }`}
                     >
                       <img
-                        src={series.img}
+                        src={series.imageUrl}
                         alt={series.name}
                         className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
                       />
@@ -423,6 +460,28 @@ export default function DynamicIPhonePage() {
               })}
             </div>
           </div>
+
+          {/* HÀNG NHẢY MODEL CON (CẤP 3: PRO MAX, PRO, PLUS, THƯỜNG) */}
+          {subModels.length > 0 && (
+            <div className="mb-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+              {subModels.map((m) => {
+                const isSubSelected = currentFilter === m.tag;
+                return (
+                  <Link
+                    key={m.tag}
+                    href={`/iphone?series=${m.tag}`}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                      isSubSelected
+                        ? 'bg-[#d70018] text-white border-[#d70018] shadow-sm scale-105'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#d70018] hover:text-[#d70018]'
+                    }`}
+                  >
+                    {m.name}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
           {/* TIÊU ĐỀ VÀ BỘ LỌC */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
@@ -537,9 +596,7 @@ export default function DynamicIPhonePage() {
             </div>
           )}
 
-          {/* ================================================================= */}
-          {/* BÀI VIẾT GIỚI THIỆU CHUẨN SEO CÓ NÚT XEM THÊM / RÚT GỌN          */}
-          {/* ================================================================= */}
+          {/* BÀI VIẾT SEO */}
           <IPhoneSeoContent categoryKey="iphone_seo_desc" />
 
           {/* CHÂN TRANG DANH MỤC */}

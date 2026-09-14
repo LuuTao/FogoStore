@@ -3,15 +3,30 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Star, CornerDownLeft, ShieldCheck } from 'lucide-react';
+import { Star, CornerDownLeft, ShieldCheck } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { USED_HELPFUL_NEWS } from '@/data/usedCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 
-// 1. Danh mục cấp 1: 3 Nhóm lớn Hàng Cũ
+// 1. Danh mục cấp 1: 3 Nhóm lớn Hàng Cũ (Đã khôi phục hoàn chỉnh)
 const USED_CATEGORIES = [
+  {
+    name: 'iPhone Cũ',
+    slug: 'iphone-cu',
+    img: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=150&q=80',
+  },
+  {
+    name: 'iPad Cũ',
+    slug: 'ipad-cu',
+    img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+  },
+  {
+    name: 'MacBook Cũ',
+    slug: 'macbook-cu',
+    img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+  },
 ];
 
 // 2. Danh mục cấp 2: Phân loại theo đời máy
@@ -83,7 +98,7 @@ export default function DynamicUsedPage() {
   const params = useParams();
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-  
+
   const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
@@ -91,13 +106,10 @@ export default function DynamicUsedPage() {
   const slugParam = params?.slug;
   const currentFilter = Array.isArray(slugParam) ? slugParam[0] || '' : (slugParam as string) || '';
 
-  // Đọc danh sách máy vừa xem từ localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
-      if (saved) {
-        setRecentViewed(JSON.parse(saved));
-      }
+      if (saved) setRecentViewed(JSON.parse(saved));
     } catch (err) {
       console.error('Lỗi đọc recent viewed:', err);
     }
@@ -121,7 +133,6 @@ export default function DynamicUsedPage() {
           const lower = (item.name || '').toLowerCase();
           const catName = (item.category?.name || item.category?.slug || '').toLowerCase();
 
-          // Phân nhóm máy chuẩn xác
           let category = 'iphone-cu';
           if (lower.includes('macbook') || catName.includes('mac')) {
             category = 'macbook-cu';
@@ -129,8 +140,7 @@ export default function DynamicUsedPage() {
             category = 'ipad-cu';
           }
 
-          // Kiểm tra xem sản phẩm có thực sự là máy cũ / like new hay không
-          const isUsed = 
+          const isUsed =
             lower.includes('cũ') ||
             lower.includes('like new') ||
             lower.includes('likenew') ||
@@ -158,7 +168,6 @@ export default function DynamicUsedPage() {
           };
         });
 
-        // Chỉ nạp các máy cũ thực sự vào danh mục Hàng Cũ
         const onlyUsed = mapped.filter((p: any) => p.isUsed);
         setDbItems(onlyUsed.length > 0 ? onlyUsed : mapped.filter((p: any) => !p.name.toLowerCase().includes('new seal')));
       } catch (err) {
@@ -180,32 +189,26 @@ export default function DynamicUsedPage() {
     return null;
   }, [currentFilter]);
 
-  const activeSubmodels = currentCategoryKey ? USED_SUBMODELS_MAP[currentCategoryKey] : null;
+  const activeSubmodels = currentCategoryKey ? USED_SUBMODELS_MAP[currentCategoryKey] || [] : null;
 
-  // Logic lọc chuẩn xác tuyệt đối theo từng nhánh danh mục & Modal
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
-    // 1. Loại bỏ các phụ kiện hoặc máy new seal nếu còn sót
     items = items.filter((i) => {
       const lower = i.name.toLowerCase();
       return !lower.includes('dock sạc') && !lower.includes('cáp sạc') && !lower.includes('new seal');
     });
 
-    // 2. Lọc thông minh theo Slug URL (Nhận diện cấp 1 và cấp 2)
     if (currentFilter) {
       const slug = currentFilter.toLowerCase();
 
-      // Cấp 1: iPhone Cũ, iPad Cũ, MacBook Cũ
       if (slug === 'iphone-cu') {
         items = items.filter((i) => i.searchIndex.includes('iphone'));
       } else if (slug === 'ipad-cu') {
         items = items.filter((i) => i.searchIndex.includes('ipad'));
       } else if (slug === 'macbook-cu') {
         items = items.filter((i) => i.searchIndex.includes('macbook'));
-      } 
-      // Cấp 2: Theo series cụ thể (ví dụ: iphone-16-series-cu, ipad-pro-cu, macbook-air-cu,...)
-      else {
+      } else {
         const numMatch = slug.match(/\d+/);
         if (numMatch) {
           items = items.filter((i) => i.searchIndex.includes(numMatch[0]));
@@ -221,7 +224,6 @@ export default function DynamicUsedPage() {
       }
     }
 
-    // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -251,7 +253,6 @@ export default function DynamicUsedPage() {
       );
     }
 
-    // Sắp xếp
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -353,9 +354,9 @@ export default function DynamicUsedPage() {
             </div>
           </div>
 
-          {/* Thanh icon 2 tầng */}
+          {/* Thanh icon tròn 2 tầng cho Hàng Cũ */}
           <div className="my-8 py-2">
-            {activeSubmodels ? (
+            {activeSubmodels && activeSubmodels.length > 0 ? (
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
                   {activeSubmodels.map((model) => {
@@ -367,7 +368,7 @@ export default function DynamicUsedPage() {
                         className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
                       >
                         <div
-                          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full p-2 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
+                          className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-2.5 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
                             isSelected
                               ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
                               : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
@@ -393,7 +394,7 @@ export default function DynamicUsedPage() {
 
                 <Link
                   href="/hang-cu"
-                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#d70018] transition-colors bg-gray-100 hover:bg-red-50 px-3.5 py-1.5 rounded-full border border-gray-200"
+                  className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#d70018] transition-colors bg-gray-100 hover:bg-red-50 px-3.5 py-1.5 rounded-full border border-gray-200 cursor-pointer"
                 >
                   <CornerDownLeft size={13} />
                   <span>Xem tất cả danh mục hàng cũ khác</span>
@@ -410,7 +411,7 @@ export default function DynamicUsedPage() {
                       className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
                     >
                       <div
-                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-2.5 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
+                        className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
                           isSelected
                             ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
                             : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
@@ -453,7 +454,7 @@ export default function DynamicUsedPage() {
             />
           </div>
 
-          {/* Lưới sản phẩm & Skeleton Loader */}
+          {/* Lưới sản phẩm */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -582,7 +583,6 @@ export default function DynamicUsedPage() {
               </div>
             </div>
 
-            {/* Khối bạn vừa xem đọc động từ localStorage */}
             {recentViewed.length > 0 && (
               <div className="lg:col-span-4">
                 <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">

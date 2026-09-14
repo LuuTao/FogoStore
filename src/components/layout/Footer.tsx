@@ -23,7 +23,7 @@ export const Footer: React.FC = () => {
             {/* Logo Đã thông báo Bộ Công Thương */}
             <div className="mb-5">
               <img
-                src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80"
+                src="https://theme.hstatic.net/200000768357/1001357594/14/footer_logobct_img.png?v=404?auto=format&fit=crop&w=300&q=80"
                 alt="Đã thông báo Bộ Công Thương"
                 className="w-48 md:w-56 h-auto border border-blue-200 rounded p-1.5 object-contain shadow-sm"
               />
