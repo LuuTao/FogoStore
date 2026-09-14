@@ -158,7 +158,7 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timerTop);
   }, [isHovered, activeBanners.length]);
 
-  // 2. TỰ ĐỘNG CHUYỂN 2 BANNER NHỎ SAU 5 GIÂY (CHẠY 100% CẢ MOBILE VÀ DESKTOP)
+  // 2. TỰ ĐỘNG CHUYỂN 2 BANNER NHỎ SAU 5 GIÂY
   useEffect(() => {
     if (isHovered || promoPairs.length <= 1) return;
 
@@ -216,7 +216,7 @@ export const HeroSection: React.FC = () => {
     return (
       <div className="w-full relative pb-6 lg:pb-16 animate-pulse">
         <div className="block lg:hidden px-3 pt-2">
-          <div className="w-full aspect-[16/9] sm:aspect-[21/9] bg-gray-200 rounded-xl" />
+          <div className="w-full aspect-[1920/540] bg-gray-200 rounded-xl" />
           <div className="grid grid-cols-2 gap-2 mt-3">
             <div className="aspect-[16/8] sm:h-[130px] bg-gray-300 rounded-lg" />
             <div className="aspect-[16/8] sm:h-[130px] bg-gray-300 rounded-lg" />
@@ -224,8 +224,8 @@ export const HeroSection: React.FC = () => {
         </div>
 
         <div className="hidden lg:block">
-          <div className="w-full h-[480px] lg:h-[540px] bg-gray-200" />
-          <div className="max-w-7xl mx-auto px-4 relative -mt-16 md:-mt-20">
+          <div className="w-full aspect-[1920/540] max-h-[540px] bg-gray-200" />
+          <div className="max-w-7xl mx-auto px-4 relative -mt-16 md:mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="h-[200px] bg-gray-300 rounded-md shadow-lg" />
               <div className="h-[200px] bg-gray-300 rounded-md shadow-lg" />
@@ -246,9 +246,9 @@ export const HeroSection: React.FC = () => {
       {/* 1. GIAO DIỆN MOBILE (< 640px)                                             */}
       {/* ========================================================================= */}
       <div className="block sm:hidden px-3 pt-2 pb-4">
-        {/* Banner Lớn Trên */}
+        {/* Banner Lớn Trên: Chuẩn tỉ lệ 1920/540 hiển thị trọn vẹn cả chữ & máy */}
         <div
-          className="relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-gray-100 shadow-md"
+          className="relative w-full aspect-[1920/540] rounded-xl overflow-hidden bg-gray-100 shadow-md"
           onTouchStart={handleTopTouchStart}
           onTouchEnd={handleTopTouchEnd}
         >
@@ -258,18 +258,18 @@ export const HeroSection: React.FC = () => {
                 src={currentTop.imageUrl}
                 alt={currentTop.title || 'Banner'}
                 draggable={false}
-                className="w-full h-full object-cover pointer-events-none"
+                className="w-full h-full object-contain pointer-events-none"
               />
             </Link>
           )}
 
           {activeBanners.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10 pointer-events-none">
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1 z-10 pointer-events-none">
               {activeBanners.map((_, idx) => (
                 <span
                   key={idx}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    topIndex === idx ? 'w-4 bg-[#d70018]' : 'w-1.5 bg-white/70'
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    topIndex === idx ? 'w-3.5 bg-[#d70018]' : 'w-1 bg-white/70'
                   }`}
                 />
               ))}
@@ -277,7 +277,7 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* Hàng 2 Banner Nhỏ Dưới: Chuyển động bằng Transform mượt mà 100%, tự chạy 5s & vuốt được */}
+        {/* Hàng 2 Banner Nhỏ Dưới */}
         {promoPairs.length > 0 && (
           <div className="mt-2.5 relative">
             <div
@@ -340,7 +340,7 @@ export const HeroSection: React.FC = () => {
       {/* ========================================================================= */}
       <div className="hidden sm:block lg:hidden px-4 pt-3 pb-6">
         <div
-          className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden bg-gray-100 shadow-lg"
+          className="relative w-full aspect-[1920/540] rounded-2xl overflow-hidden bg-gray-100 shadow-lg"
           onTouchStart={handleTopTouchStart}
           onTouchEnd={handleTopTouchEnd}
         >
@@ -417,7 +417,7 @@ export const HeroSection: React.FC = () => {
       {/* 3. GIAO DIỆN DESKTOP (>= 1024px)                                          */}
       {/* ========================================================================= */}
       <div className="hidden lg:block pb-16">
-        <div className="relative w-full h-[480px] lg:h-[540px] overflow-hidden bg-gray-100 flex items-center justify-center">
+        <div className="relative w-full aspect-[1920/540] max-h-[540px] overflow-hidden bg-gray-100 flex items-center justify-center">
           {currentTop && (
             <Link href={currentTop.link || '/'} className="block w-full h-full">
               <img
@@ -433,16 +433,16 @@ export const HeroSection: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTopIndex((prev) => (prev - 1 + activeBanners.length) % activeBanners.length)}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#d70018] text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-red-700 transition-colors"
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-[#d70018] text-white flex items-center justify-center shadow-lg cursor-pointer hover:bg-red-700 transition-all hover:scale-105"
               >
-                <ChevronLeft size={22} />
+                <ChevronLeft size={24} />
               </button>
               <button
                 type="button"
                 onClick={() => setTopIndex((prev) => (prev + 1) % activeBanners.length)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#d70018] text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-red-700 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-[#d70018] text-white flex items-center justify-center shadow-lg cursor-pointer hover:bg-red-700 transition-all hover:scale-105"
               >
-                <ChevronRight size={22} />
+                <ChevronRight size={24} />
               </button>
             </>
           )}
@@ -450,7 +450,7 @@ export const HeroSection: React.FC = () => {
 
         {/* Cặp Banner Con Đè Dưới Desktop */}
         {currentPairDesktop.length > 0 && (
-          <div className="max-w-7xl mx-auto px-4 relative z-30 -mt-16 md:-mt-20">
+          <div className="max-w-7xl mx-auto px-4 relative z-30 -mt-12 md:-mt-16">
             <div className="relative">
               <div
                 className={`grid gap-4 ${
