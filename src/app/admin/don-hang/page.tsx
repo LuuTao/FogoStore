@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   Package, 
   Search, 
@@ -19,7 +20,7 @@ import {
 
 const API_URL = 'https://fogo-store-api.onrender.com';
 
-// BẢNG DỊCH TIẾNG VIỆT CHUẨN CHO TOÀN BỘ TRẠNG THÁI
+// BẢNG DỊCH TIẾNG VIỆT CHO TRẠNG THÁI ĐƠN HÀNG
 export const STATUS_LABELS: Record<string, { label: string; bg: string; text: string; border: string }> = {
   CONFIRMED: {
     label: 'Đã xác nhận',
@@ -69,7 +70,12 @@ export default function AdminOrdersPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/orders`, { cache: 'no-store' });
+      // Ưu tiên endpoint admin, nếu 404 fallback về route /api/orders
+      let res = await fetch(`${API_URL}/api/admin/orders`, { cache: 'no-store' });
+      if (!res.ok) {
+        res = await fetch(`${API_URL}/api/orders`, { cache: 'no-store' });
+      }
+      
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setOrders(json.data);
@@ -92,19 +98,27 @@ export default function AdminOrdersPage() {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
-      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
+      let res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderStatus: newStatus }),
       });
+
+      if (!res.ok) {
+        res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderStatus: newStatus }),
+        });
+      }
+
       const data = await res.json();
       if (res.ok && data.success) {
-        // Cập nhật trực tiếp trên UI
         setOrders((prev) =>
           prev.map((ord) => (ord.id === orderId ? { ...ord, orderStatus: newStatus } : ord))
         );
       } else {
-        alert('Cập nhật thất bại: ' + (data.error || 'Lỗi server'));
+        alert('Cập nhật thất bại: ' + (data.error || 'Lỗi hệ thống'));
       }
     } catch (err: any) {
       alert('Không thể kết nối máy chủ để cập nhật!');
@@ -159,7 +173,7 @@ export default function AdminOrdersPage() {
           <button
             type="button"
             onClick={fetchOrders}
-            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors cursor-pointer"
             title="Tải lại danh sách"
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -219,7 +233,7 @@ export default function AdminOrdersPage() {
                         <p className="font-bold text-gray-900">{ord.customerName}</p>
                         <p className="text-[11px] text-gray-500 font-mono">{ord.customerPhone}</p>
                         <p className="text-[11px] text-gray-400 truncate max-w-[180px]">
-                          {ord.address ? `${ord.address}, ${ord.district}` : ord.deliveryMethod}
+                          {ord.address ? `${ord.address}, ${ord.district}` : (ord.deliveryMethod || 'Giao hàng tận nơi')}
                         </p>
                       </td>
 
