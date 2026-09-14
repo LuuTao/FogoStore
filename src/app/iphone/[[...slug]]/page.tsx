@@ -65,21 +65,6 @@ const IPHONE_HELPFUL_NEWS = [
   },
 ];
 
-const RECENTLY_VIEWED_IPHONE = [
-  {
-    id: 'rc-1',
-    name: 'iPhone 16 Pro Max 256GB - Chính Hãng VN/A',
-    currentPrice: '34.990.000đ',
-    imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=300&q=80',
-  },
-  {
-    id: 'rc-2',
-    name: 'iPhone 16 128GB - Chính Hãng VN/A',
-    currentPrice: '21.990.000đ',
-    imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80',
-  },
-];
-
 const parsePrice = (priceStr: string | number) => {
   if (typeof priceStr === 'number') return priceStr;
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
@@ -94,6 +79,7 @@ export default function DynamicIPhonePage() {
   const [dbProducts, setDbProducts] = useState<any[]>([]);
   const [loadingDb, setLoadingDb] = useState(true);
   const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_IPHONE_SERIES);
+  const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
   const slugParam = params?.slug;
   const rawFilter =
@@ -101,6 +87,18 @@ export default function DynamicIPhonePage() {
     searchParams?.get('series') ||
     '';
   const currentFilter = (rawFilter || '').toLowerCase().trim();
+
+  // Đọc sản phẩm vừa xem thực tế từ localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fogo_recent_viewed');
+      if (saved) {
+        setRecentViewed(JSON.parse(saved));
+      }
+    } catch (err) {
+      console.error('Lỗi đọc recent viewed:', err);
+    }
+  }, []);
 
   // 1. Nạp danh mục Submodel iPhone động từ LocalStorage (Admin lưu)
   useEffect(() => {
@@ -156,8 +154,8 @@ export default function DynamicIPhonePage() {
             })
             .map((item: any) => {
               const v = item.variants?.[0] || {};
-              const curPrice = v.price || 0;
-              const origPrice = v.originalPrice || curPrice;
+              const curPrice = v.price || item.price || 0;
+              const origPrice = v.originalPrice || item.originalPrice || curPrice;
               const discountPercent =
                 origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
@@ -165,14 +163,15 @@ export default function DynamicIPhonePage() {
                 id: item.id,
                 name: item.name,
                 slug: item.slug,
-                searchIndex: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
-                href: `/san-pham/${item.slug}`,
+                searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''} ${item.subSeriesName || ''}`.toLowerCase(),
+                href: `/san-pham/${item.slug || item.id}`,
                 currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
                 originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
                 rawPrice: curPrice,
                 discountPercent,
                 imageUrl:
                   v.images?.[0] ||
+                  item.imageUrl ||
                   'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80',
                 downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
                 statusTag: 'Sẵn hàng',
@@ -225,9 +224,7 @@ export default function DynamicIPhonePage() {
       }
     }
 
-    // 2. Lọc nâng cao từ Modal Bộ Lọc (activeFilters được truyền từ FilterAndSortBar)
-    
-    // Lọc theo Khoảng Giá
+    // 2. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -241,33 +238,29 @@ export default function DynamicIPhonePage() {
       });
     }
 
-    // Lọc theo RAM
     if (activeFilters.ram) {
       const ramVal = activeFilters.ram.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(ramVal));
     }
 
-    // Lọc theo Dung lượng lưu trữ (Storage)
     if (activeFilters.storage) {
       const storeVal = activeFilters.storage.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(storeVal));
     }
 
-    // Lọc theo Chip xử lý (Mảng nhiều lựa chọn)
     if (activeFilters.chip && activeFilters.chip.length > 0) {
       items = items.filter((item) =>
         activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))
       );
     }
 
-    // Lọc theo Nhu cầu (Mảng nhiều lựa chọn)
     if (activeFilters.demand && activeFilters.demand.length > 0) {
       items = items.filter((item) =>
         activeFilters.demand!.some((d) => item.searchIndex.includes(d.toLowerCase()))
       );
     }
 
-    // Sắp xếp sản phẩm theo tiêu chí hiện tại
+    // Sắp xếp sản phẩm
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -571,23 +564,38 @@ export default function DynamicIPhonePage() {
               </div>
             </div>
 
-            <div className="lg:col-span-4">
-              <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-5 bg-[#d70018] inline-block" />
-                <span>Bạn vừa xem</span>
-              </h3>
-              <div className="grid grid-cols-2 gap-3.5">
-                {RECENTLY_VIEWED_IPHONE.map((item) => (
-                  <div key={item.id} className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm border border-gray-200">
-                    <div className="w-full h-32 my-2 flex items-center justify-center overflow-hidden">
-                      <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain" />
-                    </div>
-                    <span className="font-bold text-xs text-gray-800 line-clamp-2 h-[34px]">{item.name}</span>
-                    <span className="text-xs font-black text-[#d70018] mt-2">{item.currentPrice}</span>
-                  </div>
-                ))}
+            {/* Chỉ render khi người dùng thực tế đã xem sản phẩm */}
+            {recentViewed.length > 0 && (
+              <div className="lg:col-span-4">
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-5 bg-[#d70018] inline-block" />
+                  <span>Bạn vừa xem</span>
+                </h3>
+                <div className="grid grid-cols-2 gap-3.5">
+                  {recentViewed.slice(0, 4).map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href || `/san-pham/${item.slug || item.id}`}
+                      className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm border border-gray-200 hover:border-[#d70018] transition-colors group"
+                    >
+                      <div className="w-full h-32 my-2 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                        />
+                      </div>
+                      <span className="font-bold text-xs text-gray-800 line-clamp-2 h-[34px] group-hover:text-[#d70018]">
+                        {item.name}
+                      </span>
+                      <span className="text-xs font-black text-[#d70018] mt-2">
+                        {item.currentPrice}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </main>
       </div>

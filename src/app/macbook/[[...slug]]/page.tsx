@@ -7,10 +7,7 @@ import { ChevronLeft, ChevronRight, Star, CornerDownLeft } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import {
-  MACBOOK_HELPFUL_NEWS,
-  RECENTLY_VIEWED_MACBOOK,
-} from '@/data/macbookCatalog';
+import { MACBOOK_HELPFUL_NEWS } from '@/data/macbookCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 
 // 1. Dữ liệu 3 dòng lớn
@@ -138,11 +135,24 @@ export default function DynamicMacBookPage() {
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   const [dbItems, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
   const slugArray = (params?.slug as string[]) || [];
   const rawParam = slugArray[0] || '';
 
-  // Fetch dữ liệu từ API Backend (Đã fix cú pháp try/catch và thêm searchIndex an toàn)
+  // Đọc sản phẩm đã xem thực tế từ localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fogo_recent_viewed');
+      if (saved) {
+        setRecentViewed(JSON.parse(saved));
+      }
+    } catch (err) {
+      console.error('Lỗi đọc recent viewed:', err);
+    }
+  }, []);
+
+  // Fetch dữ liệu từ API Backend
   useEffect(() => {
     const fetchLiveMacbook = async () => {
       try {
@@ -670,23 +680,38 @@ export default function DynamicMacBookPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-4">
-              <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-5 bg-[#d70018] inline-block" />
-                <span>Bạn vừa xem</span>
-              </h3>
-              <div className="grid grid-cols-2 gap-3.5">
-                {RECENTLY_VIEWED_MACBOOK.map((item) => (
-                  <div key={item.id} className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm border border-gray-200">
-                    <div className="w-full h-32 my-2 flex items-center justify-center overflow-hidden">
-                      <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain" />
-                    </div>
-                    <span className="font-bold text-xs text-gray-800 line-clamp-2 h-[34px]">{item.name}</span>
-                    <span className="text-xs font-black text-[#d70018] mt-2">{item.currentPrice}</span>
-                  </div>
-                ))}
+            {/* Khối bạn vừa xem đọc động từ localStorage */}
+            {recentViewed.length > 0 && (
+              <div className="lg:col-span-4">
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-5 bg-[#d70018] inline-block" />
+                  <span>Bạn vừa xem</span>
+                </h3>
+                <div className="grid grid-cols-2 gap-3.5">
+                  {recentViewed.slice(0, 4).map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href || `/san-pham/${item.slug || item.id}`}
+                      className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm border border-gray-200 hover:border-[#d70018] transition-colors group"
+                    >
+                      <div className="w-full h-32 my-2 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                        />
+                      </div>
+                      <span className="font-bold text-xs text-gray-800 line-clamp-2 h-[34px] group-hover:text-[#d70018]">
+                        {item.name}
+                      </span>
+                      <span className="text-xs font-black text-[#d70018] mt-2">
+                        {item.currentPrice}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </main>
       </div>
