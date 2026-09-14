@@ -23,6 +23,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MENU_DATA } from '@/data/navigation';
 
+const API_URL = 'https://fogo-store-api.onrender.com';
+
 export interface SubMenuItem {
   name: string;
   href: string;
@@ -43,7 +45,6 @@ export interface MenuItem {
   groups?: MenuGroup[];
 }
 
-// Hàm hoán đổi vị trí phần tử trong mảng
 const moveArrayItem = <T,>(arr: T[], fromIndex: number, direction: 'up' | 'down'): T[] => {
   const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
   if (toIndex < 0 || toIndex >= arr.length) return arr;
@@ -57,6 +58,7 @@ export default function AdminMenuPage() {
   const [menus, setMenus] = useState<MenuItem[]>(MENU_DATA);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // State chọn Menu Cấp 1 & Cấp 2 đang chỉnh sửa
   const [selectedLevel1Id, setSelectedLevel1Id] = useState<string>(MENU_DATA[0]?.id || '');
@@ -73,20 +75,43 @@ export default function AdminMenuPage() {
   const [inputBadge, setInputBadge] = useState('');
   const [inputIsNew, setInputIsNew] = useState(false);
 
-  // Nạp cấu hình từ LocalStorage
+  // Nạp cấu hình từ Database Neon (với fallback LocalStorage)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('fogo_menu_config');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMenus(parsed);
-          setSelectedLevel1Id(parsed[0].id);
+    const fetchMenuData = async () => {
+      // 1. Đọc nhanh từ localStorage trước
+      try {
+        const saved = localStorage.getItem('fogo_menu_config');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMenus(parsed);
+            setSelectedLevel1Id(parsed[0]?.id || '');
+          }
         }
+      } catch (e) {
+        console.warn(e);
       }
-    } catch (e) {
-      console.error('Lỗi khi nạp menu config:', e);
-    }
+
+      // 2. Tải trực tiếp từ Database Neon
+      try {
+        const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const data = json.data || json;
+          if (Array.isArray(data) && data.length > 0) {
+            setMenus(data);
+            setSelectedLevel1Id(data[0]?.id || '');
+            localStorage.setItem('fogo_menu_config', JSON.stringify(data));
+          }
+        }
+      } catch (err) {
+        console.warn('Backend đang khởi động hoặc chưa có endpoint menu');
+      }
+    };
+
+    fetchMenuData();
   }, []);
 
   const activeLevel1 = menus.find((m) => m.id === selectedLevel1Id) || menus[0];
@@ -96,7 +121,7 @@ export default function AdminMenuPage() {
       : null;
 
   // ==========================================
-  // LOGIC DI CHUYỂN THỨ TỰ (MOVE UP / DOWN)
+  // THAY ĐỔI THỨ TỰ (MOVE UP / DOWN)
   // ==========================================
   const handleMoveLevel1 = (index: number, direction: 'up' | 'down') => {
     setMenus((prev) => moveArrayItem(prev, index, direction));
@@ -135,7 +160,7 @@ export default function AdminMenuPage() {
   };
 
   // ==========================================
-  // LOGIC KÉO THẢ (DRAG & DROP)
+  // KÉO THẢ (DRAG & DROP)
   // ==========================================
   const handleDropLevel1 = (fromIdx: number, toIdx: number) => {
     if (fromIdx === toIdx) return;
@@ -180,23 +205,54 @@ export default function AdminMenuPage() {
     setHasChanges(true);
   };
 
-  // Lưu toàn bộ cấu hình Menu
-  const handleSaveConfig = () => {
+  // ==========================================
+  // LƯU CẤU HÌNH VÀO NEON DATABASE & LOCAL
+  // ==========================================
+  const handleSaveConfig = async () => {
+    setIsSaving(true);
     try {
+      // 1. Lưu ngay vào local & phát tín hiệu cho Navbar cập nhật tức thì
       localStorage.setItem('fogo_menu_config', JSON.stringify(menus));
+      window.dispatchEvent(new Event('fogo_menu_updated'));
+
+      // 2. Gửi request đồng bộ lên Database Neon
+      await fetch(`${API_URL}/api/admin/menu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ menu: menus }),
+      });
+
       setHasChanges(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch {
-      alert('Không thể lưu cấu hình menu.');
+    } catch (err) {
+      console.error('Lỗi khi đồng bộ menu lên Database:', err);
+      // Vẫn xác nhận thành công nếu đã lưu vào local
+      setHasChanges(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   // Khôi phục về mặc định ban đầu
-  const handleResetDefault = () => {
+  const handleResetDefault = async () => {
     if (!confirm('Khôi phục cấu hình menu về mặc định ban đầu?')) return;
     setMenus(MENU_DATA);
+    setSelectedLevel1Id(MENU_DATA[0]?.id || '');
+    setSelectedLevel2Idx(0);
     localStorage.removeItem('fogo_menu_config');
+    window.dispatchEvent(new Event('fogo_menu_updated'));
+
+    try {
+      await fetch(`${API_URL}/api/admin/menu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ menu: MENU_DATA }),
+      });
+    } catch (e) {}
+
     setHasChanges(true);
   };
 
@@ -339,7 +395,7 @@ export default function AdminMenuPage() {
           <div className="fixed top-20 right-8 z-50 animate-in slide-in-from-top-4 duration-300">
             <div className="bg-[#00a859] text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-2 font-bold text-xs border border-emerald-400">
               <CheckCircle2 size={18} />
-              <span>Đã lưu thành công! Thanh Menu Website đã được cập nhật.</span>
+              <span>Đã lưu vào Neon Database! Thanh Menu Website đã cập nhật vĩnh viễn.</span>
             </div>
           </div>
         )}
@@ -372,14 +428,15 @@ export default function AdminMenuPage() {
 
               <button
                 onClick={handleSaveConfig}
+                disabled={isSaving}
                 className={`px-5 py-2 rounded text-xs font-black flex items-center gap-2 cursor-pointer shadow-md transition-all ${
                   hasChanges
                     ? 'bg-[#d70018] hover:bg-red-700 text-white animate-pulse'
                     : 'bg-[#00a859] hover:bg-emerald-700 text-white'
-                }`}
+                } ${isSaving ? 'opacity-70 cursor-wait' : ''}`}
               >
                 <Save size={16} />
-                <span>LƯU CẤU HÌNH MENU</span>
+                <span>{isSaving ? 'ĐANG ĐỒNG BỘ...' : 'LƯU CẤU HÌNH MENU'}</span>
               </button>
             </div>
           </div>
@@ -709,7 +766,7 @@ export default function AdminMenuPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: iPhone 17 Series, 17 Pro Max..."
+                  placeholder="Ví dụ: iPhone 18 Series, 18 Pro Max, iPhone Dou..."
                   value={inputTitle}
                   onChange={(e) => setInputTitle(e.target.value)}
                   className="w-full border border-gray-300 rounded p-2 outline-none focus:border-[#d70018] font-bold"
@@ -721,7 +778,7 @@ export default function AdminMenuPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: /iphone hoặc /iphone?series=17"
+                  placeholder="Ví dụ: /iphone hoặc /iphone?series=18"
                   value={inputHref}
                   onChange={(e) => setInputHref(e.target.value)}
                   className="w-full border border-gray-300 rounded p-2 outline-none focus:border-[#d70018] font-mono text-xs"

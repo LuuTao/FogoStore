@@ -5,22 +5,55 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { MENU_DATA } from '@/data/navigation';
 
+const API_URL = 'https://fogo-store-api.onrender.com';
+
 export const Navbar: React.FC = () => {
   const [navData, setNavData] = useState(MENU_DATA);
 
-  // Đồng bộ cấu hình menu chuẩn trực tiếp từ Admin (fogo_menu_config)
-  useEffect(() => {
+  const fetchNavbarData = async () => {
+    // 1. Kiểm tra nhanh cache local để giao diện mượt mà, không giật trắng
     try {
-      const raw = localStorage.getItem('fogo_menu_config');
-      if (raw) {
-        const parsed = JSON.parse(raw);
+      const cached = localStorage.getItem('fogo_menu_config');
+      if (cached) {
+        const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setNavData(parsed);
         }
       }
     } catch (e) {
-      console.error('Lỗi nạp navigation động từ Admin:', e);
+      console.warn('Lỗi đọc cache menu:', e);
     }
+
+    // 2. Fetch dữ liệu mới nhất được lưu trong Database Neon
+    try {
+      const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          Pragma: 'no-cache',
+          'Cache-Control': 'no-cache',
+        },
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        if (Array.isArray(data) && data.length > 0) {
+          setNavData(data);
+          localStorage.setItem('fogo_menu_config', JSON.stringify(data));
+        }
+      }
+    } catch (err) {
+      // Khi server cold start hoặc mất mạng, giữ nguyên menu đang hiển thị
+    }
+  };
+
+  useEffect(() => {
+    fetchNavbarData();
+
+    // Lắng nghe sự kiện khi Admin nhấn lưu để cập nhật thanh menu ngay lập tức
+    const handleSync = () => fetchNavbarData();
+    window.addEventListener('fogo_menu_updated', handleSync);
+    return () => window.removeEventListener('fogo_menu_updated', handleSync);
   }, []);
 
   return (
