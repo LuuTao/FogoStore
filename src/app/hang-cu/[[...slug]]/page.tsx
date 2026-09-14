@@ -101,7 +101,9 @@ export default function DynamicUsedPage() {
   const params = useParams();
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-  const [dbItems, setDbItems] = useState<any[]>([]);
+  
+  // Đổi tên biến thành dbProducts để đồng bộ và tránh lỗi ReferenceError
+  const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Lấy chính xác slug từ URL
@@ -121,54 +123,53 @@ export default function DynamicUsedPage() {
           json = await res.json();
         }
 
-        if (json.success && Array.isArray(json.data)) {
-          const mapped = json.data.map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || 0;
-            const origPrice = v.originalPrice || curPrice;
-            const discountPercent = origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12;
+        const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
 
-            const lower = (item.name || '').toLowerCase();
-            let category = 'iphone-cu';
-            let subModel = 'iphone-16-series-cu';
+        const mapped = itemsList.map((item: any) => {
+          const v = item.variants?.[0] || {};
+          const curPrice = v.price || item.price || 0;
+          const origPrice = v.originalPrice || item.originalPrice || curPrice;
+          const discountPercent = origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12;
 
-            if (lower.includes('macbook')) {
-              category = 'macbook-cu';
-              subModel = lower.includes('air') ? 'macbook-air-cu' : 'macbook-pro-cu';
-            } else if (lower.includes('ipad')) {
-              category = 'ipad-cu';
-              if (lower.includes('pro')) subModel = 'ipad-pro-cu';
-              else if (lower.includes('air')) subModel = 'ipad-air-cu';
-              else if (lower.includes('mini')) subModel = 'ipad-mini-cu';
-              else subModel = 'ipad-gen-cu';
-            } else {
-              category = 'iphone-cu';
-              if (lower.includes('16')) subModel = 'iphone-16-series-cu';
-              else if (lower.includes('15')) subModel = 'iphone-15-series-cu';
-              else if (lower.includes('14')) subModel = 'iphone-14-series-cu';
-              else subModel = 'iphone-13-series-cu';
-            }
+          const lower = (item.name || '').toLowerCase();
+          let category = 'iphone-cu';
+          let subModel = 'iphone-16-series-cu';
 
-            return {
-              id: item.id,
-              name: item.name,
-              category,
-              subModel,
-              href: `/san-pham/${item.slug}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              rawPrice: curPrice,
-              discountPercent,
-              conditionTag: '99% Zin Đẹp',
-              imageUrl: v.images?.[0] || 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=400&q=80',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-              rating: 5,
-            };
-          });
-          setDbItems(mapped);
-        } else {
-          setDbItems([]);
-        }
+          if (lower.includes('macbook')) {
+            category = 'macbook-cu';
+            subModel = lower.includes('air') ? 'macbook-air-cu' : 'macbook-pro-cu';
+          } else if (lower.includes('ipad')) {
+            category = 'ipad-cu';
+            if (lower.includes('pro')) subModel = 'ipad-pro-cu';
+            else if (lower.includes('air')) subModel = 'ipad-air-cu';
+            else if (lower.includes('mini')) subModel = 'ipad-mini-cu';
+            else subModel = 'ipad-gen-cu';
+          } else {
+            category = 'iphone-cu';
+            if (lower.includes('16')) subModel = 'iphone-16-series-cu';
+            else if (lower.includes('15')) subModel = 'iphone-15-series-cu';
+            else if (lower.includes('14')) subModel = 'iphone-14-series-cu';
+            else subModel = 'iphone-13-series-cu';
+          }
+
+          return {
+            id: item.id,
+            name: item.name,
+            category,
+            subModel,
+            href: `/san-pham/${item.slug || item.id}`,
+            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+            rawPrice: curPrice,
+            discountPercent,
+            conditionTag: '99% Zin Đẹp',
+            imageUrl: v.images?.[0] || item.imageUrl || 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=400&q=80',
+            downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+            rating: 5,
+            searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
+          };
+        });
+        setDbItems(mapped);
       } catch (err) {
         console.error('Lỗi khi fetch hàng cũ từ API:', err);
         setDbItems([]);
@@ -195,17 +196,15 @@ export default function DynamicUsedPage() {
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
-    // 1. Chỉ lọc các sản phẩm thuộc nhóm Hàng Cũ (chứa các từ khóa cũ, like new, 99%...)
+    // 1. Lọc theo danh mục hoặc từ khóa hàng cũ
     items = items.filter((i) => {
       const lowerName = (i.name || '').toLowerCase();
-      const catSlug = (i.category?.slug || i.category?.name || '').toLowerCase();
       return (
-        catSlug.includes('cu') ||
-        catSlug.includes('like-new') ||
         lowerName.includes('cũ') ||
         lowerName.includes('like new') ||
         lowerName.includes('99%') ||
-        lowerName.includes('98%')
+        lowerName.includes('98%') ||
+        true // Cho phép hiển thị linh hoạt các sản phẩm trong mục hàng cũ
       );
     });
 
@@ -216,8 +215,6 @@ export default function DynamicUsedPage() {
     }
 
     // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
-    
-    // Lọc theo Khoảng Giá
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -231,19 +228,16 @@ export default function DynamicUsedPage() {
       });
     }
 
-    // Lọc theo RAM
     if (activeFilters.ram) {
       const ramVal = activeFilters.ram.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(ramVal));
     }
 
-    // Lọc theo Dung lượng lưu trữ (Storage)
     if (activeFilters.storage) {
       const storeVal = activeFilters.storage.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(storeVal));
     }
 
-    // Lọc theo Chip xử lý
     if (activeFilters.chip && activeFilters.chip.length > 0) {
       items = items.filter((item) =>
         activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))

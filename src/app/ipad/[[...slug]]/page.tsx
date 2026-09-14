@@ -107,7 +107,7 @@ export default function DynamicIPadPage() {
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   
-  const [dbItems, setDbItems] = useState<any[]>([]);
+  const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const slugArray = (params?.slug as string[]) || [];
@@ -128,60 +128,60 @@ export default function DynamicIPadPage() {
           json = await res.json();
         }
 
-        if (json.success && Array.isArray(json.data)) {
-          const mapped = json.data
-            .filter((item: any) => {
-              const lower = (item.name || '').toLowerCase();
-              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
-              return cat.includes('ipad') || lower.includes('ipad');
-            })
-            .map((item: any) => {
-              const v = item.variants?.[0] || {};
-              const curPrice = v.price || 0;
-              const origPrice = v.originalPrice || curPrice;
-              const discountPercent =
-                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+        const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
 
-              const lower = item.name.toLowerCase();
-              let series = 'ipad-pro';
-              let subModel = 'ipad-pro-m4';
+        const mapped = itemsList
+          .filter((item: any) => {
+            const lower = (item.name || '').toLowerCase();
+            const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+            return cat.includes('ipad') || lower.includes('ipad');
+          })
+          .map((item: any) => {
+            const v = item.variants?.[0] || {};
+            const curPrice = v.price || item.price || 0;
+            const origPrice = v.originalPrice || item.originalPrice || curPrice;
+            const discountPercent =
+              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
-              if (lower.includes('air')) {
-                series = 'ipad-air';
-                subModel = lower.includes('m2') ? 'ipad-air-m2' : 'ipad-air-5';
-              } else if (lower.includes('mini')) {
-                series = 'ipad-mini';
-                subModel = 'ipad-mini-7';
-              } else if (lower.includes('gen')) {
-                series = 'ipad-gen';
-                subModel = 'ipad-gen-11';
-              } else {
-                subModel = lower.includes('m4') ? 'ipad-pro-m4' : 'ipad-pro-m2';
-              }
+            const lower = (item.name || '').toLowerCase();
+            let series = 'ipad-pro';
+            let subModel = 'ipad-pro-m4';
 
-              return {
-                id: item.id,
-                name: item.name,
-                series,
-                subModel,
-                href: `/san-pham/${item.slug}`,
-                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-                rawPrice: curPrice,
-                discountPercent,
-                imageUrl:
-                  v.images?.[0] ||
-                  'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
-                downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-                statusTag: 'Sẵn hàng',
-                rating: 5,
-              };
-            });
+            if (lower.includes('air')) {
+              series = 'ipad-air';
+              subModel = lower.includes('m2') ? 'ipad-air-m2' : 'ipad-air-5';
+            } else if (lower.includes('mini')) {
+              series = 'ipad-mini';
+              subModel = 'ipad-mini-7';
+            } else if (lower.includes('gen')) {
+              series = 'ipad-gen';
+              subModel = 'ipad-gen-11';
+            } else {
+              subModel = lower.includes('m4') ? 'ipad-pro-m4' : 'ipad-pro-m2';
+            }
 
-          setDbItems(mapped);
-        } else {
-          setDbItems([]);
-        }
+            return {
+              id: item.id,
+              name: item.name,
+              series,
+              subModel,
+              href: `/san-pham/${item.slug || item.id}`,
+              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+              rawPrice: curPrice,
+              discountPercent,
+              imageUrl:
+                v.images?.[0] ||
+                item.imageUrl ||
+                'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
+              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+              statusTag: 'Sẵn hàng',
+              rating: 5,
+              searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
+            };
+          });
+
+        setDbItems(mapped);
       } catch (err) {
         console.error('Lỗi khi fetch iPad từ API:', err);
         setDbItems([]);
@@ -204,16 +204,14 @@ export default function DynamicIPadPage() {
 
   const activeSubmodels = currentSeriesKey ? IPAD_SUBMODELS_MAP[currentSeriesKey] : null;
 
-  // Lọc sản phẩm thuần từ cơ sở dữ liệu
-  // Logic lọc tự động kết hợp danh mục iPad và bộ lọc nâng cao từ Modal
+  // Lọc sản phẩm chuẩn từ cơ sở dữ liệu kết hợp Modal Bộ Lọc
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
     // 1. Chỉ lọc các sản phẩm thuộc danh mục iPad
     items = items.filter((i) => {
       const lowerName = (i.name || '').toLowerCase();
-      const catSlug = (i.category?.slug || i.category?.name || '').toLowerCase();
-      return catSlug.includes('ipad') || lowerName.includes('ipad');
+      return lowerName.includes('ipad');
     });
 
     // 2. Lọc theo Series hoặc Submodel (iPad Pro, iPad Air, iPad Mini, iPad Gen)
@@ -231,8 +229,6 @@ export default function DynamicIPadPage() {
     }
 
     // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
-    
-    // Lọc theo Khoảng Giá
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -246,25 +242,21 @@ export default function DynamicIPadPage() {
       });
     }
 
-    // Lọc theo Kích thước màn hình iPad (Dưới 11 inch, 11 - 13 inch, Trên 13 inch...)
     if (activeFilters.screenSize) {
       const screenVal = activeFilters.screenSize.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(screenVal));
     }
 
-    // Lọc theo RAM
     if (activeFilters.ram) {
       const ramVal = activeFilters.ram.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(ramVal));
     }
 
-    // Lọc theo Dung lượng lưu trữ (Storage)
     if (activeFilters.storage) {
       const storeVal = activeFilters.storage.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(storeVal));
     }
 
-    // Lọc theo Chip xử lý (M4, M2, A16...)
     if (activeFilters.chip && activeFilters.chip.length > 0) {
       items = items.filter((item) =>
         activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))

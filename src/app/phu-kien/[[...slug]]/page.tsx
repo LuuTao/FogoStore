@@ -56,7 +56,7 @@ export default function DynamicAccessoryPage() {
   const params = useParams();
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-  const [dbItems, setDbItems] = useState<any[]>([]);
+  const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const slugParam = params?.slug;
@@ -76,72 +76,72 @@ export default function DynamicAccessoryPage() {
           json = await res.json();
         }
 
-        if (json.success && Array.isArray(json.data)) {
-          const mapped = json.data
-            .filter((item: any) => {
-              const lower = (item.name || '').toLowerCase();
-              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
-              return (
-                cat.includes('phu-kien') ||
-                cat.includes('accessory') ||
-                lower.includes('sạc') ||
-                lower.includes('cáp') ||
-                lower.includes('tai nghe') ||
-                lower.includes('airpods') ||
-                lower.includes('ốp') ||
-                lower.includes('kính') ||
-                lower.includes('pencil') ||
-                lower.includes('chuột') ||
-                lower.includes('keyboard')
-              );
-            })
-            .map((item: any) => {
-              const v = item.variants?.[0] || {};
-              const curPrice = v.price || 0;
-              const origPrice = v.originalPrice || curPrice;
-              const discountPercent =
-                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 10;
+        const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
 
-              const lower = item.name.toLowerCase();
-              let series = 'sac-cap';
+        const mapped = itemsList
+          .filter((item: any) => {
+            const lower = (item.name || '').toLowerCase();
+            const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+            return (
+              cat.includes('phu-kien') ||
+              cat.includes('accessory') ||
+              lower.includes('sạc') ||
+              lower.includes('cáp') ||
+              lower.includes('tai nghe') ||
+              lower.includes('airpods') ||
+              lower.includes('ốp') ||
+              lower.includes('kính') ||
+              lower.includes('pencil') ||
+              lower.includes('chuột') ||
+              lower.includes('keyboard')
+            );
+          })
+          .map((item: any) => {
+            const v = item.variants?.[0] || {};
+            const curPrice = v.price || item.price || 0;
+            const origPrice = v.originalPrice || item.originalPrice || curPrice;
+            const discountPercent =
+              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 10;
 
-              if (lower.includes('airpods') || lower.includes('tai nghe')) {
-                series = 'tai-nghe';
-              } else if (lower.includes('ốp') || lower.includes('bao da')) {
-                series = 'op-lung';
-              } else if (lower.includes('kính') || lower.includes('cường lực')) {
-                series = 'cuong-luc';
-              } else if (
-                lower.includes('pencil') ||
-                lower.includes('bàn phím') ||
-                lower.includes('magic')
-              ) {
-                series = 'phu-kien-mac';
-              }
+            const lower = (item.name || '').toLowerCase();
+            let series = 'sac-cap';
 
-              return {
-                id: item.id,
-                slug: item.slug,
-                name: item.name,
-                series,
-                subModel: series,
-                href: `/san-pham/${item.slug}`,
-                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-                rawPrice: curPrice,
-                discountPercent,
-                imageUrl:
-                  v.images?.[0] ||
-                  'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=400&q=80',
-                downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-                rating: 5,
-              };
-            });
+            if (lower.includes('airpods') || lower.includes('tai nghe')) {
+              series = 'tai-nghe';
+            } else if (lower.includes('ốp') || lower.includes('bao da')) {
+              series = 'op-lung';
+            } else if (lower.includes('kính') || lower.includes('cường lực')) {
+              series = 'cuong-luc';
+            } else if (
+              lower.includes('pencil') ||
+              lower.includes('bàn phím') ||
+              lower.includes('magic')
+            ) {
+              series = 'phu-kien-mac';
+            }
 
-          setDbItems(mapped);
-        } else {
-          setDbItems([]);
-        }
+            return {
+              id: item.id,
+              slug: item.slug,
+              name: item.name,
+              series,
+              subModel: series,
+              href: `/san-pham/${item.slug || item.id}`,
+              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+              rawPrice: curPrice,
+              discountPercent,
+              imageUrl:
+                v.images?.[0] ||
+                item.imageUrl ||
+                'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=400&q=80',
+              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+              rating: 5,
+              searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
+            };
+          });
+
+        setDbItems(mapped);
       } catch (err) {
         console.error('Lỗi khi fetch phụ kiện từ API:', err);
         setDbItems([]);
@@ -157,33 +157,13 @@ export default function DynamicAccessoryPage() {
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
-    // 1. Chỉ lọc các sản phẩm thuộc nhóm Phụ Kiện (Cáp sạc, tai nghe, ốp lưng, cường lực...)
-    items = items.filter((i) => {
-      const lowerName = (i.name || '').toLowerCase();
-      const catSlug = (i.category?.slug || i.category?.name || '').toLowerCase();
-      return (
-        catSlug.includes('phu-kien') ||
-        catSlug.includes('phụ kiện') ||
-        lowerName.includes('sạc') ||
-        lowerName.includes('cáp') ||
-        lowerName.includes('airpods') ||
-        lowerName.includes('ốp lưng') ||
-        lowerName.includes('cường lực') ||
-        lowerName.includes('pencil') ||
-        lowerName.includes('bút') ||
-        lowerName.includes('tai nghe')
-      );
-    });
-
-    // 2. Lọc theo nhóm phụ kiện cụ thể (nếu trên URL có chọn sub-filter như Củ sạc, ốp lưng...)
+    // 1. Lọc theo nhóm phụ kiện cụ thể (nếu trên URL có chọn sub-filter như sac-cap, tai nghe...)
     if (currentFilter) {
       const lowerFilter = currentFilter.toLowerCase().replace(/[-]/g, ' ');
-      items = items.filter((i) => i.searchIndex.includes(lowerFilter));
+      items = items.filter((i) => i.series === currentFilter || i.searchIndex.includes(lowerFilter));
     }
 
-    // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
-    
-    // Lọc theo Khoảng Giá
+    // 2. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);

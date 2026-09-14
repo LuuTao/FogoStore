@@ -91,7 +91,7 @@ export default function DynamicWatchPage() {
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
 
   // State lưu danh sách sản phẩm lấy trực tiếp từ Database
-  const [dbItems, setDbItems] = useState<any[]>([]);
+  const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const slugArray = (params?.slug as string[]) || [];
@@ -112,61 +112,61 @@ export default function DynamicWatchPage() {
           json = await res.json();
         }
 
-        if (json.success && Array.isArray(json.data)) {
-          const mapped = json.data
-            .filter((item: any) => {
-              const lower = (item.name || '').toLowerCase();
-              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
-              return cat.includes('watch') || lower.includes('watch') || lower.includes('đồng hồ');
-            })
-            .map((item: any) => {
-              const v = item.variants?.[0] || {};
-              const curPrice = v.price || 0;
-              const origPrice = v.originalPrice || curPrice;
-              const discountPercent =
-                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+        const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
 
-              const lower = item.name.toLowerCase();
-              let series = 'watch-series';
-              let subModel = 'watch-series-10';
+        const mapped = itemsList
+          .filter((item: any) => {
+            const lower = (item.name || '').toLowerCase();
+            const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+            return cat.includes('watch') || lower.includes('watch') || lower.includes('đồng hồ');
+          })
+          .map((item: any) => {
+            const v = item.variants?.[0] || {};
+            const curPrice = v.price || item.price || 0;
+            const origPrice = v.originalPrice || item.originalPrice || curPrice;
+            const discountPercent =
+              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
-              if (lower.includes('ultra')) {
-                series = 'watch-ultra';
-                subModel = lower.includes('2') ? 'watch-ultra-2' : 'watch-ultra-1';
-              } else if (lower.includes('se')) {
-                series = 'watch-se';
-                subModel = lower.includes('2') ? 'watch-se-2' : 'watch-se-1';
-              } else {
-                series = 'watch-series';
-                if (lower.includes('10')) subModel = 'watch-series-10';
-                else if (lower.includes('9')) subModel = 'watch-series-9';
-                else if (lower.includes('8')) subModel = 'watch-series-8';
-                else subModel = 'watch-series-10';
-              }
+            const lower = (item.name || '').toLowerCase();
+            let series = 'watch-series';
+            let subModel = 'watch-series-10';
 
-              return {
-                id: item.id,
-                name: item.name,
-                series,
-                subModel,
-                href: `/san-pham/${item.slug}`,
-                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-                rawPrice: curPrice,
-                discountPercent,
-                imageUrl:
-                  v.images?.[0] ||
-                  'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80',
-                downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-                statusTag: 'Sẵn hàng',
-                rating: 5,
-              };
-            });
+            if (lower.includes('ultra')) {
+              series = 'watch-ultra';
+              subModel = lower.includes('2') ? 'watch-ultra-2' : 'watch-ultra-1';
+            } else if (lower.includes('se')) {
+              series = 'watch-se';
+              subModel = lower.includes('2') ? 'watch-se-2' : 'watch-se-1';
+            } else {
+              series = 'watch-series';
+              if (lower.includes('10')) subModel = 'watch-series-10';
+              else if (lower.includes('9')) subModel = 'watch-series-9';
+              else if (lower.includes('8')) subModel = 'watch-series-8';
+              else subModel = 'watch-series-10';
+            }
 
-          setDbItems(mapped);
-        } else {
-          setDbItems([]);
-        }
+            return {
+              id: item.id,
+              name: item.name,
+              series,
+              subModel,
+              href: `/san-pham/${item.slug || item.id}`,
+              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+              rawPrice: curPrice,
+              discountPercent,
+              imageUrl:
+                v.images?.[0] ||
+                item.imageUrl ||
+                'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80',
+              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+              statusTag: 'Sẵn hàng',
+              rating: 5,
+              searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
+            };
+          });
+
+        setDbItems(mapped);
       } catch (err) {
         console.error('Lỗi khi fetch Apple Watch từ API:', err);
         setDbItems([]);
@@ -196,8 +196,7 @@ export default function DynamicWatchPage() {
     // 1. Chỉ lọc các sản phẩm thuộc danh mục Apple Watch
     items = items.filter((i) => {
       const lowerName = (i.name || '').toLowerCase();
-      const catSlug = (i.category?.slug || i.category?.name || '').toLowerCase();
-      return catSlug.includes('watch') || lowerName.includes('watch') || lowerName.includes('đồng hồ');
+      return lowerName.includes('watch') || lowerName.includes('đồng hồ');
     });
 
     // 2. Lọc theo Series hoặc Dòng (Ultra, Series, SE)
@@ -213,8 +212,6 @@ export default function DynamicWatchPage() {
     }
 
     // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
-    
-    // Lọc theo Khoảng Giá
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -228,13 +225,11 @@ export default function DynamicWatchPage() {
       });
     }
 
-    // Lọc theo Kích thước màn hình / Size mặt đồng hồ (ví dụ: 40mm, 41mm, 44mm, 45mm, 49mm)
     if (activeFilters.screenSize) {
       const sizeVal = activeFilters.screenSize.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(sizeVal));
     }
 
-    // Lọc theo Nhu cầu / Tính năng (Thể thao, Chụp ảnh, Pin trâu,...)
     if (activeFilters.demand && activeFilters.demand.length > 0) {
       items = items.filter((item) =>
         activeFilters.demand!.some((d) => item.searchIndex.includes(d.toLowerCase()))
