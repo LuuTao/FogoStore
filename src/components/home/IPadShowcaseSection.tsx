@@ -5,36 +5,6 @@ import Link from 'next/link';
 import { Star, ArrowRight } from 'lucide-react';
 
 const IPAD_SERIES_TABS = [
-  {
-    id: 'ALL',
-    series: null,
-    name: 'Tất cả',
-    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100',
-  },
-  {
-    id: 'pro',
-    series: 'pro',
-    name: 'iPad Pro',
-    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100',
-  },
-  {
-    id: 'air',
-    series: 'air',
-    name: 'iPad Air',
-    imageUrl: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?w=100',
-  },
-  {
-    id: 'gen',
-    series: 'gen',
-    name: 'iPad Gen',
-    imageUrl: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?w=100',
-  },
-  {
-    id: 'mini',
-    series: 'mini',
-    name: 'iPad Mini',
-    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100',
-  },
 ];
 
 export const IPadShowcaseSection: React.FC = () => {

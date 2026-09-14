@@ -31,7 +31,7 @@ export const FeaturedProductsSection: React.FC = () => {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8 text-center text-xs text-gray-400">
-        Đang nạp danh sách Flash Sale...
+      
       </div>
     );
   }

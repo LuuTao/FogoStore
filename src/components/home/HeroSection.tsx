@@ -8,51 +8,9 @@ const API_URL = 'https://fogo-store-api.onrender.com';
 const API_BASE = `${API_URL}/api`;
 
 const DEFAULT_HERO_BANNERS = [
-  {
-    id: 'default-hero-1',
-    title: 'iPhone 16 Pro Max - Thiết kế Titan sa mạc đẳng cấp',
-    imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?q=80&w=2070&auto=format&fit=crop',
-    link: '/iphone',
-  },
-  {
-    id: 'default-hero-2',
-    title: 'MacBook Pro M3 Max - Sức mạnh đỉnh cao cho chuyên gia',
-    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=2052&auto=format&fit=crop',
-    link: '/macbook',
-  },
-  {
-    id: 'default-hero-3',
-    title: 'iPad Pro M4 - Siêu mỏng đỉnh cao hiển thị OLED',
-    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?q=80&w=2038&auto=format&fit=crop',
-    link: '/ipad',
-  },
 ];
 
 const DEFAULT_PROMO_CARDS = [
-  {
-    id: 'default-promo-1',
-    title: 'Thu Cũ Đổi Mới Trợ Giá Đến 2 Triệu',
-    imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=1000&auto=format&fit=crop',
-    link: '/hang-cu',
-  },
-  {
-    id: 'default-promo-2',
-    title: 'Phụ Kiện Apple Chính Hãng Giảm 30%',
-    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=1000&auto=format&fit=crop',
-    link: '/phu-kien',
-  },
-  {
-    id: 'default-promo-3',
-    title: 'Apple Watch Series 10 - Đỉnh Cao Công Nghệ',
-    imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=1000&auto=format&fit=crop',
-    link: '/watch',
-  },
-  {
-    id: 'default-promo-4',
-    title: 'AirPods 4 Âm Thanh Vòm Siêu Thực',
-    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=1000&auto=format&fit=crop',
-    link: '/phu-kien',
-  },
 ];
 
 const getFullImageUrl = (url?: string | null): string => {
@@ -126,7 +84,7 @@ export const HeroSection: React.FC = () => {
           }
         }
       } catch (err) {
-        console.error('Lỗi nạp banner từ Database:', err);
+        console.error('Lỗi nạp banner:', err);
       } finally {
         if (isMounted) setLoading(false);
       }

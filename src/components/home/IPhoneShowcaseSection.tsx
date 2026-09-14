@@ -12,36 +12,7 @@ interface TabItem {
 }
 
 const DEFAULT_TABS: TabItem[] = [
-  {
-    id: 'sub-ip-1',
-    name: 'Tất cả',
-    imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=100',
-    queryValue: null,
-  },
-  {
-    id: 'sub-ip-2',
-    name: 'iPhone 16 Series',
-    imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=100',
-    queryValue: '16',
-  },
-  {
-    id: 'sub-ip-3',
-    name: 'iPhone 15 Series',
-    imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=100',
-    queryValue: '15',
-  },
-  {
-    id: 'sub-ip-4',
-    name: 'iPhone 14 Series',
-    imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=100',
-    queryValue: '14',
-  },
-  {
-    id: 'sub-ip-5',
-    name: 'iPhone 13 Series',
-    imageUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=100',
-    queryValue: '13',
-  },
+  
 ];
 
 export const IPhoneShowcaseSection: React.FC = () => {
