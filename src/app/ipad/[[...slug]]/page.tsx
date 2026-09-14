@@ -15,7 +15,7 @@ const IPAD_SERIES_LIST = [
   {
     name: 'iPad Pro',
     slug: 'ipad-pro',
-    img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp0?auto=format&fit=crop&w=150&q=80',
+    img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?auto=format&fit=crop&w=150&q=80',
   },
   {
     name: 'iPad Air',

@@ -102,7 +102,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
               name: item.name,
               slug: item.slug,
               searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
-              href: `/iphone/${item.slug}`,
+              href: `/san-pham/${item.slug}`,
               currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
               originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
               discountPercent,

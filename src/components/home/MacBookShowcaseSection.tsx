@@ -57,7 +57,7 @@ export const MacBookShowcaseSection: React.FC = () => {
               id: item.id,
               name: item.name,
               slug: item.slug,
-              href: `/macbook/${item.slug}`,
+              href: `/san-pham/${item.slug}`,
               currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
               originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
               discountPercent,

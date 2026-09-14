@@ -24,11 +24,6 @@ interface SubModelItem {
 
 const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   {
-    name: 'Tất cả',
-    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w100',
-    queryTag: null,
-  },
-  {
     name: 'iPhone Dou Series',
     slug: 'iphone-dou',
     imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w100',
