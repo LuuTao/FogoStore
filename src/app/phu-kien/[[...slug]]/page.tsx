@@ -3,15 +3,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Star, Zap } from 'lucide-react';
+import { Star, Zap } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import {
-  ACCESSORY_CATALOG_ITEMS,
-  ACCESSORY_HELPFUL_NEWS,
-  RECENTLY_VIEWED_ACCESSORIES,
-} from '@/data/accessoryCatalog';
+import { RECENTLY_VIEWED_ACCESSORIES } from '@/data/accessoryCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 
 const ACCESSORY_CATEGORIES = [
@@ -47,7 +43,6 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
-// Hàm chuẩn hóa đường dẫn để click luôn ăn 100%
 const getProductLink = (item: any) => {
   if (item.slug) return `/san-pham/${item.slug}`;
   if (item.href) {
@@ -62,6 +57,7 @@ export default function DynamicAccessoryPage() {
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   const [dbItems, setDbItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const slugParam = params?.slug;
   const currentFilter = Array.isArray(slugParam) ? slugParam[0] || '' : (slugParam as string) || '';
@@ -69,6 +65,7 @@ export default function DynamicAccessoryPage() {
   useEffect(() => {
     const fetchAccessoryFromDB = async () => {
       try {
+        setLoading(true);
         let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=phu-kien', {
           cache: 'no-store',
         });
@@ -141,12 +138,15 @@ export default function DynamicAccessoryPage() {
               };
             });
 
-          if (mapped.length > 0) {
-            setDbItems(mapped);
-          }
+          setDbItems(mapped);
+        } else {
+          setDbItems([]);
         }
       } catch (err) {
         console.error('Lỗi khi fetch phụ kiện từ API:', err);
+        setDbItems([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -154,7 +154,7 @@ export default function DynamicAccessoryPage() {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    let items = dbItems.length > 0 ? dbItems : (ACCESSORY_CATALOG_ITEMS || []);
+    let items = dbItems;
 
     if (currentFilter) {
       items = items.filter((item) => {
@@ -247,7 +247,7 @@ export default function DynamicAccessoryPage() {
                   </div>
                   <p className="text-xs text-gray-600 font-medium mb-3">Âm thanh studio. Chống ồn chủ động đỉnh cao.</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Giá ưu đãi chỉ từ <span className="text-sm">5.x90.000đ</span>
+                    Sẵn hàng <span className="text-sm">Giá tốt nhất</span>
                   </div>
                 </div>
                 <div className="w-40 sm:w-48 h-32 shrink-0">
@@ -261,7 +261,7 @@ export default function DynamicAccessoryPage() {
             </div>
           </div>
 
-          {/* Thanh icon chọn danh mục con phụ kiện */}
+          {/* Thanh icon danh mục con */}
           <div className="my-8 py-2">
             <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
               {ACCESSORY_CATEGORIES.map((cat) => {
@@ -298,11 +298,13 @@ export default function DynamicAccessoryPage() {
             </div>
           </div>
 
-          {/* Tiêu đề & Cụm Bộ Lọc */}
+          {/* Tiêu đề & Bộ Lọc */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Tìm thấy {filteredProducts.length} phụ kiện chính hãng</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {loading ? 'Đang tải dữ liệu...' : `Tìm thấy ${filteredProducts.length} phụ kiện chính hãng`}
+              </p>
             </div>
 
             <FilterAndSortBar
@@ -313,8 +315,30 @@ export default function DynamicAccessoryPage() {
             />
           </div>
 
-          {/* Lưới sản phẩm */}
-          {filteredProducts.length > 0 ? (
+          {/* Lưới sản phẩm & Skeleton Loader */}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[410px] animate-pulse"
+                >
+                  <div className="flex justify-between items-center h-6">
+                    <div className="w-10 h-4 bg-gray-200" />
+                    <div className="w-16 h-3 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
+                  <div className="space-y-2">
+                    <div className="w-full h-4 bg-gray-200" />
+                    <div className="w-3/4 h-4 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-8 bg-gray-100 my-2" />
+                  <div className="w-1/2 h-5 bg-gray-200" />
+                  <div className="w-1/3 h-3 bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {filteredProducts.map((product) => {
                 const targetLink = getProductLink(product);
@@ -380,7 +404,7 @@ export default function DynamicAccessoryPage() {
             </div>
           ) : (
             <div className="text-center py-16 bg-gray-50 border border-dashed border-gray-200 rounded-sm mb-14">
-              <p className="text-gray-500 font-semibold text-sm">Chưa có phụ kiện nào phù hợp với danh mục này.</p>
+              <p className="text-gray-500 font-semibold text-sm">Chưa có phụ kiện nào phù hợp với danh mục này trong kho.</p>
               <Link href="/phu-kien" className="text-[#d70018] font-bold text-xs mt-2 inline-block hover:underline">
                 Quay lại xem tất cả phụ kiện
               </Link>

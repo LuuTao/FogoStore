@@ -8,7 +8,6 @@ import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import {
-  IPAD_CATALOG_ITEMS,
   IPAD_HELPFUL_NEWS,
   RECENTLY_VIEWED_IPAD,
 } from '@/data/ipadCatalog';
@@ -98,7 +97,8 @@ const IPAD_SUBMODELS_MAP: Record<
   ],
 };
 
-const parsePrice = (priceStr: string) => {
+const parsePrice = (priceStr: string | number) => {
+  if (typeof priceStr === 'number') return priceStr;
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
@@ -107,75 +107,92 @@ export default function DynamicIPadPage() {
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   
-  // State lưu danh sách sản phẩm lấy trực tiếp từ Database
   const [dbItems, setDbItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const slugArray = (params?.slug as string[]) || [];
   const currentFilter = slugArray[0] || '';
 
-  // Kết nối API Backend để đồng bộ với Admin
+  // Kết nối API Backend để đồng bộ với Database
   useEffect(() => {
     const fetchLiveProducts = async () => {
       try {
-        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=ipad', {
+        setLoading(true);
+        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=ipad', {
           cache: 'no-store',
         });
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          // Chuẩn hóa dữ liệu từ DB thành đúng cấu trúc Card hiện tại
-          const mapped = json.data.map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || 0;
-            const origPrice = v.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+        let json = await res.json();
 
-            // Tự động gán series và subModel dựa theo tên sản phẩm
-            const lower = item.name.toLowerCase();
-            let series = 'ipad-pro';
-            let subModel = 'ipad-pro-m4';
+        if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
+          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+          json = await res.json();
+        }
 
-            if (lower.includes('air')) {
-              series = 'ipad-air';
-              subModel = lower.includes('m2') ? 'ipad-air-m2' : 'ipad-air-5';
-            } else if (lower.includes('mini')) {
-              series = 'ipad-mini';
-              subModel = 'ipad-mini-7';
-            } else if (lower.includes('gen')) {
-              series = 'ipad-gen';
-              subModel = 'ipad-gen-11';
-            } else {
-              subModel = lower.includes('m4') ? 'ipad-pro-m4' : 'ipad-pro-m2';
-            }
+        if (json.success && Array.isArray(json.data)) {
+          const mapped = json.data
+            .filter((item: any) => {
+              const lower = (item.name || '').toLowerCase();
+              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+              return cat.includes('ipad') || lower.includes('ipad');
+            })
+            .map((item: any) => {
+              const v = item.variants?.[0] || {};
+              const curPrice = v.price || 0;
+              const origPrice = v.originalPrice || curPrice;
+              const discountPercent =
+                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
-            return {
-              id: item.id,
-              name: item.name,
-              series,
-              subModel,
-              href: `/san-pham/${item.slug}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-              statusTag: 'Sẵn hàng',
-              rating: 5,
-            };
-          });
+              const lower = item.name.toLowerCase();
+              let series = 'ipad-pro';
+              let subModel = 'ipad-pro-m4';
+
+              if (lower.includes('air')) {
+                series = 'ipad-air';
+                subModel = lower.includes('m2') ? 'ipad-air-m2' : 'ipad-air-5';
+              } else if (lower.includes('mini')) {
+                series = 'ipad-mini';
+                subModel = 'ipad-mini-7';
+              } else if (lower.includes('gen')) {
+                series = 'ipad-gen';
+                subModel = 'ipad-gen-11';
+              } else {
+                subModel = lower.includes('m4') ? 'ipad-pro-m4' : 'ipad-pro-m2';
+              }
+
+              return {
+                id: item.id,
+                name: item.name,
+                series,
+                subModel,
+                href: `/san-pham/${item.slug}`,
+                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                rawPrice: curPrice,
+                discountPercent,
+                imageUrl:
+                  v.images?.[0] ||
+                  'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
+                downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+                statusTag: 'Sẵn hàng',
+                rating: 5,
+              };
+            });
+
           setDbItems(mapped);
+        } else {
+          setDbItems([]);
         }
       } catch (err) {
         console.error('Lỗi khi fetch iPad từ API:', err);
+        setDbItems([]);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchLiveProducts();
   }, []);
 
-  // Xác định dòng cha đang chọn
   const currentSeriesKey = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.startsWith('ipad-pro')) return 'ipad-pro';
@@ -187,21 +204,25 @@ export default function DynamicIPadPage() {
 
   const activeSubmodels = currentSeriesKey ? IPAD_SUBMODELS_MAP[currentSeriesKey] : null;
 
-  // Lọc sản phẩm chính xác: ưu tiên sản phẩm DB nếu có, kết hợp dữ liệu mẫu
+  // Lọc sản phẩm thuần từ cơ sở dữ liệu
   const filteredProducts = useMemo(() => {
-    let items = dbItems.length > 0 ? dbItems : IPAD_CATALOG_ITEMS;
+    let items = dbItems;
 
     if (currentFilter) {
       if (['ipad-pro', 'ipad-air', 'ipad-gen', 'ipad-mini'].includes(currentFilter)) {
         items = items.filter((item) => item.series === currentFilter);
       } else {
-        items = items.filter((item) => item.subModel === currentFilter || item.name.toLowerCase().includes(currentFilter.replace('ipad-', '').replace(/-/g, ' ')));
+        items = items.filter(
+          (item) =>
+            item.subModel === currentFilter ||
+            item.name.toLowerCase().includes(currentFilter.replace('ipad-', '').replace(/-/g, ' '))
+        );
       }
     }
 
     const sorted = [...items].sort((a, b) => {
-      const priceA = parsePrice(a.currentPrice);
-      const priceB = parsePrice(b.currentPrice);
+      const priceA = parsePrice((a as any).rawPrice || a.currentPrice);
+      const priceB = parsePrice((b as any).rawPrice || b.currentPrice);
 
       if (currentSort === 'price_asc') return priceA - priceB;
       if (currentSort === 'price_desc') return priceB - priceA;
@@ -212,7 +233,6 @@ export default function DynamicIPadPage() {
     return sorted;
   }, [currentFilter, currentSort, dbItems]);
 
-  // Hiển thị tên Model
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
       case 'ipad-pro':
@@ -287,7 +307,7 @@ export default function DynamicIPadPage() {
                   </div>
                   <p className="text-xs text-gray-600 font-medium mb-3">Mỏng siêu thực. Sức mạnh AI không giới hạn.</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Giá chỉ từ <span className="text-sm">18.x90.000đ</span>
+                    Sẵn hàng <span className="text-sm">Giá tốt nhất</span>
                   </div>
                 </div>
                 <div className="w-40 sm:w-48 h-32 shrink-0">
@@ -419,7 +439,9 @@ export default function DynamicIPadPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Tìm thấy {filteredProducts.length} sản phẩm phù hợp</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} sản phẩm phù hợp`}
+              </p>
             </div>
 
             <FilterAndSortBar
@@ -432,8 +454,30 @@ export default function DynamicIPadPage() {
             />
           </div>
 
-          {/* Lưới sản phẩm */}
-          {filteredProducts.length > 0 ? (
+          {/* Lưới sản phẩm & Skeleton Loader */}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[430px] animate-pulse"
+                >
+                  <div className="flex justify-between items-center h-6">
+                    <div className="w-10 h-4 bg-gray-200" />
+                    <div className="w-16 h-3 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
+                  <div className="space-y-2">
+                    <div className="w-full h-4 bg-gray-200" />
+                    <div className="w-3/4 h-4 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-8 bg-gray-100 my-2" />
+                  <div className="w-1/2 h-5 bg-gray-200" />
+                  <div className="w-1/3 h-3 bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {filteredProducts.map((product) => (
                 <div
@@ -509,7 +553,7 @@ export default function DynamicIPadPage() {
             </div>
           ) : (
             <div className="text-center py-16 bg-gray-50 border border-dashed border-gray-200 rounded-sm mb-14">
-              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc mục này.</p>
+              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc mục này trong kho.</p>
               <Link href="/ipad" className="text-[#d70018] font-bold text-xs mt-2 inline-block hover:underline">
                 Quay lại xem tất cả iPad
               </Link>

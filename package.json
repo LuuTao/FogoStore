@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev -H 0.0.0.0 -p 3000",
-  "build": "next build",
-  "start": "next start",
-  "lint": "eslint",
-  "push": "git add . && git commit -m \"update code\" && git push origin main"
-},
+    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "push": "git add . && git commit -m \"update code\" && git push origin main"
+  },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.42.0",
     "next": "16.3.4",
     "react": "19.2.8",

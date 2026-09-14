@@ -8,7 +8,6 @@ import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import {
-  MACBOOK_CATALOG_ITEMS,
   MACBOOK_HELPFUL_NEWS,
   RECENTLY_VIEWED_MACBOOK,
 } from '@/data/macbookCatalog';
@@ -106,34 +105,28 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
-// ================= HÀM CHUẨN HOÁ SLUG BẢO ĐẢM TẤT CẢ LINK MENU ĐỀU ĂN KHỚP =================
+// Chuẩn hóa slug
 const resolveMacbookSlug = (raw: string): string => {
   if (!raw) return '';
   let s = raw.toLowerCase().trim();
-
-  // Bỏ bớt đuôi năm nếu có (VD: air-m4-2025 -> air-m4)
   s = s.replace(/-(202[0-9])/g, '');
 
-  // Map linh hoạt các kiểu URL menu có thể truyền vào
   if (s === 'pro' || s === 'macbook-pro') return 'macbook-pro';
   if (s === 'air' || s === 'macbook-air') return 'macbook-air';
   if (s === 'neo' || s === 'macbook-neo') return 'macbook-neo';
 
-  // Dòng Air
   if (s.includes('air') && s.includes('m5')) return 'macbook-air-m5';
   if (s.includes('air') && s.includes('m4')) return 'macbook-air-m4';
   if (s.includes('air') && s.includes('m3')) return 'macbook-air-m3';
   if (s.includes('air') && s.includes('m2')) return 'macbook-air-m2';
   if (s.includes('air') && s.includes('m1')) return 'macbook-air-m1';
 
-  // Dòng Pro
   if (s.includes('pro') && s.includes('m5')) return 'macbook-pro-m5';
   if (s.includes('pro') && s.includes('m4')) return 'macbook-pro-m4';
   if (s.includes('pro') && s.includes('m3')) return 'macbook-pro-m3';
   if (s.includes('pro') && s.includes('m2')) return 'macbook-pro-m2';
   if (s.includes('pro') && s.includes('m1')) return 'macbook-pro-m1';
 
-  // Dòng Neo
   if (s.includes('neo')) return 'macbook-neo-2026';
 
   return s.startsWith('macbook-') ? s : `macbook-${s}`;
@@ -143,85 +136,101 @@ export default function DynamicMacBookPage() {
   const params = useParams();
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-
-  // State lưu sản phẩm lấy trực tiếp từ Database
   const [dbItems, setDbItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const slugArray = (params?.slug as string[]) || [];
   const rawParam = slugArray[0] || '';
 
-  // 1. Fetch dữ liệu từ API Backend để liên kết với Database của Admin
+  // Fetch dữ liệu từ API Backend
   useEffect(() => {
     const fetchLiveMacbook = async () => {
       try {
-        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=macbook', {
+        setLoading(true);
+        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=macbook', {
           cache: 'no-store',
         });
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          const mapped = json.data.map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || 0;
-            const origPrice = v.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+        let json = await res.json();
 
-            const lower = item.name.toLowerCase();
-            let series = 'macbook-pro';
-            let subModel = 'macbook-pro-m3';
+        if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
+          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+          json = await res.json();
+        }
 
-            if (lower.includes('air')) {
-              series = 'macbook-air';
-              if (lower.includes('m5')) subModel = 'macbook-air-m5';
-              else if (lower.includes('m4')) subModel = 'macbook-air-m4';
-              else if (lower.includes('m3')) subModel = 'macbook-air-m3';
-              else if (lower.includes('m2')) subModel = 'macbook-air-m2';
-              else if (lower.includes('m1')) subModel = 'macbook-air-m1';
-              else subModel = 'macbook-air-m3';
-            } else if (lower.includes('neo')) {
-              series = 'macbook-neo';
-              subModel = 'macbook-neo-2026';
-            } else {
-              if (lower.includes('m5')) subModel = 'macbook-pro-m5';
-              else if (lower.includes('m4')) subModel = 'macbook-pro-m4';
-              else if (lower.includes('m3')) subModel = 'macbook-pro-m3';
-              else if (lower.includes('m2')) subModel = 'macbook-pro-m2';
-              else if (lower.includes('m1')) subModel = 'macbook-pro-m1';
-              else subModel = 'macbook-pro-m3';
-            }
+        if (json.success && Array.isArray(json.data)) {
+          const mapped = json.data
+            .filter((item: any) => {
+              const lower = (item.name || '').toLowerCase();
+              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+              return cat.includes('mac') || lower.includes('macbook') || lower.includes('mac');
+            })
+            .map((item: any) => {
+              const v = item.variants?.[0] || {};
+              const curPrice = v.price || 0;
+              const origPrice = v.originalPrice || curPrice;
+              const discountPercent =
+                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
-            return {
-              id: item.id,
-              name: item.name,
-              series,
-              subModel,
-              href: `/san-pham/${item.slug}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              rawPrice: curPrice,
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-              statusTag: 'Sẵn hàng',
-              rating: 5,
-            };
-          });
+              const lower = item.name.toLowerCase();
+              let series = 'macbook-pro';
+              let subModel = 'macbook-pro-m3';
+
+              if (lower.includes('air')) {
+                series = 'macbook-air';
+                if (lower.includes('m5')) subModel = 'macbook-air-m5';
+                else if (lower.includes('m4')) subModel = 'macbook-air-m4';
+                else if (lower.includes('m3')) subModel = 'macbook-air-m3';
+                else if (lower.includes('m2')) subModel = 'macbook-air-m2';
+                else if (lower.includes('m1')) subModel = 'macbook-air-m1';
+                else subModel = 'macbook-air-m3';
+              } else if (lower.includes('neo')) {
+                series = 'macbook-neo';
+                subModel = 'macbook-neo-2026';
+              } else {
+                if (lower.includes('m5')) subModel = 'macbook-pro-m5';
+                else if (lower.includes('m4')) subModel = 'macbook-pro-m4';
+                else if (lower.includes('m3')) subModel = 'macbook-pro-m3';
+                else if (lower.includes('m2')) subModel = 'macbook-pro-m2';
+                else if (lower.includes('m1')) subModel = 'macbook-pro-m1';
+                else subModel = 'macbook-pro-m3';
+              }
+
+              return {
+                id: item.id,
+                name: item.name,
+                series,
+                subModel,
+                href: `/san-pham/${item.slug}`,
+                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                rawPrice: curPrice,
+                discountPercent,
+                imageUrl:
+                  v.images?.[0] ||
+                  'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80',
+                downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+                statusTag: 'Sẵn hàng',
+                rating: 5,
+              };
+            });
+
           setDbItems(mapped);
+        } else {
+          setDbItems([]);
         }
       } catch (err) {
         console.error('Lỗi khi fetch MacBook từ API:', err);
+        setDbItems([]);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchLiveMacbook();
   }, []);
 
-  // Chuẩn hoá slug để menu dù bấm kiểu gì cũng tìm thấy đúng sản phẩm
   const currentFilter = useMemo(() => resolveMacbookSlug(rawParam), [rawParam]);
 
-  // 2. Xác định dòng cha đang duyệt (để hiện hàng icon tròn tương ứng)
   const currentSeriesKey = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.includes('macbook-pro')) return 'macbook-pro';
@@ -232,16 +241,14 @@ export default function DynamicMacBookPage() {
 
   const activeSubmodels = currentSeriesKey ? MACBOOK_SUBMODELS_MAP[currentSeriesKey] : null;
 
-  // 3. Lọc sản phẩm (Ưu tiên nạp từ Database, fallback về Catalog)
+  // Lọc chỉ từ dữ liệu DB thật
   const filteredProducts = useMemo(() => {
-    let items = dbItems.length > 0 ? dbItems : MACBOOK_CATALOG_ITEMS;
+    let items = dbItems;
 
     if (currentFilter) {
       if (['macbook-pro', 'macbook-air', 'macbook-neo'].includes(currentFilter)) {
-        // Bấm chọn cả dòng Pro / Air / Neo -> Hiện tất cả model của dòng đó
         items = items.filter((item) => item.series === currentFilter);
       } else {
-        // Bấm chọn model cụ thể -> So sánh chính xác theo subModel hoặc từ khóa tên
         const keyword = currentFilter.replace('macbook-', '').replace(/-/g, ' ').trim();
         items = items.filter(
           (item) => item.subModel === currentFilter || item.name.toLowerCase().includes(keyword)
@@ -262,7 +269,6 @@ export default function DynamicMacBookPage() {
     return sorted;
   }, [currentFilter, currentSort, dbItems]);
 
-  // 4. Tên hiển thị tiêu đề và Breadcrumb
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
       case 'macbook-pro':
@@ -339,7 +345,7 @@ export default function DynamicMacBookPage() {
                   </div>
                   <p className="text-xs text-gray-300 font-medium mb-3">Hiệu năng tối thượng cho chuyên gia đồ họa.</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Giá chỉ từ <span className="text-sm">39.x90.000đ</span>
+                    Sẵn hàng <span className="text-sm">Ưu đãi hôm nay</span>
                   </div>
                 </div>
                 <div className="w-40 sm:w-48 h-32 shrink-0">
@@ -380,7 +386,7 @@ export default function DynamicMacBookPage() {
             </button>
           </div>
 
-          {/* ================= THANH ICON CHỌN MODEL ĐỘNG ================= */}
+          {/* Thanh icon chọn Model */}
           <div className="my-8 py-2">
             {activeSubmodels ? (
               <div className="flex flex-col items-center">
@@ -467,11 +473,13 @@ export default function DynamicMacBookPage() {
             )}
           </div>
 
-          {/* Tiêu đề & Cụm Bộ Lọc */}
+          {/* Tiêu đề & Bộ Lọc */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Tìm thấy {filteredProducts.length} cấu hình phù hợp</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} cấu hình phù hợp`}
+              </p>
             </div>
 
             <FilterAndSortBar
@@ -484,8 +492,30 @@ export default function DynamicMacBookPage() {
             />
           </div>
 
-          {/* Lưới sản phẩm */}
-          {filteredProducts.length > 0 ? (
+          {/* Lưới sản phẩm & Skeleton Loader */}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[430px] animate-pulse"
+                >
+                  <div className="flex justify-between items-center h-6">
+                    <div className="w-10 h-4 bg-gray-200" />
+                    <div className="w-16 h-3 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
+                  <div className="space-y-2">
+                    <div className="w-full h-4 bg-gray-200" />
+                    <div className="w-3/4 h-4 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-8 bg-gray-100 my-2" />
+                  <div className="w-1/2 h-5 bg-gray-200" />
+                  <div className="w-1/3 h-3 bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {filteredProducts.map((product) => (
                 <div
@@ -561,7 +591,7 @@ export default function DynamicMacBookPage() {
             </div>
           ) : (
             <div className="text-center py-16 bg-gray-50 border border-dashed border-gray-200 rounded-sm mb-14">
-              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc mục này.</p>
+              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc danh mục này trong kho.</p>
               <Link href="/macbook" className="text-[#d70018] font-bold text-xs mt-2 inline-block hover:underline">
                 Quay lại xem tất cả MacBook
               </Link>

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Menu as MenuIcon,
   X,
@@ -13,17 +14,39 @@ import {
   Shield,
   LogOut,
   ChevronDown,
+  Loader2,
 } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { MENU_DATA } from '@/data/navigation';
 
+const API_URL = 'https://fogo-store-api.onrender.com';
+
+interface SearchItem {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  imageUrl: string;
+  categoryName?: string;
+}
+
 export const Header: React.FC = () => {
+  const router = useRouter();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [expandedMenuId, setExpandedMenuId] = useState<string | null>(null);
+
+  // States tìm kiếm gợi ý tức thì
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [productsCache, setProductsCache] = useState<any[]>([]);
+
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const { user, logout } = useAuth();
   const { totalQuantity } = useCart();
@@ -31,6 +54,82 @@ export const Header: React.FC = () => {
   const toggleSubMenu = (id: string) => {
     setExpandedMenuId(expandedMenuId === id ? null : id);
   };
+
+  // 1. Tải trước danh mục sản phẩm từ DB một lần duy nhất để tìm kiếm tức thì
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setProductsCache(json.data);
+        }
+      } catch (e) {
+        console.error('Lỗi khi nạp dữ liệu tìm kiếm:', e);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  // 2. Lọc sản phẩm theo ký tự (Debounce 200ms tránh lag)
+  useEffect(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      if (productsCache.length > 0) {
+        const matched = productsCache
+          .filter((item: any) => {
+            const name = (item.name || '').toLowerCase();
+            const cat = (item.category?.name || item.category?.slug || '').toLowerCase();
+            return name.includes(query) || cat.includes(query);
+          })
+          .slice(0, 6) // Lấy tối đa 6 sản phẩm liên quan nhất
+          .map((item: any) => {
+            const variant = item.variants?.[0] || {};
+            return {
+              id: item.id,
+              name: item.name,
+              slug: item.slug,
+              price: variant.price || 0,
+              imageUrl: variant.images?.[0] || '/placeholder.png',
+              categoryName: item.category?.name,
+            };
+          });
+
+        setSearchResults(matched);
+        setShowDropdown(true);
+      }
+      setIsSearching(false);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, productsCache]);
+
+  // 3. Đóng dropdown khi click ra vùng ngoài
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchTerm.trim()) return;
+    setShowDropdown(false);
+    router.push(`/tim-kiem?q=${encodeURIComponent(searchTerm.trim())}`);
+  };
+
+  const formatVnd = (num: number) => (!num || num <= 0 ? 'Liên hệ' : num.toLocaleString('vi-VN') + 'đ');
 
   return (
     <>
@@ -46,7 +145,6 @@ export const Header: React.FC = () => {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
           {/* Cụm Nút 3 Gạch (Mobile/Tablet) + Logo FoGo */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* NÚT 3 GẠCH (Chỉ hiện trên Mobile & Tablet < 1024px) */}
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
@@ -56,7 +154,6 @@ export const Header: React.FC = () => {
               <MenuIcon size={22} />
             </button>
 
-            {/* Logo */}
             <Link href="/" className="flex items-center">
               <img
                 src="/logoFogo.png"
@@ -66,20 +163,102 @@ export const Header: React.FC = () => {
             </Link>
           </div>
 
-          {/* Thanh tìm kiếm trên PC / Tablet */}
-          <div className="flex-1 max-w-lg relative hidden sm:block">
-            <input
-              type="text"
-              placeholder="Bạn cần tìm gì hôm nay..."
-              className="w-full pl-4 pr-11 py-2 lg:py-2.5 rounded-sm text-sm text-gray-900 bg-white border-2 border-[#d70018] outline-hidden placeholder-gray-400 focus:ring-1 focus:ring-[#d70018]"
-            />
-            <button
-              type="button"
-              aria-label="Tìm kiếm"
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#d70018] hover:scale-110 transition-transform cursor-pointer"
-            >
-              <Search size={18} strokeWidth={2.5} />
-            </button>
+          {/* Thanh tìm kiếm PC / Tablet tích hợp Live Search */}
+          <div ref={searchContainerRef} className="flex-1 max-w-lg relative hidden sm:block">
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => {
+                  if (searchTerm.trim() && searchResults.length > 0) setShowDropdown(true);
+                }}
+                placeholder="Bạn cần tìm gì hôm nay..."
+                className="w-full pl-4 pr-16 py-2 lg:py-2.5 rounded-sm text-sm text-gray-900 bg-white border-2 border-[#d70018] outline-hidden placeholder-gray-400 focus:ring-1 focus:ring-[#d70018]"
+              />
+
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSearchResults([]);
+                    setShowDropdown(false);
+                  }}
+                  className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              )}
+
+              <button
+                type="submit"
+                aria-label="Tìm kiếm"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#d70018] hover:scale-110 transition-transform cursor-pointer"
+              >
+                {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} strokeWidth={2.5} />}
+              </button>
+            </form>
+
+            {/* POPUP XỔ XUỐNG GỢI Ý KẾT QUẢ TRÊN PC */}
+            {showDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  <span>Gợi ý cho &quot;{searchTerm}&quot;</span>
+                  <span>{searchResults.length} sản phẩm</span>
+                </div>
+
+                <div className="max-h-[340px] overflow-y-auto divide-y divide-gray-100">
+                  {searchResults.length > 0 ? (
+                    searchResults.map((item) => (
+                      <Link
+                        key={item.id}
+                        href={`/san-pham/${item.slug}`}
+                        onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-3 p-3 hover:bg-red-50/50 transition-colors group cursor-pointer"
+                      >
+                        <div className="w-12 h-12 rounded-lg border border-gray-100 p-1 flex items-center justify-center shrink-0 bg-white shadow-2xs group-hover:scale-105 transition-transform">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-800 group-hover:text-[#d70018] truncate transition-colors">
+                            {item.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-black text-[#d70018]">
+                              {formatVnd(item.price)}
+                            </span>
+                            {item.categoryName && (
+                              <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">
+                                {item.categoryName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="p-5 text-center text-xs text-gray-500">
+                      Không tìm thấy sản phẩm nào khớp với &quot;<b className="text-gray-800">{searchTerm}</b>&quot;.
+                    </div>
+                  )}
+                </div>
+
+                {searchResults.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSearchSubmit}
+                    className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-[11px] font-bold text-[#d70018] text-center border-t border-gray-100 transition-colors cursor-pointer"
+                  >
+                    Xem tất cả kết quả &rarr;
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Cụm tiện ích */}
@@ -133,7 +312,7 @@ export const Header: React.FC = () => {
               </div>
             </Link>
 
-            {/* Tài khoản: Hỗ trợ click mở dropdown menu chi tiết */}
+            {/* Tài khoản */}
             {user ? (
               <div className="relative shrink-0">
                 <button
@@ -155,14 +334,9 @@ export const Header: React.FC = () => {
                   </div>
                 </button>
 
-                {/* POPUP DROPDOWN HIỂN THỊ TÊN & MENU TÀI KHOẢN */}
                 {isUserMenuOpen && (
                   <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    />
-
+                    <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
                     <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                       <div className="pb-2.5 border-b border-gray-100">
                         <p className="text-xs text-gray-400 font-medium">Đang đăng nhập:</p>
@@ -237,27 +411,71 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Thanh tìm kiếm phụ trên Mobile (< 640px) */}
-        <div className="block sm:hidden px-3 pb-2.5 pt-0.5">
-          <div className="relative w-full">
+        <div className="block sm:hidden px-3 pb-2.5 pt-0.5 relative">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
             <input
               type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => {
+                if (searchTerm.trim() && searchResults.length > 0) setShowDropdown(true);
+              }}
               placeholder="Bạn cần tìm gì hôm nay..."
-              className="w-full pl-3 pr-9 py-1.5 rounded-sm text-xs text-gray-900 bg-white border border-[#d70018] outline-hidden placeholder-gray-400"
+              className="w-full pl-3 pr-14 py-1.5 rounded-sm text-xs text-gray-900 bg-white border border-[#d70018] outline-hidden placeholder-gray-400"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSearchResults([]);
+                  setShowDropdown(false);
+                }}
+                className="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 p-1"
+              >
+                <X size={13} />
+              </button>
+            )}
             <button
-              type="button"
+              type="submit"
               aria-label="Tìm kiếm"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#d70018]"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#d70018]"
             >
-              <Search size={15} strokeWidth={2.5} />
+              {isSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={15} strokeWidth={2.5} />}
             </button>
-          </div>
+          </form>
+
+          {/* POPUP XỔ XUỐNG GỢI Ý KẾT QUẢ TRÊN MOBILE */}
+          {showDropdown && (
+            <div className="absolute top-full left-3 right-3 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
+              <div className="max-h-[280px] overflow-y-auto divide-y divide-gray-100">
+                {searchResults.length > 0 ? (
+                  searchResults.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/san-pham/${item.slug}`}
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2.5 p-2.5 hover:bg-red-50/50"
+                    >
+                      <div className="w-10 h-10 rounded border border-gray-100 p-0.5 flex items-center justify-center shrink-0 bg-white">
+                        <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-800 truncate">{item.name}</p>
+                        <span className="text-[11px] font-black text-[#d70018] block">{formatVnd(item.price)}</span>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-xs text-gray-500">Không tìm thấy sản phẩm.</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* ========================================================================= */}
-      {/* 3. MENU SIDEBAR 3 GẠCH (DRAWER SLIDE-OVER TỪ BÊN TRÁI)                      */}
-      {/* ========================================================================= */}
+      {/* 3. MENU SIDEBAR 3 GẠCH (DRAWER SLIDE-OVER TỪ BÊN TRÁI CHO MOBILE/TABLET) */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div

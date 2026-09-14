@@ -8,7 +8,6 @@ import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import {
-  USED_CATALOG_ITEMS,
   USED_HELPFUL_NEWS,
   RECENTLY_VIEWED_USED,
 } from '@/data/usedCatalog';
@@ -103,19 +102,20 @@ export default function DynamicUsedPage() {
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   const [dbItems, setDbItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Lấy chính xác slug từ URL
   const slugParam = params?.slug;
   const currentFilter = Array.isArray(slugParam) ? slugParam[0] || '' : (slugParam as string) || '';
 
-  // 1. Fetch dữ liệu từ API (Fallback lấy toàn bộ sản phẩm nếu category hang-cu chưa tạo trong DB)
+  // 1. Fetch dữ liệu từ API
   useEffect(() => {
     const fetchLiveUsedProducts = async () => {
       try {
+        setLoading(true);
         let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=hang-cu', { cache: 'no-store' });
         let json = await res.json();
 
-        // Nếu DB chưa có tag hang-cu thì lấy toàn bộ sản phẩm về để lọc
         if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
           res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
           json = await res.json();
@@ -154,7 +154,7 @@ export default function DynamicUsedPage() {
               name: item.name,
               category,
               subModel,
-              href: `/san-pham/${item.slug}`, // Điều hướng chuẩn về route chi tiết sản phẩm
+              href: `/san-pham/${item.slug}`,
               currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
               originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
               rawPrice: curPrice,
@@ -166,9 +166,14 @@ export default function DynamicUsedPage() {
             };
           });
           setDbItems(mapped);
+        } else {
+          setDbItems([]);
         }
       } catch (err) {
         console.error('Lỗi khi fetch hàng cũ từ API:', err);
+        setDbItems([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -186,15 +191,14 @@ export default function DynamicUsedPage() {
 
   const activeSubmodels = currentCategoryKey ? USED_SUBMODELS_MAP[currentCategoryKey] : null;
 
-  // 3. Lọc sản phẩm thông minh (sửa triệt để lỗi lọc ra 0 kết quả)
+  // 3. Lọc sản phẩm thuần từ database
   const filteredProducts = useMemo(() => {
-    let items = dbItems.length > 0 ? dbItems : USED_CATALOG_ITEMS;
+    let items = dbItems;
 
     if (currentFilter) {
       if (['iphone-cu', 'ipad-cu', 'macbook-cu'].includes(currentFilter)) {
         items = items.filter((item) => item.category === currentFilter);
       } else {
-        // Trích xuất số đời máy: ví dụ "iphone-16-series-cu" -> "16"
         const matchedNumber = currentFilter.match(/\d+/)?.[0];
         items = items.filter((item) => {
           if (item.subModel === currentFilter) return true;
@@ -389,7 +393,9 @@ export default function DynamicUsedPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Tìm thấy {filteredProducts.length} máy tuyển chọn chất lượng cao</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} máy tuyển chọn chất lượng cao`}
+              </p>
             </div>
 
             <FilterAndSortBar
@@ -400,8 +406,30 @@ export default function DynamicUsedPage() {
             />
           </div>
 
-          {/* Danh sách máy */}
-          {filteredProducts.length > 0 ? (
+          {/* Lưới sản phẩm & Skeleton Loader */}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[430px] animate-pulse"
+                >
+                  <div className="flex justify-between items-center h-6">
+                    <div className="w-10 h-4 bg-gray-200" />
+                    <div className="w-16 h-3 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
+                  <div className="space-y-2">
+                    <div className="w-full h-4 bg-gray-200" />
+                    <div className="w-3/4 h-4 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-8 bg-gray-100 my-2" />
+                  <div className="w-1/2 h-5 bg-gray-200" />
+                  <div className="w-1/3 h-3 bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {filteredProducts.map((product) => (
                 <div
@@ -466,7 +494,7 @@ export default function DynamicUsedPage() {
             </div>
           ) : (
             <div className="text-center py-16 bg-gray-50 border border-dashed border-gray-200 rounded-sm mb-14">
-              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm máy cũ nào phù hợp với bộ lọc.</p>
+              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm máy cũ nào phù hợp với bộ lọc trong kho.</p>
               <Link href="/hang-cu" className="text-[#d70018] font-bold text-xs mt-2 inline-block hover:underline">
                 Quay lại xem tất cả máy cũ
               </Link>

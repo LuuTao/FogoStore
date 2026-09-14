@@ -13,10 +13,10 @@ interface SeriesTabItem {
   name: string;
   slug: string;
   img: string;
-  queryTag: string; // Chuỗi dùng để lọc sản phẩm (vd: '16', '15', '17', 'pro-max'...)
+  queryTag: string;
 }
 
-// Fallback mặc định nếu chưa lưu cấu hình trong Admin
+// Fallback danh mục iPhone cấp 1
 const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   {
     name: 'iPhone 16 Series',
@@ -95,7 +95,6 @@ export default function DynamicIPhonePage() {
   const [loadingDb, setLoadingDb] = useState(true);
   const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_IPHONE_SERIES);
 
-  // Đọc tham số lọc: hỗ trợ cả slug path (/iphone/iphone-17) và URL params (?series=17)
   const slugParam = params?.slug;
   const rawFilter =
     (Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)) ||
@@ -133,44 +132,61 @@ export default function DynamicIPhonePage() {
     }
   }, []);
 
-  // 2. Fetch toàn bộ sản phẩm iPhone từ Database
+  // 2. Fetch toàn bộ sản phẩm iPhone từ Database với fallback
   useEffect(() => {
     const fetchIPhoneProducts = async () => {
       try {
-        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=iphone', {
+        setLoadingDb(true);
+        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=iphone', {
           cache: 'no-store',
         });
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          const formatted = json.data.map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || 0;
-            const origPrice = v.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+        let json = await res.json();
 
-            return {
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              searchIndex: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
-              href: `/san-pham/${item.slug}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              rawPrice: curPrice,
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80',
-              downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-              statusTag: 'Sẵn hàng',
-              rating: 5,
-            };
-          });
+        if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
+          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+          json = await res.json();
+        }
+
+        if (json.success && Array.isArray(json.data)) {
+          const formatted = json.data
+            .filter((item: any) => {
+              const lower = (item.name || '').toLowerCase();
+              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+              return cat.includes('iphone') || lower.includes('iphone');
+            })
+            .map((item: any) => {
+              const v = item.variants?.[0] || {};
+              const curPrice = v.price || 0;
+              const origPrice = v.originalPrice || curPrice;
+              const discountPercent =
+                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+
+              return {
+                id: item.id,
+                name: item.name,
+                slug: item.slug,
+                searchIndex: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
+                href: `/san-pham/${item.slug}`,
+                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                rawPrice: curPrice,
+                discountPercent,
+                imageUrl:
+                  v.images?.[0] ||
+                  'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80',
+                downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+                statusTag: 'Sẵn hàng',
+                rating: 5,
+              };
+            });
+
           setDbProducts(formatted);
+        } else {
+          setDbProducts([]);
         }
       } catch (err) {
         console.error('Lỗi khi fetch sản phẩm iPhone:', err);
+        setDbProducts([]);
       } finally {
         setLoadingDb(false);
       }
@@ -179,20 +195,17 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
-  // 3. Logic lọc tự động không bị giới hạn phiên bản
+  // 3. Logic lọc tự động
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
     if (currentFilter) {
-      // Tìm số series trong query (ví dụ: '16', '17', '18' từ 'iphone-17' hoặc '?series=17')
       const numMatch = currentFilter.match(/\d+/);
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
-        // Lọc đúng series số (iPhone 16, 17, 18...)
         items = items.filter((i) => i.searchIndex.includes(targetNumber));
 
-        // Nếu người dùng chọn chi tiết phân khúc con
         if (currentFilter.includes('pro-max')) {
           items = items.filter((i) => i.searchIndex.includes('pro max'));
         } else if (currentFilter.includes('pro')) {
@@ -203,7 +216,6 @@ export default function DynamicIPhonePage() {
           items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('plus'));
         }
       } else {
-        // Nếu click lọc theo chữ (ví dụ: 'plus', 'pro')
         const cleanTag = currentFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
           items = items.filter((i) => i.searchIndex.includes(cleanTag));
@@ -211,7 +223,6 @@ export default function DynamicIPhonePage() {
       }
     }
 
-    // Áp dụng sắp xếp giá
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -225,7 +236,7 @@ export default function DynamicIPhonePage() {
     return items;
   }, [dbProducts, currentFilter, currentSort]);
 
-  // 4. Tiêu đề hiển thị linh hoạt theo bộ lọc
+  // 4. Tiêu đề hiển thị
   const displayTitle = useMemo(() => {
     if (!currentFilter) return 'Tất cả sản phẩm iPhone';
 
@@ -315,10 +326,9 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* HÀNG ICON TRÒN SERIES ĐỒNG BỘ ĐỘNG THEO ADMIN */}
+          {/* HÀNG ICON TRÒN SERIES */}
           <div className="my-8 py-2">
             <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
-              {/* Nút xem Tất Cả */}
               <Link
                 href="/iphone"
                 className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
@@ -337,7 +347,6 @@ export default function DynamicIPhonePage() {
                 </span>
               </Link>
 
-              {/* Các nút Series do Admin định cấu hình */}
               {seriesTabs.map((series) => {
                 const isSelected =
                   currentFilter === series.slug ||
@@ -381,7 +390,9 @@ export default function DynamicIPhonePage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Tìm thấy {filteredProducts.length} sản phẩm phù hợp</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {loadingDb ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} sản phẩm phù hợp`}
+              </p>
             </div>
 
             <FilterAndSortBar
@@ -392,8 +403,30 @@ export default function DynamicIPhonePage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM */}
-          {filteredProducts.length > 0 ? (
+          {/* LƯỚI SẢN PHẨM & SKELETON LOADER */}
+          {loadingDb ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[430px] animate-pulse"
+                >
+                  <div className="flex justify-between items-center h-6">
+                    <div className="w-10 h-4 bg-gray-200" />
+                    <div className="w-16 h-3 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
+                  <div className="space-y-2">
+                    <div className="w-full h-4 bg-gray-200" />
+                    <div className="w-3/4 h-4 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-8 bg-gray-100 my-2" />
+                  <div className="w-1/2 h-5 bg-gray-200" />
+                  <div className="w-1/3 h-3 bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {filteredProducts.map((product) => (
                 <div
@@ -459,7 +492,7 @@ export default function DynamicIPhonePage() {
             </div>
           ) : (
             <div className="text-center py-16 bg-gray-50 border border-dashed border-gray-200 rounded-sm mb-14">
-              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc mục này.</p>
+              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc mục này trong kho.</p>
               <Link href="/iphone" className="text-[#d70018] font-bold text-xs mt-2 inline-block hover:underline">
                 Quay lại xem tất cả iPhone
               </Link>

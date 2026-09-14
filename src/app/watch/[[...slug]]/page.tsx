@@ -8,7 +8,6 @@ import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import {
-  WATCH_CATALOG_ITEMS,
   WATCH_HELPFUL_NEWS,
   RECENTLY_VIEWED_WATCH,
 } from '@/data/watchCatalog';
@@ -93,6 +92,7 @@ export default function DynamicWatchPage() {
 
   // State lưu danh sách sản phẩm lấy trực tiếp từ Database
   const [dbItems, setDbItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const slugArray = (params?.slug as string[]) || [];
   const currentFilter = slugArray[0] || '';
@@ -101,58 +101,77 @@ export default function DynamicWatchPage() {
   useEffect(() => {
     const fetchWatchFromDB = async () => {
       try {
-        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=watch', {
+        setLoading(true);
+        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=watch', {
           cache: 'no-store',
         });
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          const mapped = json.data.map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || 0;
-            const origPrice = v.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+        let json = await res.json();
 
-            const lower = item.name.toLowerCase();
-            let series = 'watch-series';
-            let subModel = 'watch-series-10';
+        if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
+          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+          json = await res.json();
+        }
 
-            if (lower.includes('ultra')) {
-              series = 'watch-ultra';
-              subModel = lower.includes('2') ? 'watch-ultra-2' : 'watch-ultra-1';
-            } else if (lower.includes('se')) {
-              series = 'watch-se';
-              subModel = lower.includes('2') ? 'watch-se-2' : 'watch-se-1';
-            } else {
-              series = 'watch-series';
-              if (lower.includes('10')) subModel = 'watch-series-10';
-              else if (lower.includes('9')) subModel = 'watch-series-9';
-              else if (lower.includes('8')) subModel = 'watch-series-8';
-              else subModel = 'watch-series-10';
-            }
+        if (json.success && Array.isArray(json.data)) {
+          const mapped = json.data
+            .filter((item: any) => {
+              const lower = (item.name || '').toLowerCase();
+              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+              return cat.includes('watch') || lower.includes('watch') || lower.includes('đồng hồ');
+            })
+            .map((item: any) => {
+              const v = item.variants?.[0] || {};
+              const curPrice = v.price || 0;
+              const origPrice = v.originalPrice || curPrice;
+              const discountPercent =
+                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
-            return {
-              id: item.id,
-              name: item.name,
-              series,
-              subModel,
-              href: `/san-pham/${item.slug}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              rawPrice: curPrice,
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-              statusTag: 'Sẵn hàng',
-              rating: 5,
-            };
-          });
+              const lower = item.name.toLowerCase();
+              let series = 'watch-series';
+              let subModel = 'watch-series-10';
+
+              if (lower.includes('ultra')) {
+                series = 'watch-ultra';
+                subModel = lower.includes('2') ? 'watch-ultra-2' : 'watch-ultra-1';
+              } else if (lower.includes('se')) {
+                series = 'watch-se';
+                subModel = lower.includes('2') ? 'watch-se-2' : 'watch-se-1';
+              } else {
+                series = 'watch-series';
+                if (lower.includes('10')) subModel = 'watch-series-10';
+                else if (lower.includes('9')) subModel = 'watch-series-9';
+                else if (lower.includes('8')) subModel = 'watch-series-8';
+                else subModel = 'watch-series-10';
+              }
+
+              return {
+                id: item.id,
+                name: item.name,
+                series,
+                subModel,
+                href: `/san-pham/${item.slug}`,
+                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                rawPrice: curPrice,
+                discountPercent,
+                imageUrl:
+                  v.images?.[0] ||
+                  'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80',
+                downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+                statusTag: 'Sẵn hàng',
+                rating: 5,
+              };
+            });
+
           setDbItems(mapped);
+        } else {
+          setDbItems([]);
         }
       } catch (err) {
         console.error('Lỗi khi fetch Apple Watch từ API:', err);
+        setDbItems([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -170,9 +189,9 @@ export default function DynamicWatchPage() {
 
   const activeSubmodels = currentSeriesKey ? WATCH_SUBMODELS_MAP[currentSeriesKey] : null;
 
-  // 3. Lọc sản phẩm chính xác (Ưu tiên Database, fallback về Catalog mẫu)
+  // 3. Lọc sản phẩm chính xác từ Database
   const filteredProducts = useMemo(() => {
-    let items = dbItems.length > 0 ? dbItems : WATCH_CATALOG_ITEMS;
+    let items = dbItems;
 
     if (currentFilter) {
       if (['watch-ultra', 'watch-series', 'watch-se'].includes(currentFilter)) {
@@ -198,7 +217,7 @@ export default function DynamicWatchPage() {
     return sorted;
   }, [currentFilter, currentSort, dbItems]);
 
-  // 4. Tên hiển thị tiêu đề và breadcrumb (chính xác từng model)
+  // 4. Tên hiển thị tiêu đề và breadcrumb
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
       case 'watch-ultra':
@@ -267,7 +286,7 @@ export default function DynamicWatchPage() {
                   </div>
                   <p className="text-xs text-gray-300 font-medium mb-3">Titanium Đen ấn tượng. Thách thức mọi giới hạn.</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Giá chỉ từ <span className="text-sm">14.x90.000đ</span>
+                    Sẵn hàng <span className="text-sm">Ưu đãi hôm nay</span>
                   </div>
                 </div>
                 <div className="w-40 sm:w-48 h-32 shrink-0">
@@ -399,7 +418,9 @@ export default function DynamicWatchPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Tìm thấy {filteredProducts.length} phiên bản phù hợp</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {loading ? 'Đang tải dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} phiên bản phù hợp`}
+              </p>
             </div>
 
             <FilterAndSortBar
@@ -412,8 +433,30 @@ export default function DynamicWatchPage() {
             />
           </div>
 
-          {/* Lưới sản phẩm */}
-          {filteredProducts.length > 0 ? (
+          {/* Lưới sản phẩm & Skeleton Loader */}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[430px] animate-pulse"
+                >
+                  <div className="flex justify-between items-center h-6">
+                    <div className="w-10 h-4 bg-gray-200" />
+                    <div className="w-16 h-3 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
+                  <div className="space-y-2">
+                    <div className="w-full h-4 bg-gray-200" />
+                    <div className="w-3/4 h-4 bg-gray-200" />
+                  </div>
+                  <div className="w-full h-8 bg-gray-100 my-2" />
+                  <div className="w-1/2 h-5 bg-gray-200" />
+                  <div className="w-1/3 h-3 bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {filteredProducts.map((product) => (
                 <div
@@ -489,7 +532,7 @@ export default function DynamicWatchPage() {
             </div>
           ) : (
             <div className="text-center py-16 bg-gray-50 border border-dashed border-gray-200 rounded-sm mb-14">
-              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc mục này.</p>
+              <p className="text-gray-500 font-semibold text-sm">Chưa có sản phẩm nào thuộc danh mục này trong kho.</p>
               <Link href="/watch" className="text-[#d70018] font-bold text-xs mt-2 inline-block hover:underline">
                 Quay lại xem tất cả Apple Watch
               </Link>
