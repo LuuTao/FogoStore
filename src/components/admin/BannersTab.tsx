@@ -223,7 +223,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         id: it.id,
         title: it.name,
         name: it.name,
-        imageUrl: it.imageUrl, // Lưu trực tiếp chuỗi Base64 hoặc link CDN vào DB Neon
+        imageUrl: it.imageUrl,
         linkUrl: it.link || '/',
         link: it.link || '/',
         position: it.group,
@@ -232,7 +232,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         order: idx,
       }));
 
-      // Gọi đồng bộ trực tiếp vào Database
       const res = await fetch(`${API_URL}/api/admin/banners/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -295,7 +294,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
     setHasUnsavedChanges(true);
   };
 
-  // NÉN VÀ ĐỌC FILE ẢNH THÀNH BASE64 - LƯU VĨNH VIỄN VÀO DATABASE
+  // NÉN VÀ ĐỌC FILE ẢNH THÀNH BASE64
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
