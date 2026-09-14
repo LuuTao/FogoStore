@@ -25,7 +25,8 @@ import { useCart } from '@/context/CartContext';
 import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
 import { ToastNotification } from '@/components/common/ToastNotification';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+// Ưu tiên Render trực tiếp, loại bỏ hoàn toàn khả năng dính loca.lt
+const API_URL = 'https://fogo-store-api.onrender.com';
 
 export default function CheckoutPage() {
   const router = useRouter();

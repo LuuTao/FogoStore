@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+const API_URL = 'https://fogo-store-api.onrender.com';
 const API_BASE = `${API_URL}/api`;
 
 const DEFAULT_HERO_BANNERS = [
