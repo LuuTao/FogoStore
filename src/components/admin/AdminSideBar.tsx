@@ -25,6 +25,7 @@ const MENU_ITEMS = [
   { href: '/admin/bai-viet', label: 'Bài Viết & SEO Blog', icon: FileText },
   { href: '/admin/banner', label: 'Quản Lý Banner', icon: ImageIcon },
   { href: '/admin/menu', label: 'Quản Lý Menu', icon: ImageIcon },
+  { href: '/admin/manage-seo', label: 'Quản Lý SEO', icon: ImageIcon },
 ];
 
 export default function AdminSidebar({

@@ -3,11 +3,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Star, CornerDownLeft } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
+import { IPhoneSeoContent } from '@/components/category/IPhoneSeoContent';
 
 interface SeriesTabItem {
   name: string;
@@ -16,7 +17,6 @@ interface SeriesTabItem {
   queryTag: string;
 }
 
-// Fallback danh mục iPhone cấp 1
 const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   {
     name: 'iPhone 16 Series',
@@ -88,19 +88,15 @@ export default function DynamicIPhonePage() {
     '';
   const currentFilter = (rawFilter || '').toLowerCase().trim();
 
-  // Đọc sản phẩm vừa xem thực tế từ localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
-      if (saved) {
-        setRecentViewed(JSON.parse(saved));
-      }
+      if (saved) setRecentViewed(JSON.parse(saved));
     } catch (err) {
       console.error('Lỗi đọc recent viewed:', err);
     }
   }, []);
 
-  // 1. Nạp danh mục Submodel iPhone động từ LocalStorage (Admin lưu)
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -126,11 +122,10 @@ export default function DynamicIPhonePage() {
         }
       }
     } catch (e) {
-      console.error('Lỗi khi nạp Submodel iPhone từ Admin:', e);
+      console.error('Lỗi nạp Submodel iPhone từ Admin:', e);
     }
   }, []);
 
-  // 2. Fetch toàn bộ sản phẩm iPhone từ Database với fallback
   useEffect(() => {
     const fetchIPhoneProducts = async () => {
       try {
@@ -194,11 +189,9 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
-  // Logic lọc tự động kết hợp cả Series và bộ lọc nâng cao từ Modal (activeFilters)
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
-    // 1. Lọc theo Series (iPhone 17, 16,...)
     if (currentFilter) {
       const lowerFilter = currentFilter.toLowerCase();
       const numMatch = lowerFilter.match(/\d+/);
@@ -224,7 +217,6 @@ export default function DynamicIPhonePage() {
       }
     }
 
-    // 2. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -260,7 +252,6 @@ export default function DynamicIPhonePage() {
       );
     }
 
-    // Sắp xếp sản phẩm
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -274,7 +265,6 @@ export default function DynamicIPhonePage() {
     return items;
   }, [dbProducts, currentFilter, currentSort, activeFilters]);
 
-  // 4. Tiêu đề hiển thị
   const displayTitle = useMemo(() => {
     if (!currentFilter) return 'Tất cả sản phẩm iPhone';
 
@@ -319,7 +309,7 @@ export default function DynamicIPhonePage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* BANNER ĐÔI TRÊN CÙNG */}
+          {/* BANNER ĐÔI */}
           <div className="relative mb-6 group">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative rounded-sm bg-gradient-to-r from-[#f3f5f8] to-[#e7ebf0] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
@@ -364,21 +354,26 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* HÀNG ICON TRÒN SERIES */}
-          <div className="my-8 py-2">
-            <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
+          {/* HÀNG ICON TRÒN LỚN 80PX (CHUẨN 2 SIZE BO TRÒN) */}
+          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
+            <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
+              {/* Nút Tất cả: Sử dụng ảnh máy iPhone và viền đỏ bo tròn khi chọn */}
               <Link
                 href="/iphone"
-                className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
+                className="group flex flex-col items-center gap-2 cursor-pointer"
               >
                 <div
-                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full p-2 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
+                  className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                     !currentFilter
-                      ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                      : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
+                      ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
+                      : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200'
                   }`}
                 >
-                  <span className="text-xs font-black text-gray-700 group-hover:text-[#d70018]">ALL</span>
+                  <img
+                    src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=200&q=80"
+                    alt="Tất cả iPhone"
+                    className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
+                  />
                 </div>
                 <span className={`text-xs sm:text-sm font-semibold transition-colors ${!currentFilter ? 'text-[#d70018] font-bold' : 'text-gray-800'}`}>
                   Tất cả
@@ -394,23 +389,23 @@ export default function DynamicIPhonePage() {
                   <Link
                     key={series.slug}
                     href={`/iphone?series=${series.queryTag}`}
-                    className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
+                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
                   >
                     <div
-                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full p-2 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
+                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                         isSelected
-                          ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                          : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
+                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
+                          : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
                       }`}
                     >
                       <img
                         src={series.img}
                         alt={series.name}
-                        className="w-full h-full object-contain drop-shadow-xs group-hover:scale-110 transition-transform"
+                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
                       />
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-semibold text-center transition-colors whitespace-nowrap ${
+                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
                         isSelected
                           ? 'text-[#d70018] font-bold'
                           : 'text-gray-800 group-hover:text-[#d70018]'
@@ -441,7 +436,7 @@ export default function DynamicIPhonePage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM & SKELETON LOADER */}
+          {/* LƯỚI SẢN PHẨM */}
           {loadingDb ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -537,6 +532,11 @@ export default function DynamicIPhonePage() {
             </div>
           )}
 
+          {/* ================================================================= */}
+          {/* BÀI VIẾT GIỚI THIỆU CHUẨN SEO CÓ NÚT XEM THÊM / RÚT GỌN          */}
+          {/* ================================================================= */}
+          <IPhoneSeoContent categoryKey="iphone_seo_desc" />
+
           {/* CHÂN TRANG DANH MỤC */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8 border-t border-gray-200">
             <div className="lg:col-span-8">
@@ -564,7 +564,6 @@ export default function DynamicIPhonePage() {
               </div>
             </div>
 
-            {/* Chỉ render khi người dùng thực tế đã xem sản phẩm */}
             {recentViewed.length > 0 && (
               <div className="lg:col-span-4">
                 <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
