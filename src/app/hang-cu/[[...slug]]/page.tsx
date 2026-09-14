@@ -191,31 +191,78 @@ export default function DynamicUsedPage() {
 
   const activeSubmodels = currentCategoryKey ? USED_SUBMODELS_MAP[currentCategoryKey] : null;
 
-  // 3. Lọc sản phẩm thuần từ database
+  // Logic lọc tự động kết hợp các sản phẩm cũ/like-new và bộ lọc nâng cao từ Modal
   const filteredProducts = useMemo(() => {
-    let items = dbItems;
+    let items = [...dbProducts];
 
+    // 1. Chỉ lọc các sản phẩm thuộc nhóm Hàng Cũ (chứa các từ khóa cũ, like new, 99%...)
+    items = items.filter((i) => {
+      const lowerName = (i.name || '').toLowerCase();
+      const catSlug = (i.category?.slug || i.category?.name || '').toLowerCase();
+      return (
+        catSlug.includes('cu') ||
+        catSlug.includes('like-new') ||
+        lowerName.includes('cũ') ||
+        lowerName.includes('like new') ||
+        lowerName.includes('99%') ||
+        lowerName.includes('98%')
+      );
+    });
+
+    // 2. Lọc theo dòng máy (nếu trên URL có chọn sub-filter)
     if (currentFilter) {
-      if (['iphone-cu', 'ipad-cu', 'macbook-cu'].includes(currentFilter)) {
-        items = items.filter((item) => item.category === currentFilter);
-      } else {
-        const matchedNumber = currentFilter.match(/\d+/)?.[0];
-        items = items.filter((item) => {
-          if (item.subModel === currentFilter) return true;
-          if (matchedNumber && item.name.toLowerCase().includes(matchedNumber)) return true;
-          return false;
-        });
-      }
+      const lowerFilter = currentFilter.toLowerCase();
+      items = items.filter((i) => i.searchIndex.includes(lowerFilter.replace(/[-]/g, ' ')));
     }
 
-    return [...items].sort((a, b) => {
-      const priceA = parsePrice((a as any).rawPrice || a.currentPrice);
-      const priceB = parsePrice((b as any).rawPrice || b.currentPrice);
+    // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
+    
+    // Lọc theo Khoảng Giá
+    if (activeFilters.price) {
+      items = items.filter((item) => {
+        const price = parsePrice(item.rawPrice || item.currentPrice);
+        if (activeFilters.price === 'Dưới 2 triệu') return price < 2000000;
+        if (activeFilters.price === 'Từ 2 - 4 triệu') return price >= 2000000 && price <= 4000000;
+        if (activeFilters.price === 'Từ 4 - 7 triệu') return price > 4000000 && price <= 7000000;
+        if (activeFilters.price === 'Từ 7 - 13 triệu') return price > 7000000 && price <= 13000000;
+        if (activeFilters.price === 'Từ 13 - 20 triệu') return price > 13000000 && price <= 20000000;
+        if (activeFilters.price === 'Trên 20 triệu') return price > 20000000;
+        return true;
+      });
+    }
+
+    // Lọc theo RAM
+    if (activeFilters.ram) {
+      const ramVal = activeFilters.ram.toLowerCase();
+      items = items.filter((item) => item.searchIndex.includes(ramVal));
+    }
+
+    // Lọc theo Dung lượng lưu trữ (Storage)
+    if (activeFilters.storage) {
+      const storeVal = activeFilters.storage.toLowerCase();
+      items = items.filter((item) => item.searchIndex.includes(storeVal));
+    }
+
+    // Lọc theo Chip xử lý
+    if (activeFilters.chip && activeFilters.chip.length > 0) {
+      items = items.filter((item) =>
+        activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))
+      );
+    }
+
+    // Sắp xếp sản phẩm theo tiêu chí hiện tại
+    items.sort((a, b) => {
+      const priceA = parsePrice(a.rawPrice || a.currentPrice);
+      const priceB = parsePrice(b.rawPrice || b.currentPrice);
+
       if (currentSort === 'price_asc') return priceA - priceB;
       if (currentSort === 'price_desc') return priceB - priceA;
+      if (currentSort === 'id') return String(a.id).localeCompare(String(b.id));
       return 0;
     });
-  }, [currentFilter, currentSort, dbItems]);
+
+    return items;
+  }, [dbProducts, currentFilter, currentSort, activeFilters]);
 
   // 4. Tiêu đề hiển thị
   const displayTitle = useMemo(() => {

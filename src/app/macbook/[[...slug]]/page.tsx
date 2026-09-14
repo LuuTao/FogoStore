@@ -242,32 +242,77 @@ export default function DynamicMacBookPage() {
   const activeSubmodels = currentSeriesKey ? MACBOOK_SUBMODELS_MAP[currentSeriesKey] : null;
 
   // Lọc chỉ từ dữ liệu DB thật
+  // Logic lọc tự động kết hợp danh mục MacBook và bộ lọc nâng cao từ Modal
   const filteredProducts = useMemo(() => {
-    let items = dbItems;
+    let items = [...dbProducts];
 
+    // 1. Chỉ lọc các sản phẩm thuộc danh mục MacBook
+    items = items.filter((i) => {
+      const lowerName = (i.name || '').toLowerCase();
+      const catSlug = (i.category?.slug || i.category?.name || '').toLowerCase();
+      return catSlug.includes('mac') || lowerName.includes('macbook') || lowerName.includes('mac mini');
+    });
+
+    // 2. Lọc theo Series hoặc Submodel (nếu có trên URL)
     if (currentFilter) {
-      if (['macbook-pro', 'macbook-air', 'macbook-neo'].includes(currentFilter)) {
-        items = items.filter((item) => item.series === currentFilter);
-      } else {
-        const keyword = currentFilter.replace('macbook-', '').replace(/-/g, ' ').trim();
-        items = items.filter(
-          (item) => item.subModel === currentFilter || item.name.toLowerCase().includes(keyword)
-        );
+      const lowerFilter = currentFilter.toLowerCase();
+      if (lowerFilter.includes('pro')) {
+        items = items.filter((i) => i.searchIndex.includes('pro'));
+      } else if (lowerFilter.includes('air')) {
+        items = items.filter((i) => i.searchIndex.includes('air'));
+      } else if (lowerFilter.includes('neo')) {
+        items = items.filter((i) => i.searchIndex.includes('neo'));
       }
     }
 
-    const sorted = [...items].sort((a, b) => {
-      const priceA = parsePrice((a as any).rawPrice || a.currentPrice);
-      const priceB = parsePrice((b as any).rawPrice || b.currentPrice);
+    // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
+    
+    // Lọc theo Khoảng Giá
+    if (activeFilters.price) {
+      items = items.filter((item) => {
+        const price = parsePrice(item.rawPrice || item.currentPrice);
+        if (activeFilters.price === 'Dưới 2 triệu') return price < 2000000;
+        if (activeFilters.price === 'Từ 2 - 4 triệu') return price >= 2000000 && price <= 4000000;
+        if (activeFilters.price === 'Từ 4 - 7 triệu') return price > 4000000 && price <= 7000000;
+        if (activeFilters.price === 'Từ 7 - 13 triệu') return price > 7000000 && price <= 13000000;
+        if (activeFilters.price === 'Từ 13 - 20 triệu') return price > 13000000 && price <= 20000000;
+        if (activeFilters.price === 'Trên 20 triệu') return price > 20000000;
+        return true;
+      });
+    }
+
+    // Lọc theo RAM
+    if (activeFilters.ram) {
+      const ramVal = activeFilters.ram.toLowerCase();
+      items = items.filter((item) => item.searchIndex.includes(ramVal));
+    }
+
+    // Lọc theo Dung lượng lưu trữ (Storage / SSD)
+    if (activeFilters.storage) {
+      const storeVal = activeFilters.storage.toLowerCase();
+      items = items.filter((item) => item.searchIndex.includes(storeVal));
+    }
+
+    // Lọc theo Chip xử lý (M4, M3, M2, M1...)
+    if (activeFilters.chip && activeFilters.chip.length > 0) {
+      items = items.filter((item) =>
+        activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))
+      );
+    }
+
+    // Sắp xếp sản phẩm theo tiêu chí
+    items.sort((a, b) => {
+      const priceA = parsePrice(a.rawPrice || a.currentPrice);
+      const priceB = parsePrice(b.rawPrice || b.currentPrice);
 
       if (currentSort === 'price_asc') return priceA - priceB;
       if (currentSort === 'price_desc') return priceB - priceA;
-      if (currentSort === 'id') return a.id.localeCompare(b.id);
+      if (currentSort === 'id') return String(a.id).localeCompare(String(b.id));
       return 0;
     });
 
-    return sorted;
-  }, [currentFilter, currentSort, dbItems]);
+    return items;
+  }, [dbProducts, currentFilter, currentSort, activeFilters]);
 
   const displayTitle = useMemo(() => {
     switch (currentFilter) {

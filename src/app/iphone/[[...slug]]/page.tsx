@@ -195,21 +195,19 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
-  // 3. Logic lọc tự động thông minh (Hỗ trợ bắt mọi dòng số và tên biến thể)
+  // Logic lọc tự động kết hợp cả Series và bộ lọc nâng cao từ Modal (activeFilters)
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
+    // 1. Lọc theo Series (iPhone 17, 16,...)
     if (currentFilter) {
       const lowerFilter = currentFilter.toLowerCase();
-      // Tách lấy toàn bộ chuỗi số có trong bộ lọc (Ví dụ: "17", "16",...)
       const numMatch = lowerFilter.match(/\d+/);
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
-        // Lọc tất cả sản phẩm có tên chứa con số đó (Ví dụ: chứa số "17")
         items = items.filter((i) => i.searchIndex.includes(targetNumber));
 
-        // Lọc tinh chỉnh theo các phiên bản Pro Max, Pro, Plus, Thường nếu có yêu cầu
         if (lowerFilter.includes('pro-max') || lowerFilter.includes('promax')) {
           items = items.filter((i) => i.searchIndex.includes('pro max') || i.searchIndex.includes('promax'));
         } else if (lowerFilter.includes('pro') && !lowerFilter.includes('max')) {
@@ -220,7 +218,6 @@ export default function DynamicIPhonePage() {
           items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('plus'));
         }
       } else {
-        // Trường hợp lọc bằng chữ (ví dụ: "hang-cu", "chinh-hang")
         const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
           items = items.filter((i) => i.searchIndex.includes(cleanTag));
@@ -228,7 +225,49 @@ export default function DynamicIPhonePage() {
       }
     }
 
-    // Sắp xếp sản phẩm theo tiêu chí
+    // 2. Lọc nâng cao từ Modal Bộ Lọc (activeFilters được truyền từ FilterAndSortBar)
+    
+    // Lọc theo Khoảng Giá
+    if (activeFilters.price) {
+      items = items.filter((item) => {
+        const price = parsePrice(item.rawPrice || item.currentPrice);
+        if (activeFilters.price === 'Dưới 2 triệu') return price < 2000000;
+        if (activeFilters.price === 'Từ 2 - 4 triệu') return price >= 2000000 && price <= 4000000;
+        if (activeFilters.price === 'Từ 4 - 7 triệu') return price > 4000000 && price <= 7000000;
+        if (activeFilters.price === 'Từ 7 - 13 triệu') return price > 7000000 && price <= 13000000;
+        if (activeFilters.price === 'Từ 13 - 20 triệu') return price > 13000000 && price <= 20000000;
+        if (activeFilters.price === 'Trên 20 triệu') return price > 20000000;
+        return true;
+      });
+    }
+
+    // Lọc theo RAM
+    if (activeFilters.ram) {
+      const ramVal = activeFilters.ram.toLowerCase();
+      items = items.filter((item) => item.searchIndex.includes(ramVal));
+    }
+
+    // Lọc theo Dung lượng lưu trữ (Storage)
+    if (activeFilters.storage) {
+      const storeVal = activeFilters.storage.toLowerCase();
+      items = items.filter((item) => item.searchIndex.includes(storeVal));
+    }
+
+    // Lọc theo Chip xử lý (Mảng nhiều lựa chọn)
+    if (activeFilters.chip && activeFilters.chip.length > 0) {
+      items = items.filter((item) =>
+        activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))
+      );
+    }
+
+    // Lọc theo Nhu cầu (Mảng nhiều lựa chọn)
+    if (activeFilters.demand && activeFilters.demand.length > 0) {
+      items = items.filter((item) =>
+        activeFilters.demand!.some((d) => item.searchIndex.includes(d.toLowerCase()))
+      );
+    }
+
+    // Sắp xếp sản phẩm theo tiêu chí hiện tại
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -240,7 +279,7 @@ export default function DynamicIPhonePage() {
     });
 
     return items;
-  }, [dbProducts, currentFilter, currentSort]);
+  }, [dbProducts, currentFilter, currentSort, activeFilters]);
 
   // 4. Tiêu đề hiển thị
   const displayTitle = useMemo(() => {

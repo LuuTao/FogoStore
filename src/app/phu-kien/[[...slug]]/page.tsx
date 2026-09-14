@@ -153,33 +153,63 @@ export default function DynamicAccessoryPage() {
     fetchAccessoryFromDB();
   }, []);
 
+  // Logic lọc tự động kết hợp các sản phẩm phụ kiện và bộ lọc nâng cao từ Modal
   const filteredProducts = useMemo(() => {
-    let items = dbItems;
+    let items = [...dbProducts];
 
+    // 1. Chỉ lọc các sản phẩm thuộc nhóm Phụ Kiện (Cáp sạc, tai nghe, ốp lưng, cường lực...)
+    items = items.filter((i) => {
+      const lowerName = (i.name || '').toLowerCase();
+      const catSlug = (i.category?.slug || i.category?.name || '').toLowerCase();
+      return (
+        catSlug.includes('phu-kien') ||
+        catSlug.includes('phụ kiện') ||
+        lowerName.includes('sạc') ||
+        lowerName.includes('cáp') ||
+        lowerName.includes('airpods') ||
+        lowerName.includes('ốp lưng') ||
+        lowerName.includes('cường lực') ||
+        lowerName.includes('pencil') ||
+        lowerName.includes('bút') ||
+        lowerName.includes('tai nghe')
+      );
+    });
+
+    // 2. Lọc theo nhóm phụ kiện cụ thể (nếu trên URL có chọn sub-filter như Củ sạc, ốp lưng...)
     if (currentFilter) {
+      const lowerFilter = currentFilter.toLowerCase().replace(/[-]/g, ' ');
+      items = items.filter((i) => i.searchIndex.includes(lowerFilter));
+    }
+
+    // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
+    
+    // Lọc theo Khoảng Giá
+    if (activeFilters.price) {
       items = items.filter((item) => {
-        if (item.series === currentFilter || item.subModel === currentFilter) return true;
-
-        const nameLower = (item.name || '').toLowerCase();
-        if (currentFilter === 'sac-cap') return nameLower.includes('sạc') || nameLower.includes('cáp');
-        if (currentFilter === 'tai-nghe') return nameLower.includes('airpods') || nameLower.includes('tai nghe');
-        if (currentFilter === 'op-lung') return nameLower.includes('ốp') || nameLower.includes('bao da');
-        if (currentFilter === 'cuong-luc') return nameLower.includes('kính') || nameLower.includes('cường lực');
-        if (currentFilter === 'phu-kien-mac')
-          return nameLower.includes('pencil') || nameLower.includes('phím') || nameLower.includes('chuột');
-
-        return false;
+        const price = parsePrice(item.rawPrice || item.currentPrice);
+        if (activeFilters.price === 'Dưới 2 triệu') return price < 2000000;
+        if (activeFilters.price === 'Từ 2 - 4 triệu') return price >= 2000000 && price <= 4000000;
+        if (activeFilters.price === 'Từ 4 - 7 triệu') return price > 4000000 && price <= 7000000;
+        if (activeFilters.price === 'Từ 7 - 13 triệu') return price > 7000000 && price <= 13000000;
+        if (activeFilters.price === 'Từ 13 - 20 triệu') return price > 13000000 && price <= 20000000;
+        if (activeFilters.price === 'Trên 20 triệu') return price > 20000000;
+        return true;
       });
     }
 
-    return [...items].sort((a, b) => {
-      const priceA = parsePrice((a as any).rawPrice || a.currentPrice);
-      const priceB = parsePrice((b as any).rawPrice || b.currentPrice);
+    // Sắp xếp sản phẩm theo tiêu chí hiện tại
+    items.sort((a, b) => {
+      const priceA = parsePrice(a.rawPrice || a.currentPrice);
+      const priceB = parsePrice(b.rawPrice || b.currentPrice);
+
       if (currentSort === 'price_asc') return priceA - priceB;
       if (currentSort === 'price_desc') return priceB - priceA;
+      if (currentSort === 'id') return String(a.id).localeCompare(String(b.id));
       return 0;
     });
-  }, [currentFilter, currentSort, dbItems]);
+
+    return items;
+  }, [dbProducts, currentFilter, currentSort, activeFilters]);
 
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
