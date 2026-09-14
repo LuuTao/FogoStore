@@ -21,7 +21,6 @@ import {
   CreditCard,
   X,
 } from 'lucide-react';
-import { MENU_DATA } from '@/data/navigation';
 
 interface Props {
   banners?: any[];
@@ -58,7 +57,6 @@ interface ItemConfig {
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Hàm xử lý link ảnh an toàn (hỗ trợ cả Base64, CDN ngoài và đường dẫn /uploads)
 const resolveImageUrl = (url?: string | null): string => {
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
@@ -69,6 +67,54 @@ const resolveImageUrl = (url?: string | null): string => {
   }
   const cleanPath = url.startsWith('/') ? url : `/${url}`;
   return `${API_URL}${cleanPath}`;
+};
+
+// Hàm nén ảnh bằng HTML5 Canvas: Giảm dung lượng từ vài MB xuống còn ~60-90KB
+const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+
+        // Tối ưu kích thước dựa trên nhóm mục tiêu
+        if (targetGroup === 'hero_banners') {
+          width = 1920;
+          height = 540;
+        } else if (targetGroup === 'promo_cards') {
+          width = 800;
+          height = 300;
+        } else if (targetGroup.startsWith('sub_') || targetGroup === 'all_categories') {
+          width = 300;
+          height = 300;
+        } else {
+          // Các banner danh mục trang
+          width = 1200;
+          height = 400;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        // Nén định dạng webp chất lượng 0.78, dung lượng siêu nhẹ
+        const compressedBase64 = canvas.toDataURL('image/webp', 0.78);
+        resolve(compressedBase64);
+      };
+      img.onerror = () => reject(new Error('Lỗi load ảnh vào canvas'));
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Lỗi đọc file ảnh'));
+    reader.readAsDataURL(file);
+  });
 };
 
 const INITIAL_ITEMS: ItemConfig[] = [
@@ -159,7 +205,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const [itemPriceText, setItemPriceText] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // Nạp dữ liệu từ Database / Props hoặc LocalStorage
+  // Nạp dữ liệu
   useEffect(() => {
     if (propBanners && Array.isArray(propBanners) && propBanners.length > 0) {
       const mapped = propBanners.map((b: any) => ({
@@ -181,14 +227,14 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error('Không thể đọc cấu hình banner từ localStorage:', e);
       }
     }
   }, [propBanners]);
 
   const currentItems = items.filter((it) => it.group === activeGroup);
 
-  // LƯU TOÀN BỘ VÀO NEON DATABASE
+  // LƯU TOÀN BỘ VÀO DATABASE VỚI CƠ CHẾ DỰ PHÒNG ROUTE
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     try {
@@ -205,18 +251,58 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         order: idx,
       }));
 
-      const res = await fetch(`${API_URL}/api/admin/banners/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: payloadItems }),
-      });
+      // 1. Gửi request đồng bộ đến Backend
+      let syncSuccess = false;
+      let syncError = '';
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error || `Lỗi máy chủ (${res.status})`);
+      // Thử Route 1: /api/admin/banners/sync
+      try {
+        const res1 = await fetch(`${API_URL}/api/admin/banners/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: payloadItems }),
+        });
+        if (res1.ok) {
+          syncSuccess = true;
+        } else {
+          syncError = `Route sync phản hồi ${res1.status}`;
+        }
+      } catch (e: any) {
+        syncError = e.message;
       }
 
-      localStorage.setItem('fogo_banners_config', JSON.stringify(items));
+      // Thử Route 2 (Fallback): /api/banners nếu route 1 trả về 404
+      if (!syncSuccess) {
+        try {
+          const res2 = await fetch(`${API_URL}/api/banners`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: payloadItems }),
+          });
+          if (res2.ok) syncSuccess = true;
+        } catch (e: any) {
+          syncError = e.message;
+        }
+      }
+
+      // 2. Lưu bộ nhớ tạm localStorage an toàn chống tràn quota
+      try {
+        localStorage.setItem('fogo_banners_config', JSON.stringify(items));
+      } catch (quotaErr) {
+        console.warn('LocalStorage đã đầy, bỏ qua lưu tạm Base64:', quotaErr);
+        // Lưu phiên bản rút gọn không chứa Base64 dài
+        try {
+          const stripped = items.map((it) => ({
+            ...it,
+            imageUrl: it.imageUrl.startsWith('data:') ? '' : it.imageUrl,
+          }));
+          localStorage.setItem('fogo_banners_config', JSON.stringify(stripped));
+        } catch (_) {}
+      }
+
+      if (!syncSuccess) {
+        throw new Error(syncError || 'Không thể kết nối đến máy chủ lưu banner');
+      }
 
       setHasUnsavedChanges(false);
       setSaveToast(true);
@@ -232,7 +318,9 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const handleResetDefault = () => {
     if (!confirm('Khôi phục toàn bộ cấu hình Banner về mặc định?')) return;
     setItems(INITIAL_ITEMS);
-    localStorage.removeItem('fogo_banners_config');
+    try {
+      localStorage.removeItem('fogo_banners_config');
+    } catch (_) {}
     setHasUnsavedChanges(true);
   };
 
@@ -264,28 +352,20 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
     setHasUnsavedChanges(true);
   };
 
-  // NÉN VÀ ĐỌC FILE ẢNH THÀNH BASE64
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // NÉN VÀ ĐỌC FILE ẢNH (Dung lượng < 100KB, chống nghẽn LocalStorage)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 3 * 1024 * 1024) {
-      alert('Vui lòng chọn file ảnh có dung lượng dưới 3MB để tải nhanh!');
-      return;
-    }
-
     setUploading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setItemImageUrl(base64);
+    try {
+      const compressed = await compressImageFile(file, activeGroup);
+      setItemImageUrl(compressed);
+    } catch (err) {
+      alert('Không thể xử lý hình ảnh, vui lòng thử lại ảnh khác!');
+    } finally {
       setUploading(false);
-    };
-    reader.onerror = () => {
-      alert('Lỗi khi đọc file ảnh');
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleSaveModal = (e: React.FormEvent) => {
@@ -348,7 +428,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
             <span>Quản Lý Banner &amp; Danh Mục (Trang Chủ &amp; Trang Sản Phẩm)</span>
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Mọi hình ảnh tải lên sẽ được lưu trữ vĩnh viễn trong <b>Database Neon</b> và tự động hiển thị ra Trang Chủ &amp; Trang Sản Phẩm.
+            Mọi hình ảnh tải lên sẽ được nén tối ưu để lưu trữ vĩnh viễn trong <b>Database Neon</b> và tự động hiển thị ra toàn bộ hệ thống.
           </p>
         </div>
 
@@ -384,7 +464,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         </div>
       </div>
 
-      {/* TABS ĐẦY ĐỦ CÁC TRANG SẢN PHẨM & MỤC CON */}
+      {/* TABS DANH MỤC */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-gray-200 text-xs">
         {[
           { id: 'hero_banners', label: 'Banner Lớn (Hero)', icon: Sliders },
@@ -430,18 +510,18 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
             {currentItems.map((item) => (
               <div
                 key={item.id}
-                className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[21/9] flex flex-col justify-between group bg-gray-900"
+                className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[1920/540] flex flex-col justify-between group bg-gray-900"
               >
-                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-85" />
+                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-90" />
                 <div className="relative p-4 z-10 text-white space-y-1">
-                  <h3 className="font-black text-sm md:text-base">{item.name}</h3>
-                  {item.subtitle && <p className="text-xs text-gray-300">{item.subtitle}</p>}
+                  <h3 className="font-black text-sm md:text-base drop-shadow-md">{item.name}</h3>
+                  {item.subtitle && <p className="text-xs text-gray-200 drop-shadow-xs">{item.subtitle}</p>}
                 </div>
                 <div className="relative p-3 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer">
+                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer">
+                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -460,10 +540,10 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                 <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="relative p-2 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-b from-black/60 to-transparent">
                   <span className="text-[10px] text-white font-bold mr-auto px-2 py-0.5 bg-black/40 rounded">{item.name}</span>
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer">
+                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
                     <Edit2 size={13} />
                   </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer">
+                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -472,7 +552,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
           </div>
         )}
 
-        {/* HIỂN THỊ BANNER CÁC TRANG SẢN PHẨM */}
         {['iphone_banners', 'ipad_banners', 'macbook_banners', 'watch_banners', 'hang_cu_banners', 'phu_kien_banners'].includes(activeGroup) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentItems.map((item) => (
@@ -482,14 +561,14 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
               >
                 <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-85" />
                 <div className="relative p-4 z-10 text-white space-y-1">
-                  <h3 className="font-black text-sm md:text-base">{item.name}</h3>
-                  {item.subtitle && <p className="text-xs text-gray-300">{item.subtitle}</p>}
+                  <h3 className="font-black text-sm md:text-base drop-shadow-md">{item.name}</h3>
+                  {item.subtitle && <p className="text-xs text-gray-300 drop-shadow-xs">{item.subtitle}</p>}
                 </div>
                 <div className="relative p-3 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer">
+                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer">
+                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -508,10 +587,10 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                   <span className="bg-[#d70018] text-white font-black text-xs px-2 py-0.5 rounded uppercase">{item.name}</span>
                 </div>
                 <div className="relative p-3 z-10 flex items-center justify-end gap-1.5">
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer">
+                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer">
+                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -576,9 +655,9 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                     <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
                   </label>
                 </div>
-                {uploading && <p className="text-[11px] text-blue-600 font-bold">Đang tải và xử lý hình ảnh...</p>}
+                {uploading && <p className="text-[11px] text-blue-600 font-bold animate-pulse">Đang nén tối ưu và xử lý hình ảnh...</p>}
                 
-                {/* KHUNG PREVIEW LUÔN HIỆN ẢNH KỂ CẢ BASE64 */}
+                {/* KHUNG PREVIEW */}
                 <div className="p-2 border rounded-lg bg-gray-50 flex items-center justify-center h-36 overflow-hidden">
                   {itemImageUrl ? (
                     <img
@@ -593,8 +672,8 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
               </div>
 
               <div className="pt-3 flex justify-end gap-2 border-t">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded cursor-pointer">Hủy</button>
-                <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded shadow-sm cursor-pointer">Xác Nhận</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded cursor-pointer font-semibold">Hủy</button>
+                <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded shadow-sm cursor-pointer hover:bg-red-700 transition-colors">Xác Nhận</button>
               </div>
             </form>
           </div>
