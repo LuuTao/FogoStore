@@ -23,7 +23,8 @@ const MENU_ITEMS = [
   { href: '/admin/ton-kho', label: 'Quản Lý Tồn Kho', icon: Layers },
   { href: '/admin/nhap-excel', label: 'Nhập Sản Phẩm Excel', icon: FileSpreadsheet },
   { href: '/admin/bai-viet', label: 'Bài Viết & SEO Blog', icon: FileText },
-  { href: '/admin/menu', label: 'Quản Lý Banner', icon: ImageIcon },
+  { href: '/admin/banner', label: 'Quản Lý Banner', icon: ImageIcon },
+  { href: '/admin/menu', label: 'Quản Lý Menu', icon: ImageIcon },
 ];
 
 export default function AdminSidebar({
