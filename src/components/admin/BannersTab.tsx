@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   UploadCloud,
   Plus,
@@ -20,6 +20,7 @@ import {
   Sliders,
   CreditCard,
   X,
+  RefreshCw,
 } from 'lucide-react';
 
 interface Props {
@@ -69,7 +70,7 @@ const resolveImageUrl = (url?: string | null): string => {
   return `${API_URL}${cleanPath}`;
 };
 
-// Hàm nén ảnh giữ nguyên tỉ lệ gốc (không bao giờ bị bè hay méo ảnh)
+// Hàm nén ảnh giữ chuẩn tỷ lệ gốc (không bị bè hay méo)
 const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -85,14 +86,12 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
         let height = origHeight;
 
         if (targetGroup === 'hero_banners') {
-          // Riêng Hero Banner lớn giữ chuẩn 1920x540
           width = 1920;
           height = 540;
         } else if (targetGroup === 'promo_cards') {
           width = 800;
           height = Math.round(800 * ratio);
         } else if (targetGroup === 'commit_cards') {
-          // 4 banner cam kết: Giữ nguyên tỉ lệ ảnh dọc gốc, giới hạn chiều rộng 600px
           width = Math.min(origWidth, 600);
           height = Math.round(width * ratio);
         } else if (targetGroup.startsWith('sub_') || targetGroup === 'all_categories') {
@@ -112,11 +111,10 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        // Xuất file WebP siêu nhẹ, không bị vỡ hạt và không bị méo tỉ lệ
         const compressedBase64 = canvas.toDataURL('image/webp', 0.82);
         resolve(compressedBase64);
       };
-      img.onerror = () => reject(new Error('Lỗi tải ảnh vào canvas'));
+      img.onerror = () => reject(new Error('Lỗi load ảnh vào canvas'));
       img.src = event.target?.result as string;
     };
     reader.onerror = () => reject(new Error('Lỗi đọc file ảnh'));
@@ -163,42 +161,13 @@ const INITIAL_ITEMS: ItemConfig[] = [
     group: 'promo_cards',
     imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=300&q=80',
   },
-  { id: 'ip-b1', name: 'Thế Hệ iPhone Mới Nhất', subtitle: 'Sức mạnh Apple Intelligence đỉnh cao.', tag: 'Giá tốt nhất', link: '/iphone', group: 'iphone_banners', imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80' },
-  { id: 'ip-b2', name: 'iPhone 17 Series', subtitle: 'Chính hãng Apple VN/A - Bảo hành 1 đổi 1', tag: 'Trả trước 0đ', link: '/iphone', group: 'iphone_banners', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=400&q=80' },
-  { id: 'id-b1', name: 'iPad Pro Thế Hệ Mới', subtitle: 'Mỏng siêu thực. Sức mạnh AI không giới hạn.', tag: 'Sẵn hàng', link: '/ipad', group: 'ipad_banners', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80' },
-  { id: 'id-b2', name: 'Tất cả sản phẩm iPad', subtitle: 'Chính hãng Apple VN/A - Bảo hành 1 đổi 1', tag: 'Trả trước 0đ', link: '/ipad', group: 'ipad_banners', imageUrl: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=400&q=80' },
-  { id: 'mb-b1', name: 'MacBook Pro M5 / M4', subtitle: 'Hiệu năng tối thượng cho chuyên gia đồ họa.', tag: 'Ưu đãi', link: '/macbook', group: 'macbook_banners', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80' },
-  { id: 'mb-b2', name: 'Tất cả sản phẩm MacBook', subtitle: 'Chính hãng Apple VN/A - Bảo hành 12 tháng', tag: 'Trả trước 0đ', link: '/macbook', group: 'macbook_banners', imageUrl: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=400&q=80' },
-  { id: 'wt-b1', name: 'Apple Watch Series & Ultra', subtitle: 'Đồng hồ thông minh đỉnh cao từ Apple', tag: 'Chính hãng', link: '/watch', group: 'watch_banners', imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=400&q=80' },
-  { id: 'cu-b1', name: 'Kho Máy Cũ Giá Hời - 99%', subtitle: 'Tiết kiệm đến 30% - Test máy thoải mái', tag: 'Trả góp 0%', link: '/hang-cu', group: 'hang_cu_banners', imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400&q=80' },
-  { id: 'pk-b1', name: 'Phụ Kiện Chính Hãng Apple', subtitle: 'Cáp sạc, ốp lưng, tai nghe, kính cường lực', tag: 'Giảm 20%', link: '/phu-kien', group: 'phu_kien_banners', imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=400&q=80' },
-
-  { id: 'cat-1', name: 'iPhone 18 Pro Max', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=300&q=80' },
-  { id: 'cat-2', name: 'iPhone 17 Pro Max', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=300&q=80' },
-  { id: 'cat-3', name: 'iPhone 17', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=300&q=80' },
-  { id: 'cat-4', name: 'iPhone 17 Air', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=300&q=80' },
-  { id: 'cat-5', name: 'iPhone 16 Series', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=300&q=80' },
-  { id: 'sub-ip-1', name: 'Tất cả', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-ip-2', name: 'iPhone 16 Series', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-ip-3', name: 'iPhone 15 Series', group: 'sub_iphone', imageUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-ipad-1', name: 'Tất cả', group: 'sub_ipad', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-ipad-2', name: 'iPad Pro', group: 'sub_ipad', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-mac-1', name: 'Tất cả', group: 'sub_macbook', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-mac-2', name: 'MacBook Pro', group: 'sub_macbook', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-wt-1', name: 'Tất cả', group: 'sub_watch', imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-pk-1', name: 'Củ & Cáp Sạc', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-pk-2', name: 'AirPods & Âm Thanh', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-pk-3', name: 'Ốp Lưng & Bao Da', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1539185441755-769473a23570?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-pk-4', name: 'Kính Cường Lực', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=200&q=80' },
-  { id: 'sub-pk-5', name: 'Bút Pencil & Phím', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=200&q=80' },
-  { id: 'commit-1', name: 'BẢO HÀNH VÀ HẬU MÃI', tag: 'ĐI ĐẦU VỀ CHẾ ĐỘ', subtitle: 'BẢO HÀNH VÀ HẬU MÃI', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=400&q=80' },
-  { id: 'commit-2', name: 'SẢN PHẨM MINH BẠCH', tag: 'MINH BẠCH', subtitle: 'GIÁ BÁN NIÊM YẾT', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=400&q=80' },
 ];
 
 export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const [activeGroup, setActiveGroup] = useState<BannerGroup>('hero_banners');
   const [items, setItems] = useState<ItemConfig[]>(INITIAL_ITEMS);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingDB, setIsLoadingDB] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveToast, setSaveToast] = useState(false);
 
@@ -212,36 +181,74 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const [itemPriceText, setItemPriceText] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // Nạp dữ liệu
-  useEffect(() => {
-    if (propBanners && Array.isArray(propBanners) && propBanners.length > 0) {
-      const mapped = propBanners.map((b: any) => ({
-        id: b.id,
-        name: b.title || b.name || 'Banner',
-        link: b.linkUrl || b.link || '/',
-        group: (b.position || b.group || 'hero_banners') as BannerGroup,
-        imageUrl: resolveImageUrl(b.imageUrl),
-        order: b.order,
-      }));
-      setItems(mapped);
-    } else {
-      try {
-        const savedBanners = localStorage.getItem('fogo_banners_config');
-        if (savedBanners) {
-          const parsed = JSON.parse(savedBanners);
+  // FETCH TRỰC TIẾP TỪ DATABASE NEON QUA API (Không sợ F5 hay Deploy mất dữ liệu)
+  const fetchBannersFromBackend = useCallback(async () => {
+    setIsLoadingDB(true);
+    try {
+      const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          Pragma: 'no-cache',
+          'Cache-Control': 'no-cache',
+        },
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const dataList = json.data || json;
+        if (Array.isArray(dataList) && dataList.length > 0) {
+          const mapped: ItemConfig[] = dataList.map((b: any, idx: number) => ({
+            id: String(b.id || `item-${idx}`),
+            name: b.title || b.name || 'Banner',
+            link: b.linkUrl || b.link || '/',
+            group: (b.position || b.group || 'hero_banners') as BannerGroup,
+            imageUrl: resolveImageUrl(b.imageUrl),
+            subtitle: b.subtitle || '',
+            tag: b.tag || '',
+            priceText: b.priceText || '',
+          }));
+
+          setItems(mapped);
+          try {
+            localStorage.setItem('fogo_banners_config', JSON.stringify(mapped));
+          } catch (_) {}
+          return;
+        }
+      }
+      
+      // Fallback: Kiểm tra propBanners hoặc localStorage nếu API chưa phản hồi
+      if (propBanners && Array.isArray(propBanners) && propBanners.length > 0) {
+        const mapped = propBanners.map((b: any, idx: number) => ({
+          id: String(b.id || `item-${idx}`),
+          name: b.title || b.name || 'Banner',
+          link: b.linkUrl || b.link || '/',
+          group: (b.position || b.group || 'hero_banners') as BannerGroup,
+          imageUrl: resolveImageUrl(b.imageUrl),
+        }));
+        setItems(mapped);
+      } else {
+        const cached = localStorage.getItem('fogo_banners_config');
+        if (cached) {
+          const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setItems(parsed.map((it: ItemConfig) => ({ ...it, imageUrl: resolveImageUrl(it.imageUrl) })));
+            setItems(parsed);
           }
         }
-      } catch (e) {
-        console.error('Không thể đọc cấu hình banner từ localStorage:', e);
       }
+    } catch (err) {
+      console.error('Lỗi khi fetch banner từ backend:', err);
+    } finally {
+      setIsLoadingDB(false);
     }
   }, [propBanners]);
 
+  useEffect(() => {
+    fetchBannersFromBackend();
+  }, [fetchBannersFromBackend]);
+
   const currentItems = items.filter((it) => it.group === activeGroup);
 
-  // LƯU TOÀN BỘ VÀO DATABASE VỚI CƠ CHẾ DỰ PHÒNG ROUTE
+  // LƯU CẤU HÌNH VÀO NEON DATABASE
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     try {
@@ -258,7 +265,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         order: idx,
       }));
 
-      // 1. Gửi request đồng bộ đến Backend
       let syncSuccess = false;
       let syncError = '';
 
@@ -269,16 +275,13 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: payloadItems }),
         });
-        if (res1.ok) {
-          syncSuccess = true;
-        } else {
-          syncError = `Route sync phản hồi ${res1.status}`;
-        }
+        if (res1.ok) syncSuccess = true;
+        else syncError = `Status ${res1.status}`;
       } catch (e: any) {
         syncError = e.message;
       }
 
-      // Thử Route 2 (Fallback): /api/banners nếu route 1 trả về 404
+      // Thử Route 2: /api/banners
       if (!syncSuccess) {
         try {
           const res2 = await fetch(`${API_URL}/api/banners`, {
@@ -292,29 +295,21 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         }
       }
 
-      // 2. Lưu bộ nhớ tạm localStorage an toàn chống tràn quota
       try {
         localStorage.setItem('fogo_banners_config', JSON.stringify(items));
-      } catch (quotaErr) {
-        console.warn('LocalStorage đã đầy, bỏ qua lưu tạm Base64:', quotaErr);
-        // Lưu phiên bản rút gọn không chứa Base64 dài
-        try {
-          const stripped = items.map((it) => ({
-            ...it,
-            imageUrl: it.imageUrl.startsWith('data:') ? '' : it.imageUrl,
-          }));
-          localStorage.setItem('fogo_banners_config', JSON.stringify(stripped));
-        } catch (_) {}
-      }
+      } catch (_) {}
 
       if (!syncSuccess) {
-        throw new Error(syncError || 'Không thể kết nối đến máy chủ lưu banner');
+        throw new Error(syncError || 'Backend chưa lưu được dữ liệu');
       }
 
       setHasUnsavedChanges(false);
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3000);
+      
       if (onRefresh) onRefresh();
+      // Load lại để đồng bộ state sạch
+      fetchBannersFromBackend();
     } catch (err: any) {
       alert('Đã xảy ra lỗi khi lưu vào cơ sở dữ liệu: ' + err.message);
     } finally {
@@ -359,7 +354,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
     setHasUnsavedChanges(true);
   };
 
-  // NÉN VÀ ĐỌC FILE ẢNH (Dung lượng < 100KB, chống nghẽn LocalStorage)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -369,7 +363,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
       const compressed = await compressImageFile(file, activeGroup);
       setItemImageUrl(compressed);
     } catch (err) {
-      alert('Không thể xử lý hình ảnh, vui lòng thử lại ảnh khác!');
+      alert('Không thể xử lý ảnh, vui lòng thử lại!');
     } finally {
       setUploading(false);
     }
@@ -432,14 +426,23 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         <div>
           <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
             <ImageIcon size={22} className="text-[#d70018]" />
-            <span>Quản Lý Banner &amp; Danh Mục (Trang Chủ &amp; Trang Sản Phẩm)</span>
+            <span>Quản Lý Banner &amp; Danh Mục</span>
+            {isLoadingDB && <RefreshCw size={15} className="animate-spin text-gray-400" />}
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Mọi hình ảnh tải lên sẽ được nén tối ưu để lưu trữ vĩnh viễn trong <b>Database Neon</b> và tự động hiển thị ra toàn bộ hệ thống.
+            Dữ liệu đồng bộ trực tiếp từ <b>Database Neon</b>, đảm bảo an toàn vĩnh viễn khi deploy lại website.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={fetchBannersFromBackend}
+            title="Tải lại từ Database"
+            className="p-2 border border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold cursor-pointer"
+          >
+            <RefreshCw size={14} className={isLoadingDB ? 'animate-spin' : ''} />
+          </button>
+
           <button
             onClick={handleResetDefault}
             className="px-3 py-2 border border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
@@ -510,7 +513,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         })}
       </div>
 
-      {/* DANH SÁCH BANNER / ITEMS */}
+      {/* DANH SÁCH BANNER */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         {activeGroup === 'hero_banners' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -587,13 +590,12 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         {activeGroup === 'commit_cards' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {currentItems.map((item) => (
-              <div key={item.id} className="relative rounded-lg overflow-hidden border border-gray-200 aspect-square flex flex-col justify-between group">
-                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/40" />
+              <div key={item.id} className="relative rounded-lg overflow-hidden border border-gray-200 aspect-[3/4] flex flex-col justify-between group bg-gray-50">
+                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-contain" />
                 <div className="relative p-4 z-10 text-center text-white space-y-1">
-                  <span className="bg-[#d70018] text-white font-black text-xs px-2 py-0.5 rounded uppercase">{item.name}</span>
+                  <span className="bg-[#d70018] text-white font-black text-xs px-2 py-0.5 rounded uppercase shadow">{item.name}</span>
                 </div>
-                <div className="relative p-3 z-10 flex items-center justify-end gap-1.5">
+                <div className="relative p-3 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-t from-black/60 to-transparent">
                   <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
                     <Edit2 size={14} />
                   </button>
@@ -628,7 +630,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         )}
       </div>
 
-      {/* MODAL SỬA/THÊM BANNER KÈM PREVIEW CHUẨN */}
+      {/* MODAL SỬA/THÊM BANNER */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-xs max-h-[92vh] overflow-y-auto">
@@ -664,7 +666,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                 </div>
                 {uploading && <p className="text-[11px] text-blue-600 font-bold animate-pulse">Đang nén tối ưu và xử lý hình ảnh...</p>}
                 
-                {/* KHUNG PREVIEW */}
                 <div className="p-2 border rounded-lg bg-gray-50 flex items-center justify-center h-36 overflow-hidden">
                   {itemImageUrl ? (
                     <img
