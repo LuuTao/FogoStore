@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ import {
   Tag,
   ArrowRight,
   Loader2,
+  UserCheck,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -25,14 +26,16 @@ import { useCart } from '@/context/CartContext';
 import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
 import { ToastNotification } from '@/components/common/ToastNotification';
 
-// Ưu tiên Render trực tiếp, loại bỏ hoàn toàn khả năng dính loca.lt
 const API_URL = 'https://fogo-store-api.onrender.com';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, updateQuantity, removeItem, clearCart, totalPrice } = useCart();
 
-  // Trạng thái thông báo Toast
+  // Thông tin tài khoản người dùng đăng nhập
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Trạng thái thông báo Toast (Xanh / Đỏ)
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -83,6 +86,32 @@ export default function CheckoutPage() {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponError, setCouponError] = useState('');
 
+  // Bắt buộc kiểm tra phiên đăng nhập
+  useEffect(() => {
+    const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
+    if (!rawUser) {
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Bạn cần đăng nhập tài khoản trước khi tiến hành đặt hàng!',
+      });
+      setTimeout(() => {
+        router.push('/dang-nhap?redirect=/thanh-toan');
+      }, 1500);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(rawUser);
+      setCurrentUser(parsed);
+      if (parsed.name && !customerName) setCustomerName(parsed.name);
+      if (parsed.phone && !customerPhone) setCustomerPhone(parsed.phone);
+      if (parsed.email && !customerEmail) setCustomerEmail(parsed.email);
+    } catch {
+      router.push('/dang-nhap?redirect=/thanh-toan');
+    }
+  }, [router]);
+
   const handleApplyCoupon = () => {
     const code = couponCode.trim().toUpperCase();
     if (code === 'FOGO100') {
@@ -91,7 +120,7 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'success',
-        message: 'Áp dụng mã giảm giá FOGO100 thành công: Giảm 100.000đ',
+        message: 'Áp dụng mã giảm giá FOGO100: Giảm 100.000đ',
       });
     } else if (code === 'VIPAPPLE') {
       setDiscountAmount(500000);
@@ -99,7 +128,7 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'success',
-        message: 'Áp dụng mã giảm giá VIPAPPLE thành công: Giảm 500.000đ',
+        message: 'Áp dụng mã giảm giá VIPAPPLE: Giảm 500.000đ',
       });
     } else {
       setCouponError('Mã ưu đãi không hợp lệ hoặc đã hết hạn.');
@@ -122,6 +151,31 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 1. Kiểm tra lại đăng nhập
+    const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
+    if (!rawUser) {
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!',
+      });
+      router.push('/dang-nhap?redirect=/thanh-toan');
+      return;
+    }
+
+    const userObj = JSON.parse(rawUser);
+    const userId = userObj.id || userObj._id;
+
+    if (!userId) {
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại!',
+      });
+      return;
+    }
+
+    // 2. Validate thông tin nhập
     if (!customerName.trim()) {
       setToast({
         show: true,
@@ -144,7 +198,7 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'error',
-        message: 'Vui lòng nhập địa chỉ giao hàng cụ thể.',
+        message: 'Vui lòng nhập địa chỉ giao hàng chi tiết.',
       });
       return;
     }
@@ -167,6 +221,7 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          userId, // Lưu đơn hàng gắn liền tài khoản
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           customerEmail: customerEmail.trim() || undefined,
@@ -203,20 +258,17 @@ export default function CheckoutPage() {
         throw new Error(result.error || result.message || 'Đặt hàng không thành công');
       }
 
-      // Thông báo thành công màu xanh lá chuẩn Fogo Admin
       setToast({
         show: true,
         type: 'success',
-        message: `Đặt hàng thành công! Mã đơn: ${result.data?.orderCode || ''}`,
+        message: `Đặt hàng thành công! Mã đơn hàng: ${result.data?.orderCode || ''}`,
       });
 
-      // Nếu chọn quét QR hoặc MoMo -> Mở Modal thanh toán QR
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
         setCreatedOrderCode(result.data.orderCode);
         setCreatedTotalAmount(finalPrice);
         setIsQrModalOpen(true);
       } else {
-        // Thanh toán COD -> Xóa giỏ hàng và điều hướng sang trang kết quả đơn hàng
         clearCart();
         setTimeout(() => {
           router.push(`/don-hang/${result.data.orderCode}`);
@@ -227,14 +279,13 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'error',
-        message: error.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại backend!',
+        message: error.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Xử lý sau khi bấm "Tôi đã thanh toán thành công" trên modal QR
   const handleConfirmQrSuccess = () => {
     clearCart();
     setIsQrModalOpen(false);
@@ -243,7 +294,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] flex flex-col justify-between select-none relative">
-      {/* Toast thông báo hiển thị góc trên màn hình */}
       <ToastNotification
         show={toast.show}
         type={toast.type}
@@ -257,7 +307,6 @@ export default function CheckoutPage() {
           <Navbar />
         </div>
 
-        {/* Breadcrumb */}
         <div className="w-full bg-white border-b border-gray-200 py-2.5 px-4 text-xs">
           <div className="max-w-6xl mx-auto flex items-center gap-1.5 text-gray-500">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
@@ -283,6 +332,20 @@ export default function CheckoutPage() {
             <div className="w-16" />
           </div>
 
+          {currentUser && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-2.5 rounded mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCheck size={16} className="text-emerald-600 shrink-0" />
+                <span>
+                  Đang đặt hàng với tài khoản: <strong>{currentUser.name || currentUser.email}</strong>
+                </span>
+              </div>
+              <Link href="/tai-khoan/don-hang" className="font-bold underline hover:text-emerald-950">
+                Xem lịch sử đơn của tôi
+              </Link>
+            </div>
+          )}
+
           {cartItems.length === 0 ? (
             <div className="bg-white rounded-md p-12 text-center border border-gray-200 shadow-sm max-w-lg mx-auto">
               <p className="text-gray-600 font-semibold mb-4">Giỏ hàng của bạn đang trống.</p>
@@ -297,7 +360,6 @@ export default function CheckoutPage() {
           ) : (
             <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               
-              {/* CỘT TRÁI: THÔNG TIN KHÁCH HÀNG & HÌNH THỨC NHẬN / THANH TOÁN */}
               <div className="lg:col-span-7 space-y-6">
                 
                 {/* 1. THÔNG TIN KHÁCH HÀNG */}
@@ -756,7 +818,6 @@ export default function CheckoutPage() {
         </main>
       </div>
 
-      {/* POPUP QUÉT MÃ QR */}
       <QrPaymentModal
         isOpen={isQrModalOpen}
         orderCode={createdOrderCode}
