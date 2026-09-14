@@ -26,7 +26,7 @@ interface AuthModalProps {
 const API_URL = 'https://fogo-store-api.onrender.com';
 const GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-  '974988535391-2fao6fbch8v9vk77aiqhph4f8jf3h6am.apps.googleusercontent.com';
+  '974988535391-m1b2907pue0m80ek7a5vuvl0idkk2787.apps.googleusercontent.com';
 
 function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
