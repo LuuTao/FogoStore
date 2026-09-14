@@ -22,11 +22,9 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-// Gán trực tiếp domain Render để không bị ăn cache biến môi trường
+// Gán trực tiếp domain Render và Client ID mới để Vercel không lấy cache biến môi trường cũ
 const API_URL = 'https://fogo-store-api.onrender.com';
-const GOOGLE_CLIENT_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-  '974988535391-m1b2907pue0m80ek7a5vuvl0idkk2787.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '974988535391-m1b2907pue0m80ek7a5vuvl0idkk2787.apps.googleusercontent.com';
 
 function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
