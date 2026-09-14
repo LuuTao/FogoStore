@@ -14,6 +14,9 @@ import {
   Layers,
   X,
   ArrowLeft,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -39,6 +42,16 @@ export interface MenuItem {
   badge?: string;
   groups?: MenuGroup[];
 }
+
+// Hàm hoán đổi vị trí phần tử trong mảng
+const moveArrayItem = <T,>(arr: T[], fromIndex: number, direction: 'up' | 'down'): T[] => {
+  const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+  if (toIndex < 0 || toIndex >= arr.length) return arr;
+  const newArr = [...arr];
+  const [target] = newArr.splice(fromIndex, 1);
+  newArr.splice(toIndex, 0, target);
+  return newArr;
+};
 
 export default function AdminMenuPage() {
   const [menus, setMenus] = useState<MenuItem[]>(MENU_DATA);
@@ -81,6 +94,91 @@ export default function AdminMenuPage() {
     activeLevel1?.groups && selectedLevel2Idx !== null
       ? activeLevel1.groups[selectedLevel2Idx]
       : null;
+
+  // ==========================================
+  // LOGIC DI CHUYỂN THỨ TỰ (MOVE UP / DOWN)
+  // ==========================================
+  const handleMoveLevel1 = (index: number, direction: 'up' | 'down') => {
+    setMenus((prev) => moveArrayItem(prev, index, direction));
+    setHasChanges(true);
+  };
+
+  const handleMoveLevel2 = (index: number, direction: 'up' | 'down') => {
+    setMenus((prev) => {
+      const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
+      const targetL1 = next.find((m) => m.id === selectedLevel1Id);
+      if (targetL1?.groups) {
+        targetL1.groups = moveArrayItem(targetL1.groups, index, direction);
+        const toIdx = direction === 'up' ? index - 1 : index + 1;
+        if (toIdx >= 0 && toIdx < targetL1.groups.length) {
+          setSelectedLevel2Idx(toIdx);
+        }
+      }
+      return next;
+    });
+    setHasChanges(true);
+  };
+
+  const handleMoveLevel3 = (index: number, direction: 'up' | 'down') => {
+    setMenus((prev) => {
+      const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
+      const targetL1 = next.find((m) => m.id === selectedLevel1Id);
+      if (targetL1?.groups && selectedLevel2Idx !== null) {
+        const targetL2 = targetL1.groups[selectedLevel2Idx];
+        if (targetL2?.items) {
+          targetL2.items = moveArrayItem(targetL2.items, index, direction);
+        }
+      }
+      return next;
+    });
+    setHasChanges(true);
+  };
+
+  // ==========================================
+  // LOGIC KÉO THẢ (DRAG & DROP)
+  // ==========================================
+  const handleDropLevel1 = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    setMenus((prev) => {
+      const newArr = [...prev];
+      const [moved] = newArr.splice(fromIdx, 1);
+      newArr.splice(toIdx, 0, moved);
+      return newArr;
+    });
+    setHasChanges(true);
+  };
+
+  const handleDropLevel2 = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    setMenus((prev) => {
+      const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
+      const targetL1 = next.find((m) => m.id === selectedLevel1Id);
+      if (targetL1?.groups) {
+        const [moved] = targetL1.groups.splice(fromIdx, 1);
+        targetL1.groups.splice(toIdx, 0, moved);
+        setSelectedLevel2Idx(toIdx);
+      }
+      return next;
+    });
+    setHasChanges(true);
+  };
+
+  const handleDropLevel3 = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    setMenus((prev) => {
+      const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
+      const targetL1 = next.find((m) => m.id === selectedLevel1Id);
+      if (targetL1?.groups && selectedLevel2Idx !== null) {
+        const targetL2 = targetL1.groups[selectedLevel2Idx];
+        if (targetL2?.items) {
+          const [moved] = targetL2.items.splice(fromIdx, 1);
+          targetL2.items.splice(toIdx, 0, moved);
+        }
+      }
+      return next;
+    });
+    setHasChanges(true);
+  };
 
   // Lưu toàn bộ cấu hình Menu
   const handleSaveConfig = () => {
@@ -304,31 +402,68 @@ export default function AdminMenuPage() {
               </div>
 
               <div className="space-y-1.5 max-h-[520px] overflow-y-auto pr-1">
-                {menus.map((item) => {
+                {menus.map((item, idx) => {
                   const isSelected = item.id === selectedLevel1Id;
                   return (
                     <div
                       key={item.id}
+                      draggable
+                      onDragStart={(e) => e.dataTransfer.setData('text/l1', idx.toString())}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const fromIdx = Number(e.dataTransfer.getData('text/l1'));
+                        if (!isNaN(fromIdx)) handleDropLevel1(fromIdx, idx);
+                      }}
                       onClick={() => {
                         setSelectedLevel1Id(item.id);
                         setSelectedLevel2Idx(item.groups && item.groups.length > 0 ? 0 : null);
                       }}
-                      className={`p-2.5 rounded border flex items-center justify-between cursor-pointer transition-all ${
+                      className={`group p-2.5 rounded border flex items-center justify-between cursor-pointer transition-all ${
                         isSelected
                           ? 'border-[#d70018] bg-red-50/60 text-[#d70018] font-bold shadow-xs'
                           : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
+                        <GripVertical
+                          size={14}
+                          className="text-gray-300 group-hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0"
+                        />
                         <span className="truncate">{item.title}</span>
                         {item.badge && (
-                          <span className="bg-[#d70018] text-white text-[9px] px-1 py-0.5 rounded font-black">
+                          <span className="bg-[#d70018] text-white text-[9px] px-1 py-0.5 rounded font-black shrink-0">
                             {item.badge}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {/* Nút mũi tên di chuyển */}
+                        <button
+                          disabled={idx === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveLevel1(idx, 'up');
+                          }}
+                          className="p-1 hover:text-black text-gray-400 disabled:opacity-20 disabled:cursor-not-allowed"
+                          title="Lên trên"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          disabled={idx === menus.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveLevel1(idx, 'down');
+                          }}
+                          className="p-1 hover:text-black text-gray-400 disabled:opacity-20 disabled:cursor-not-allowed"
+                          title="Xuống dưới"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+
+                        {/* Sửa / Xóa */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -381,19 +516,58 @@ export default function AdminMenuPage() {
                     return (
                       <div
                         key={idx}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/l2', idx.toString())}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const fromIdx = Number(e.dataTransfer.getData('text/l2'));
+                          if (!isNaN(fromIdx)) handleDropLevel2(fromIdx, idx);
+                        }}
                         onClick={() => setSelectedLevel2Idx(idx)}
-                        className={`p-2.5 rounded border flex items-center justify-between cursor-pointer transition-all ${
+                        className={`group p-2.5 rounded border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
                             ? 'border-blue-600 bg-blue-50/60 text-blue-700 font-bold shadow-xs'
                             : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
                         }`}
                       >
-                        <div className="flex flex-col truncate pr-2">
-                          <span className="truncate">{group.groupTitle}</span>
-                          <span className="text-[10px] text-gray-400 font-mono truncate">{group.href}</span>
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <GripVertical
+                            size={14}
+                            className="text-gray-300 group-hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0"
+                          />
+                          <div className="flex flex-col truncate">
+                            <span className="truncate">{group.groupTitle}</span>
+                            <span className="text-[10px] text-gray-400 font-mono truncate">{group.href}</span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          {/* Nút mũi tên di chuyển */}
+                          <button
+                            disabled={idx === 0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoveLevel2(idx, 'up');
+                            }}
+                            className="p-1 hover:text-black text-gray-400 disabled:opacity-20 disabled:cursor-not-allowed"
+                            title="Lên trên"
+                          >
+                            <ChevronUp size={14} />
+                          </button>
+                          <button
+                            disabled={idx === activeLevel1.groups!.length - 1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoveLevel2(idx, 'down');
+                            }}
+                            className="p-1 hover:text-black text-gray-400 disabled:opacity-20 disabled:cursor-not-allowed"
+                            title="Xuống dưới"
+                          >
+                            <ChevronDown size={14} />
+                          </button>
+
+                          {/* Sửa / Xóa */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -445,21 +619,54 @@ export default function AdminMenuPage() {
                   activeLevel2.items.map((sub, idx) => (
                     <div
                       key={idx}
-                      className="p-2.5 rounded border border-gray-200 hover:border-gray-300 bg-white flex items-center justify-between text-xs"
+                      draggable
+                      onDragStart={(e) => e.dataTransfer.setData('text/l3', idx.toString())}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const fromIdx = Number(e.dataTransfer.getData('text/l3'));
+                        if (!isNaN(fromIdx)) handleDropLevel3(fromIdx, idx);
+                      }}
+                      className="group p-2.5 rounded border border-gray-200 hover:border-gray-300 bg-white flex items-center justify-between text-xs"
                     >
-                      <div className="flex flex-col truncate pr-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-gray-800 truncate">{sub.name}</span>
-                          {sub.isNew && (
-                            <span className="bg-emerald-600 text-white text-[8px] font-black px-1 rounded">
-                              MỚI
-                            </span>
-                          )}
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <GripVertical
+                          size={14}
+                          className="text-gray-300 group-hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0"
+                        />
+                        <div className="flex flex-col truncate">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-gray-800 truncate">{sub.name}</span>
+                            {sub.isNew && (
+                              <span className="bg-emerald-600 text-white text-[8px] font-black px-1 rounded">
+                                MỚI
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-gray-400 font-mono truncate">{sub.href}</span>
                         </div>
-                        <span className="text-[10px] text-gray-400 font-mono truncate">{sub.href}</span>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {/* Nút mũi tên di chuyển */}
+                        <button
+                          disabled={idx === 0}
+                          onClick={() => handleMoveLevel3(idx, 'up')}
+                          className="p-1 hover:text-black text-gray-400 disabled:opacity-20 disabled:cursor-not-allowed"
+                          title="Lên trên"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          disabled={idx === activeLevel2.items!.length - 1}
+                          onClick={() => handleMoveLevel3(idx, 'down')}
+                          className="p-1 hover:text-black text-gray-400 disabled:opacity-20 disabled:cursor-not-allowed"
+                          title="Xuống dưới"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+
+                        {/* Sửa / Xóa */}
                         <button
                           onClick={() => handleOpenEdit('level3', idx)}
                           className="p-1 hover:text-blue-600 text-gray-400 cursor-pointer"
