@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Loader2,
   UserCheck,
+  LogIn,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -25,6 +26,7 @@ import { Footer } from '@/components/layout/Footer';
 import { useCart } from '@/context/CartContext';
 import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
 import { ToastNotification } from '@/components/common/ToastNotification';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 const API_URL = 'https://fogo-store-api.onrender.com';
 
@@ -32,10 +34,11 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, updateQuantity, removeItem, clearCart, totalPrice } = useCart();
 
-  // Thông tin tài khoản người dùng đăng nhập
+  // Modal Auth & Tài khoản
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Trạng thái thông báo Toast (Xanh / Đỏ)
+  // Trạng thái Toast
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -46,71 +49,83 @@ export default function CheckoutPage() {
     type: 'success',
   });
 
-  // Trạng thái xử lý gửi đơn
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Trạng thái Modal QR
+  // Modal QR
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [createdOrderCode, setCreatedOrderCode] = useState('');
   const [createdTotalAmount, setCreatedTotalAmount] = useState(0);
 
-  // Tab nhận hàng: 'delivery' (Giao tận nơi) hoặc 'store' (Nhận tại cửa hàng)
+  // Form giao nhận & thanh toán
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'store'>('delivery');
-
-  // Phương thức thanh toán
   const [paymentMethod, setPaymentMethod] = useState<string>('cod');
 
-  // Khách hàng
   const [customerGender, setCustomerGender] = useState<'anh' | 'chi'>('anh');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
 
-  // Địa chỉ nhận hàng
   const [province, setProvince] = useState('TP. Hồ Chí Minh');
   const [district, setDistrict] = useState('Quận 1');
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
-
-  // Nhận tại chi nhánh
   const [selectedStore, setSelectedStore] = useState('61-63 Trần Quang Khải, P. Tân Định, Quận 1');
 
-  // Xuất hóa đơn VAT
+  // VAT
   const [needVat, setNeedVat] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [taxCode, setTaxCode] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
 
-  // Mã giảm giá
+  // Voucher
   const [couponCode, setCouponCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponError, setCouponError] = useState('');
 
-  // Bắt buộc kiểm tra phiên đăng nhập
+  // Đọc thông tin người dùng từ LocalStorage (hoặc bật Modal nếu chưa đăng nhập)
   useEffect(() => {
-    const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
-    if (!rawUser) {
-      setToast({
-        show: true,
-        type: 'error',
-        message: 'Bạn cần đăng nhập tài khoản trước khi tiến hành đặt hàng!',
-      });
-      setTimeout(() => {
-        router.push('/dang-nhap?redirect=/thanh-toan');
-      }, 1500);
-      return;
-    }
+    const syncUser = () => {
+      const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
+      if (rawUser) {
+        try {
+          const parsed = JSON.parse(rawUser);
+          setCurrentUser(parsed);
+          if (parsed.name && !customerName) setCustomerName(parsed.name);
+          if (parsed.phone && !customerPhone) setCustomerPhone(parsed.phone);
+          if (parsed.email && !customerEmail) setCustomerEmail(parsed.email);
+        } catch {
+          setCurrentUser(null);
+        }
+      } else {
+        setCurrentUser(null);
+        // Chưa đăng nhập -> Bật popup đăng nhập ngay tại trang thanh toán
+        setIsAuthModalOpen(true);
+      }
+    };
 
-    try {
-      const parsed = JSON.parse(rawUser);
-      setCurrentUser(parsed);
-      if (parsed.name && !customerName) setCustomerName(parsed.name);
-      if (parsed.phone && !customerPhone) setCustomerPhone(parsed.phone);
-      if (parsed.email && !customerEmail) setCustomerEmail(parsed.email);
-    } catch {
-      router.push('/dang-nhap?redirect=/thanh-toan');
+    syncUser();
+  }, []);
+
+  const handleLoginSuccess = () => {
+    const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        setCurrentUser(parsed);
+        if (parsed.name) setCustomerName(parsed.name);
+        if (parsed.phone) setCustomerPhone(parsed.phone);
+        if (parsed.email) setCustomerEmail(parsed.email);
+      } catch (err) {
+        console.error(err);
+      }
     }
-  }, [router]);
+    setIsAuthModalOpen(false);
+    setToast({
+      show: true,
+      type: 'success',
+      message: 'Đăng nhập thành công! Bạn có thể tiếp tục hoàn tất đơn hàng.',
+    });
+  };
 
   const handleApplyCoupon = () => {
     const code = couponCode.trim().toUpperCase();
@@ -143,23 +158,20 @@ export default function CheckoutPage() {
   const shippingFee = 0;
   const finalPrice = Math.max(0, totalPrice - discountAmount + shippingFee);
 
-  const formatVnd = (num: number) => {
-    return num.toLocaleString('vi-VN') + 'đ';
-  };
+  const formatVnd = (num: number) => num.toLocaleString('vi-VN') + 'đ';
 
-  // Xác nhận đặt hàng
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Kiểm tra lại đăng nhập
+    // 1. Kiểm tra tài khoản
     const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
     if (!rawUser) {
       setToast({
         show: true,
         type: 'error',
-        message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!',
+        message: 'Vui lòng đăng nhập tài khoản để hoàn tất đơn hàng!',
       });
-      router.push('/dang-nhap?redirect=/thanh-toan');
+      setIsAuthModalOpen(true);
       return;
     }
 
@@ -172,10 +184,11 @@ export default function CheckoutPage() {
         type: 'error',
         message: 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại!',
       });
+      setIsAuthModalOpen(true);
       return;
     }
 
-    // 2. Validate thông tin nhập
+    // 2. Validate form
     if (!customerName.trim()) {
       setToast({
         show: true,
@@ -198,7 +211,7 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'error',
-        message: 'Vui lòng nhập địa chỉ giao hàng chi tiết.',
+        message: 'Vui lòng nhập địa chỉ giao hàng cụ thể.',
       });
       return;
     }
@@ -217,11 +230,9 @@ export default function CheckoutPage() {
     try {
       const response = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId, // Lưu đơn hàng gắn liền tài khoản
+          userId,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           customerEmail: customerEmail.trim() || undefined,
@@ -261,7 +272,7 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'success',
-        message: `Đặt hàng thành công! Mã đơn hàng: ${result.data?.orderCode || ''}`,
+        message: `Đặt hàng thành công! Mã đơn: ${result.data?.orderCode || ''}`,
       });
 
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
@@ -279,7 +290,7 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'error',
-        message: error.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!',
+        message: error.message || 'Không thể kết nối máy chủ đặt hàng. Vui lòng thử lại!',
       });
     } finally {
       setIsSubmitting(false);
@@ -294,11 +305,19 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] flex flex-col justify-between select-none relative">
+      {/* Toast thông báo */}
       <ToastNotification
         show={toast.show}
         type={toast.type}
         message={toast.message}
         onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
+      {/* Modal Popup Đăng nhập / Tạo tài khoản */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleLoginSuccess}
       />
 
       <div>
@@ -332,7 +351,8 @@ export default function CheckoutPage() {
             <div className="w-16" />
           </div>
 
-          {currentUser && (
+          {/* Banner trạng thái tài khoản */}
+          {currentUser ? (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-2.5 rounded mb-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <UserCheck size={16} className="text-emerald-600 shrink-0" />
@@ -341,8 +361,20 @@ export default function CheckoutPage() {
                 </span>
               </div>
               <Link href="/tai-khoan/don-hang" className="font-bold underline hover:text-emerald-950">
-                Xem lịch sử đơn của tôi
+                Đơn hàng của tôi
               </Link>
+            </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs px-4 py-3 rounded mb-6 flex items-center justify-between">
+              <span>Bạn chưa đăng nhập. Vui lòng đăng nhập để lưu và theo dõi đơn hàng của mình.</span>
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="bg-[#d70018] text-white px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1.5 hover:bg-red-700 transition-colors cursor-pointer"
+              >
+                <LogIn size={14} />
+                <span>Đăng nhập ngay</span>
+              </button>
             </div>
           )}
 
