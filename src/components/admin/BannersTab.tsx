@@ -13,13 +13,13 @@ import {
   Smartphone,
   Tablet,
   Laptop,
+  Watch as WatchIcon,
+  Headphones,
   Save,
   RotateCcw,
   Sliders,
   CreditCard,
   X,
-  Menu as MenuIcon,
-  ChevronRight,
 } from 'lucide-react';
 import { MENU_DATA } from '@/data/navigation';
 
@@ -32,14 +32,18 @@ type BannerGroup =
   | 'hero_banners'       // Banner Lớn Đầu Trang
   | 'promo_cards'        // 2 Banner Nhỏ Đè Hero
   | 'all_categories'     // Tất cả danh mục
-  | 'iphone_banners'     // Banner Trang iPhone (BỔ SUNG MỚI)
-  | 'ipad_banners'       // Banner Trang iPad (BỔ SUNG MỚI)
-  | 'macbook_banners'    // Banner Trang MacBook (BỔ SUNG MỚI)
+  | 'iphone_banners'     // Banner Trang iPhone
+  | 'ipad_banners'       // Banner Trang iPad
+  | 'macbook_banners'    // Banner Trang MacBook
+  | 'watch_banners'      // Banner Trang Watch
+  | 'hang_cu_banners'    // Banner Trang Hàng Cũ
+  | 'phu_kien_banners'   // Banner Trang Phụ Kiện
   | 'sub_iphone'         // Submodel iPhone
   | 'sub_ipad'           // Submodel iPad
   | 'sub_macbook'        // Submodel MacBook
-  | 'commit_cards'       // 4 Ô Cam Kết
-  | 'nav_menu';          // QUẢN LÝ MENU NAVBAR
+  | 'sub_watch'          // Submodel Watch
+  | 'sub_phu_kien'       // Submodel Phụ Kiện
+  | 'commit_cards';      // 4 Ô Cam Kết
 
 interface ItemConfig {
   id: string;
@@ -50,26 +54,6 @@ interface ItemConfig {
   subtitle?: string;
   tag?: string;
   priceText?: string;
-}
-
-export interface SubMenuItem {
-  name: string;
-  href: string;
-  isNew?: boolean;
-}
-
-export interface MenuGroup {
-  groupTitle: string;
-  href: string;
-  items?: SubMenuItem[];
-}
-
-export interface MenuItem {
-  id: string;
-  title: string;
-  href: string;
-  badge?: string;
-  groups?: MenuGroup[];
 }
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
@@ -126,13 +110,15 @@ const INITIAL_ITEMS: ItemConfig[] = [
     group: 'promo_cards',
     imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=300&q=80',
   },
-  // Bổ sung mặc định cho Banner Trang Sản Phẩm
   { id: 'ip-b1', name: 'Thế Hệ iPhone Mới Nhất', subtitle: 'Sức mạnh Apple Intelligence đỉnh cao.', tag: 'Giá tốt nhất', link: '/iphone', group: 'iphone_banners', imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80' },
   { id: 'ip-b2', name: 'iPhone 17 Series', subtitle: 'Chính hãng Apple VN/A - Bảo hành 1 đổi 1', tag: 'Trả trước 0đ', link: '/iphone', group: 'iphone_banners', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=400&q=80' },
   { id: 'id-b1', name: 'iPad Pro Thế Hệ Mới', subtitle: 'Mỏng siêu thực. Sức mạnh AI không giới hạn.', tag: 'Sẵn hàng', link: '/ipad', group: 'ipad_banners', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80' },
   { id: 'id-b2', name: 'Tất cả sản phẩm iPad', subtitle: 'Chính hãng Apple VN/A - Bảo hành 1 đổi 1', tag: 'Trả trước 0đ', link: '/ipad', group: 'ipad_banners', imageUrl: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=400&q=80' },
   { id: 'mb-b1', name: 'MacBook Pro M5 / M4', subtitle: 'Hiệu năng tối thượng cho chuyên gia đồ họa.', tag: 'Ưu đãi', link: '/macbook', group: 'macbook_banners', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80' },
   { id: 'mb-b2', name: 'Tất cả sản phẩm MacBook', subtitle: 'Chính hãng Apple VN/A - Bảo hành 12 tháng', tag: 'Trả trước 0đ', link: '/macbook', group: 'macbook_banners', imageUrl: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=400&q=80' },
+  { id: 'wt-b1', name: 'Apple Watch Series & Ultra', subtitle: 'Đồng hồ thông minh đỉnh cao từ Apple', tag: 'Chính hãng', link: '/watch', group: 'watch_banners', imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=400&q=80' },
+  { id: 'cu-b1', name: 'Kho Máy Cũ Giá Hời - 99%', subtitle: 'Tiết kiệm đến 30% - Test máy thoải mái', tag: 'Trả góp 0%', link: '/hang-cu', group: 'hang_cu_banners', imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400&q=80' },
+  { id: 'pk-b1', name: 'Phụ Kiện Chính Hãng Apple', subtitle: 'Cáp sạc, ốp lưng, tai nghe, kính cường lực', tag: 'Giảm 20%', link: '/phu-kien', group: 'phu_kien_banners', imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=400&q=80' },
 
   { id: 'cat-1', name: 'iPhone 18 Pro Max', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=300&q=80' },
   { id: 'cat-2', name: 'iPhone 17 Pro Max', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=300&q=80' },
@@ -146,6 +132,12 @@ const INITIAL_ITEMS: ItemConfig[] = [
   { id: 'sub-ipad-2', name: 'iPad Pro', group: 'sub_ipad', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=200&q=80' },
   { id: 'sub-mac-1', name: 'Tất cả', group: 'sub_macbook', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80' },
   { id: 'sub-mac-2', name: 'MacBook Pro', group: 'sub_macbook', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80' },
+  { id: 'sub-wt-1', name: 'Tất cả', group: 'sub_watch', imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=200&q=80' },
+  { id: 'sub-pk-1', name: 'Củ & Cáp Sạc', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=200&q=80' },
+  { id: 'sub-pk-2', name: 'AirPods & Âm Thanh', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=200&q=80' },
+  { id: 'sub-pk-3', name: 'Ốp Lưng & Bao Da', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1539185441755-769473a23570?auto=format&fit=crop&w=200&q=80' },
+  { id: 'sub-pk-4', name: 'Kính Cường Lực', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=200&q=80' },
+  { id: 'sub-pk-5', name: 'Bút Pencil & Phím', group: 'sub_phu_kien', imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=200&q=80' },
   { id: 'commit-1', name: 'BẢO HÀNH VÀ HẬU MÃI', tag: 'ĐI ĐẦU VỀ CHẾ ĐỘ', subtitle: 'BẢO HÀNH VÀ HẬU MÃI', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=400&q=80' },
   { id: 'commit-2', name: 'SẢN PHẨM MINH BẠCH', tag: 'MINH BẠCH', subtitle: 'GIÁ BÁN NIÊM YẾT', group: 'commit_cards', imageUrl: 'https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=400&q=80' },
 ];
@@ -153,13 +145,9 @@ const INITIAL_ITEMS: ItemConfig[] = [
 export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const [activeGroup, setActiveGroup] = useState<BannerGroup>('hero_banners');
   const [items, setItems] = useState<ItemConfig[]>(INITIAL_ITEMS);
-  const [menus, setMenus] = useState<MenuItem[]>(MENU_DATA);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveToast, setSaveToast] = useState(false);
-
-  const [selectedLevel1Id, setSelectedLevel1Id] = useState<string>(MENU_DATA[0]?.id || '');
-  const [selectedLevel2Idx, setSelectedLevel2Idx] = useState<number | null>(0);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemConfig | null>(null);
@@ -170,14 +158,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const [itemSubtitle, setItemSubtitle] = useState('');
   const [itemPriceText, setItemPriceText] = useState('');
   const [uploading, setUploading] = useState(false);
-
-  const [menuModalType, setMenuModalType] = useState<'level1' | 'level2' | 'level3' | null>(null);
-  const [menuIsEdit, setMenuIsEdit] = useState(false);
-  const [menuEditIndex, setMenuEditIndex] = useState<number | null>(null);
-  const [menuTitle, setMenuTitle] = useState('');
-  const [menuHref, setMenuHref] = useState('');
-  const [menuBadge, setMenuBadge] = useState('');
-  const [menuIsNew, setMenuIsNew] = useState(false);
 
   // Nạp dữ liệu từ Database / Props hoặc LocalStorage
   useEffect(() => {
@@ -204,27 +184,9 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         console.error(e);
       }
     }
-
-    try {
-      const savedMenu = localStorage.getItem('fogo_menu_config');
-      if (savedMenu) {
-        const parsedMenu = JSON.parse(savedMenu);
-        if (Array.isArray(parsedMenu) && parsedMenu.length > 0) {
-          setMenus(parsedMenu);
-          setSelectedLevel1Id(parsedMenu[0].id);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
   }, [propBanners]);
 
   const currentItems = items.filter((it) => it.group === activeGroup);
-  const activeLevel1 = menus.find((m) => m.id === selectedLevel1Id) || menus[0];
-  const activeLevel2 =
-    activeLevel1?.groups && selectedLevel2Idx !== null
-      ? activeLevel1.groups[selectedLevel2Idx]
-      : null;
 
   // LƯU TOÀN BỘ VÀO NEON DATABASE
   const handleSaveAllConfig = async () => {
@@ -255,7 +217,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
       }
 
       localStorage.setItem('fogo_banners_config', JSON.stringify(items));
-      localStorage.setItem('fogo_menu_config', JSON.stringify(menus));
 
       setHasUnsavedChanges(false);
       setSaveToast(true);
@@ -271,9 +232,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const handleResetDefault = () => {
     if (!confirm('Khôi phục toàn bộ cấu hình Banner về mặc định?')) return;
     setItems(INITIAL_ITEMS);
-    setMenus(MENU_DATA);
     localStorage.removeItem('fogo_banners_config');
-    localStorage.removeItem('fogo_menu_config');
     setHasUnsavedChanges(true);
   };
 
@@ -370,81 +329,13 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
     setIsModalOpen(false);
   };
 
-  const handleSaveMenuModal = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!menuTitle.trim()) return;
-
-    setMenus((prev) => {
-      const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
-      const targetL1 = next.find((m) => m.id === selectedLevel1Id);
-
-      if (menuModalType === 'level1') {
-        if (menuIsEdit) {
-          if (targetL1) {
-            targetL1.title = menuTitle;
-            targetL1.href = menuHref;
-            targetL1.badge = menuBadge || undefined;
-          }
-        } else {
-          const newId = `menu-${Date.now()}`;
-          next.push({ id: newId, title: menuTitle, href: menuHref, badge: menuBadge || undefined, groups: [] });
-          setSelectedLevel1Id(newId);
-        }
-      } else if (menuModalType === 'level2' && targetL1) {
-        if (!targetL1.groups) targetL1.groups = [];
-        if (menuIsEdit && menuEditIndex !== null) {
-          targetL1.groups[menuEditIndex].groupTitle = menuTitle;
-          targetL1.groups[menuEditIndex].href = menuHref;
-        } else {
-          targetL1.groups.push({ groupTitle: menuTitle, href: menuHref, items: [] });
-          setSelectedLevel2Idx(targetL1.groups.length - 1);
-        }
-      } else if (menuModalType === 'level3' && targetL1 && selectedLevel2Idx !== null) {
-        const targetL2 = targetL1.groups?.[selectedLevel2Idx];
-        if (targetL2) {
-          if (!targetL2.items) targetL2.items = [];
-          if (menuIsEdit && menuEditIndex !== null) {
-            targetL2.items[menuEditIndex] = { name: menuTitle, href: menuHref, isNew: menuIsNew };
-          } else {
-            targetL2.items.push({ name: menuTitle, href: menuHref, isNew: menuIsNew });
-          }
-        }
-      }
-      return next;
-    });
-
-    setHasUnsavedChanges(true);
-    setMenuModalType(null);
-  };
-
-  const handleDeleteMenuItem = (type: 'level1' | 'level2' | 'level3', index?: number) => {
-    if (!confirm('Bạn có chắc muốn xóa mục menu này?')) return;
-    setMenus((prev) => {
-      const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
-      if (type === 'level1') {
-        const filtered = next.filter((m) => m.id !== selectedLevel1Id);
-        if (filtered.length > 0) setSelectedLevel1Id(filtered[0].id);
-        return filtered;
-      }
-      const targetL1 = next.find((m) => m.id === selectedLevel1Id);
-      if (type === 'level2' && targetL1?.groups && index !== undefined) {
-        targetL1.groups.splice(index, 1);
-        setSelectedLevel2Idx(targetL1.groups.length > 0 ? 0 : null);
-      } else if (type === 'level3' && targetL1 && selectedLevel2Idx !== null && index !== undefined) {
-        targetL1.groups?.[selectedLevel2Idx]?.items?.splice(index, 1);
-      }
-      return next;
-    });
-    setHasUnsavedChanges(true);
-  };
-
   return (
     <div className="space-y-6 select-none relative">
       {saveToast && (
         <div className="fixed top-20 right-8 z-[99999] animate-in slide-in-from-top-4 duration-300">
           <div className="bg-[#00a859] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-2.5 font-bold text-xs border border-emerald-400">
             <CheckCircle2 size={18} />
-            <span>Đã lưu thành công toàn bộ cấu hình Banner &amp; Menu vào Database!</span>
+            <span>Đã lưu thành công cấu hình Banner vào Database!</span>
           </div>
         </div>
       )}
@@ -454,7 +345,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         <div>
           <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
             <ImageIcon size={22} className="text-[#d70018]" />
-            <span>Quản Lý Banner, Danh Mục, Submodel &amp; Menu</span>
+            <span>Quản Lý Banner &amp; Danh Mục (Trang Chủ &amp; Trang Sản Phẩm)</span>
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
             Mọi hình ảnh tải lên sẽ được lưu trữ vĩnh viễn trong <b>Database Neon</b> và tự động hiển thị ra Trang Chủ &amp; Trang Sản Phẩm.
@@ -470,15 +361,13 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
             <span>Khôi Phục</span>
           </button>
 
-          {activeGroup !== 'nav_menu' && (
-            <button
-              onClick={handleOpenAdd}
-              className="bg-gray-800 hover:bg-gray-900 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
-            >
-              <Plus size={15} />
-              <span>Thêm Mục Vào Nhóm</span>
-            </button>
-          )}
+          <button
+            onClick={handleOpenAdd}
+            className="bg-gray-800 hover:bg-gray-900 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+          >
+            <Plus size={15} />
+            <span>Thêm Mục Vào Nhóm</span>
+          </button>
 
           <button
             onClick={handleSaveAllConfig}
@@ -495,172 +384,46 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         </div>
       </div>
 
-      {/* TABS (ĐÃ BỔ SUNG TAB TRANG SẢN PHẨM) */}
+      {/* TABS ĐẦY ĐỦ CÁC TRANG SẢN PHẨM & MỤC CON */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-gray-200 text-xs">
-        <button
-          onClick={() => setActiveGroup('hero_banners')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'hero_banners'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Sliders size={15} />
-          <span>Banner Lớn (Hero)</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'hero_banners').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('promo_cards')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'promo_cards'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <CreditCard size={15} />
-          <span>2 Banner Nhỏ Đè Hero</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'promo_cards').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('iphone_banners')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'iphone_banners'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Smartphone size={15} />
-          <span>Banner Trang iPhone</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'iphone_banners').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('ipad_banners')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'ipad_banners'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Tablet size={15} />
-          <span>Banner Trang iPad</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'ipad_banners').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('macbook_banners')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'macbook_banners'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Laptop size={15} />
-          <span>Banner Trang MacBook</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'macbook_banners').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('all_categories')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'all_categories'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Layers size={15} />
-          <span>Tất Cả Danh Mục</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'all_categories').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('sub_iphone')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'sub_iphone'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Smartphone size={15} />
-          <span>Submodel iPhone</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'sub_iphone').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('sub_ipad')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'sub_ipad'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Tablet size={15} />
-          <span>Submodel iPad</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'sub_ipad').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('sub_macbook')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'sub_macbook'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <Laptop size={15} />
-          <span>Submodel MacBook</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'sub_macbook').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('commit_cards')}
-          className={`px-4 py-2.5 rounded-t-lg font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'commit_cards'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <ShieldCheck size={15} />
-          <span>Banner Cam Kết 4 Ô</span>
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
-            {items.filter((i) => i.group === 'commit_cards').length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveGroup('nav_menu')}
-          className={`px-4 py-2.5 rounded-t-lg font-black flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeGroup === 'nav_menu'
-              ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
-              : 'text-gray-600 hover:text-gray-900 bg-gray-100'
-          }`}
-        >
-          <MenuIcon size={15} className="text-[#d70018]" />
-          <span>Quản Lý Menu (Navbar)</span>
-        </button>
+        {[
+          { id: 'hero_banners', label: 'Banner Lớn (Hero)', icon: Sliders },
+          { id: 'promo_cards', label: '2 Banner Nhỏ Đè Hero', icon: CreditCard },
+          { id: 'iphone_banners', label: 'Banner iPhone', icon: Smartphone },
+          { id: 'ipad_banners', label: 'Banner iPad', icon: Tablet },
+          { id: 'macbook_banners', label: 'Banner MacBook', icon: Laptop },
+          { id: 'watch_banners', label: 'Banner Watch', icon: WatchIcon },
+          { id: 'hang_cu_banners', label: 'Banner Hàng Cũ', icon: Layers },
+          { id: 'phu_kien_banners', label: 'Banner Phụ Kiện', icon: Headphones },
+          { id: 'sub_iphone', label: 'Sub iPhone', icon: Smartphone },
+          { id: 'sub_ipad', label: 'Sub iPad', icon: Tablet },
+          { id: 'sub_macbook', label: 'Sub MacBook', icon: Laptop },
+          { id: 'sub_watch', label: 'Sub Watch', icon: WatchIcon },
+          { id: 'sub_phu_kien', label: 'Sub Phụ Kiện', icon: Headphones },
+          { id: 'commit_cards', label: 'Cam Kết 4 Ô', icon: ShieldCheck },
+        ].map((tab) => {
+          const IconComponent = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveGroup(tab.id as BannerGroup)}
+              className={`px-3.5 py-2.5 rounded-t-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                activeGroup === tab.id
+                  ? 'bg-white border-t-2 border-x border-[#d70018] text-[#d70018] shadow-2xs'
+                  : 'text-gray-600 hover:text-gray-900 bg-gray-100'
+              }`}
+            >
+              <IconComponent size={14} />
+              <span>{tab.label}</span>
+              <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">
+                {items.filter((i) => i.group === tab.id).length}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* DANH SÁCH BANNER */}
+      {/* DANH SÁCH BANNER / ITEMS */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         {activeGroup === 'hero_banners' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -709,8 +472,8 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
           </div>
         )}
 
-        {/* HIỂN THỊ BANNER TRANG SẢN PHẨM (IPHONE, IPAD, MACBOOK) */}
-        {['iphone_banners', 'ipad_banners', 'macbook_banners'].includes(activeGroup) && (
+        {/* HIỂN THỊ BANNER CÁC TRANG SẢN PHẨM */}
+        {['iphone_banners', 'ipad_banners', 'macbook_banners', 'watch_banners', 'hang_cu_banners', 'phu_kien_banners'].includes(activeGroup) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentItems.map((item) => (
               <div
@@ -757,7 +520,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
           </div>
         )}
 
-        {['all_categories', 'sub_iphone', 'sub_ipad', 'sub_macbook'].includes(activeGroup) && (
+        {['all_categories', 'sub_iphone', 'sub_ipad', 'sub_macbook', 'sub_watch', 'sub_phu_kien'].includes(activeGroup) && (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
             {currentItems.map((item) => (
               <div key={item.id} className="relative bg-[#fafafb] border border-gray-200 rounded-lg p-3 flex flex-col items-center text-center justify-between group min-h-[140px]">
@@ -775,208 +538,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                 <span className="text-[11px] font-bold text-gray-800 line-clamp-2 leading-tight mt-2">{item.name}</span>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* MENU NAVBAR CẤP 1 - 2 - 3 */}
-        {activeGroup === 'nav_menu' && (
-          <div className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center justify-between">
-              <span>Bấm chọn Cấp 1 để xem các nhóm Cấp 2, và chọn Cấp 2 để chỉnh sửa các mục con Cấp 3.</span>
-              <button
-                onClick={() => {
-                  setMenuModalType('level1');
-                  setMenuIsEdit(false);
-                  setMenuTitle('');
-                  setMenuHref('/iphone');
-                  setMenuBadge('');
-                }}
-                className="bg-[#d70018] text-white px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1 cursor-pointer"
-              >
-                <Plus size={14} /> Thêm Cấp 1
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-              {/* CỘT 1 */}
-              <div className="md:col-span-4 bg-[#f8f9fa] border border-gray-200 rounded-lg p-3 space-y-2">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                  <span className="font-black text-xs uppercase text-gray-800">Cấp 1 (Thanh Menu)</span>
-                  <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded font-bold">{menus.length} mục</span>
-                </div>
-                <div className="space-y-1.5 max-h-[480px] overflow-y-auto">
-                  {menus.map((item) => {
-                    const isSelected = item.id === selectedLevel1Id;
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => {
-                          setSelectedLevel1Id(item.id);
-                          setSelectedLevel2Idx(item.groups && item.groups.length > 0 ? 0 : null);
-                        }}
-                        className={`p-2.5 rounded-md border flex items-center justify-between cursor-pointer transition-all ${
-                          isSelected ? 'bg-white border-[#d70018] text-[#d70018] font-bold shadow-xs' : 'bg-white/70 border-gray-200 text-gray-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5 truncate">
-                          <span className="text-xs truncate">{item.title}</span>
-                          {item.badge && <span className="bg-[#d70018] text-white text-[9px] px-1 rounded font-black">{item.badge}</span>}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedLevel1Id(item.id);
-                              setMenuModalType('level1');
-                              setMenuIsEdit(true);
-                              setMenuTitle(item.title);
-                              setMenuHref(item.href);
-                              setMenuBadge(item.badge || '');
-                            }}
-                            className="p-1 text-blue-600 hover:bg-gray-100 rounded"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedLevel1Id(item.id);
-                              handleDeleteMenuItem('level1');
-                            }}
-                            className="p-1 text-red-600 hover:bg-gray-100 rounded"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                          <ChevronRight size={14} className={isSelected ? 'text-[#d70018]' : 'text-gray-300'} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* CỘT 2 */}
-              <div className="md:col-span-4 bg-[#f8f9fa] border border-gray-200 rounded-lg p-3 space-y-2">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                  <span className="font-black text-xs uppercase text-blue-700">Cấp 2 (Nhóm Dropdown)</span>
-                  <button
-                    onClick={() => {
-                      setMenuModalType('level2');
-                      setMenuIsEdit(false);
-                      setMenuTitle('');
-                      setMenuHref(activeLevel1?.href || '/');
-                    }}
-                    className="text-blue-700 text-xs font-bold hover:underline flex items-center gap-0.5"
-                  >
-                    <Plus size={13} /> Thêm
-                  </button>
-                </div>
-                <div className="space-y-1.5 max-h-[480px] overflow-y-auto">
-                  {(!activeLevel1?.groups || activeLevel1.groups.length === 0) ? (
-                    <p className="text-xs text-gray-400 text-center py-8">Chưa có nhóm menu cấp 2</p>
-                  ) : (
-                    activeLevel1.groups.map((group, idx) => {
-                      const isSelected = selectedLevel2Idx === idx;
-                      return (
-                        <div
-                          key={idx}
-                          onClick={() => setSelectedLevel2Idx(idx)}
-                          className={`p-2.5 rounded-md border flex items-center justify-between cursor-pointer transition-all ${
-                            isSelected ? 'bg-white border-blue-600 text-blue-700 font-bold shadow-xs' : 'bg-white/70 border-gray-200 text-gray-700'
-                          }`}
-                        >
-                          <div className="flex flex-col truncate pr-2">
-                            <span className="text-xs truncate">{group.groupTitle}</span>
-                            <span className="text-[10px] text-gray-400 font-mono truncate">{group.href}</span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMenuModalType('level2');
-                                setMenuIsEdit(true);
-                                setMenuEditIndex(idx);
-                                setMenuTitle(group.groupTitle);
-                                setMenuHref(group.href);
-                              }}
-                              className="p-1 text-blue-600 hover:bg-gray-100 rounded"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteMenuItem('level2', idx);
-                              }}
-                              className="p-1 text-red-600 hover:bg-gray-100 rounded"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                            <ChevronRight size={14} className={isSelected ? 'text-blue-600' : 'text-gray-300'} />
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* CỘT 3 */}
-              <div className="md:col-span-4 bg-[#f8f9fa] border border-gray-200 rounded-lg p-3 space-y-2">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                  <span className="font-black text-xs uppercase text-emerald-700">Cấp 3 (Phiên Bản Con)</span>
-                  {activeLevel2 && (
-                    <button
-                      onClick={() => {
-                        setMenuModalType('level3');
-                        setMenuIsEdit(false);
-                        setMenuTitle('');
-                        setMenuHref(activeLevel2.href || '/');
-                        setMenuIsNew(false);
-                      }}
-                      className="text-emerald-700 text-xs font-bold hover:underline flex items-center gap-0.5"
-                    >
-                      <Plus size={13} /> Thêm
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-1.5 max-h-[480px] overflow-y-auto">
-                  {(!activeLevel2?.items || activeLevel2.items.length === 0) ? (
-                    <p className="text-xs text-gray-400 text-center py-8">Chưa có phiên bản con</p>
-                  ) : (
-                    activeLevel2.items.map((sub, idx) => (
-                      <div key={idx} className="p-2.5 rounded-md border border-gray-200 bg-white flex items-center justify-between text-xs">
-                        <div className="flex flex-col truncate pr-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-gray-800 truncate">{sub.name}</span>
-                            {sub.isNew && <span className="bg-[#d70018] text-white text-[8px] font-black px-1 rounded">MỚI</span>}
-                          </div>
-                          <span className="text-[10px] text-gray-400 font-mono truncate">{sub.href}</span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => {
-                              setMenuModalType('level3');
-                              setMenuIsEdit(true);
-                              setMenuEditIndex(idx);
-                              setMenuTitle(sub.name);
-                              setMenuHref(sub.href);
-                              setMenuIsNew(!!sub.isNew);
-                            }}
-                            className="p-1 text-blue-600 hover:bg-gray-100 rounded"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button onClick={() => handleDeleteMenuItem('level3', idx)} className="p-1 text-red-600 hover:bg-gray-100 rounded">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -1034,46 +595,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
               <div className="pt-3 flex justify-end gap-2 border-t">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded cursor-pointer">Hủy</button>
                 <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded shadow-sm cursor-pointer">Xác Nhận</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL MENU NAVBAR */}
-      {menuModalType && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl text-xs">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-extrabold text-sm text-gray-900">
-                {menuIsEdit ? 'Chỉnh Sửa' : 'Thêm'} Menu {menuModalType === 'level1' ? 'Cấp 1' : menuModalType === 'level2' ? 'Cấp 2' : 'Cấp 3'}
-              </h3>
-              <button onClick={() => setMenuModalType(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
-            </div>
-            <form onSubmit={handleSaveMenuModal} className="space-y-3">
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Tên Hiển Thị *</label>
-                <input type="text" required value={menuTitle} onChange={(e) => setMenuTitle(e.target.value)} className="w-full border rounded p-2 outline-none font-bold" />
-              </div>
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Đường dẫn lọc URL (Href) *</label>
-                <input type="text" required value={menuHref} onChange={(e) => setMenuHref(e.target.value)} className="w-full border rounded p-2 outline-none font-mono text-xs" />
-              </div>
-              {menuModalType === 'level1' && (
-                <div>
-                  <label className="font-bold text-gray-700 block mb-1">Nhãn Badge</label>
-                  <input type="text" placeholder="HOT, NEW..." value={menuBadge} onChange={(e) => setMenuBadge(e.target.value)} className="w-full border rounded p-2 outline-none" />
-                </div>
-              )}
-              {menuModalType === 'level3' && (
-                <div className="flex items-center gap-2 pt-1">
-                  <input type="checkbox" id="checkNew" checked={menuIsNew} onChange={(e) => setMenuIsNew(e.target.checked)} className="w-4 h-4 accent-[#d70018]" />
-                  <label htmlFor="checkNew" className="font-bold text-gray-700 cursor-pointer">Gắn nhãn màu đỏ "MỚI"</label>
-                </div>
-              )}
-              <div className="pt-3 flex justify-end gap-2 border-t">
-                <button type="button" onClick={() => setMenuModalType(null)} className="px-4 py-2 border rounded cursor-pointer">Hủy</button>
-                <button type="submit" className="px-5 py-2 bg-[#d70018] text-white font-bold rounded cursor-pointer">Xác Nhận</button>
               </div>
             </form>
           </div>
