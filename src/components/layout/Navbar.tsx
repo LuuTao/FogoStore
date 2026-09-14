@@ -8,91 +8,21 @@ import { MENU_DATA } from '@/data/navigation';
 export const Navbar: React.FC = () => {
   const [navData, setNavData] = useState(MENU_DATA);
 
-  // Đồng bộ danh mục động từ cấu hình Admin mà không làm thay đổi giao diện
+  // Đồng bộ cấu hình menu chuẩn trực tiếp từ Admin (fogo_menu_config)
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('fogo_banners_config');
+      const raw = localStorage.getItem('fogo_menu_config');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const adminSubIphones = parsed.filter(
-            (it: any) => it.group === 'sub_iphone' && it.name.toLowerCase() !== 'tất cả'
-          );
-          const adminSubIpads = parsed.filter(
-            (it: any) => it.group === 'sub_ipad' && it.name.toLowerCase() !== 'tất cả'
-          );
-          const adminSubMacbooks = parsed.filter(
-            (it: any) => it.group === 'sub_macbook' && it.name.toLowerCase() !== 'tất cả'
-          );
-
-          // Cập nhật các menu cấp con dựa theo cấu hình Admin
-          const updated = MENU_DATA.map((menuItem) => {
-            const lowerHref = menuItem.href.toLowerCase();
-
-            // 1. Đồng bộ Menu iPhone
-            if (lowerHref.includes('iphone') && adminSubIphones.length > 0) {
-              const dynamicGroups = adminSubIphones.map((sub: any) => {
-                const numMatch = sub.name.match(/\d+/);
-                const queryVal = numMatch ? numMatch[0] : sub.name.toLowerCase().replace(/\s+/g, '-');
-                return {
-                  groupTitle: sub.name,
-                  href: `/iphone?series=${queryVal}`,
-                  items: [
-                    { name: `${sub.name} Pro Max`, href: `/iphone?series=${queryVal}-pro-max`, isNew: queryVal >= '16' },
-                    { name: `${sub.name} Pro`, href: `/iphone?series=${queryVal}-pro` },
-                    { name: `${sub.name} Plus`, href: `/iphone?series=${queryVal}-plus` },
-                    { name: `${sub.name} Thường`, href: `/iphone?series=${queryVal}-thuong` },
-                  ],
-                };
-              });
-              return { ...menuItem, groups: dynamicGroups };
-            }
-
-            // 2. Đồng bộ Menu iPad
-            if (lowerHref.includes('ipad') && adminSubIpads.length > 0) {
-              const dynamicGroups = adminSubIpads.map((sub: any) => {
-                const queryVal = sub.name.toLowerCase().replace(/ipad|\s/g, '');
-                return {
-                  groupTitle: sub.name,
-                  href: `/ipad?series=${queryVal}`,
-                  items: [
-                    { name: `${sub.name} Wi-Fi`, href: `/ipad?series=${queryVal}&type=wifi` },
-                    { name: `${sub.name} 5G (Cellular)`, href: `/ipad?series=${queryVal}&type=5g` },
-                  ],
-                };
-              });
-              return { ...menuItem, groups: dynamicGroups };
-            }
-
-            // 3. Đồng bộ Menu MacBook
-            if (lowerHref.includes('macbook') && adminSubMacbooks.length > 0) {
-              const dynamicGroups = adminSubMacbooks.map((sub: any) => {
-                const queryVal = sub.name.toLowerCase().replace(/macbook|\s/g, '');
-                return {
-                  groupTitle: sub.name,
-                  href: `/macbook?series=${queryVal}`,
-                  items: [
-                    { name: `${sub.name} 13-inch`, href: `/macbook?series=${queryVal}&size=13` },
-                    { name: `${sub.name} 14-inch`, href: `/macbook?series=${queryVal}&size=14` },
-                    { name: `${sub.name} 16-inch`, href: `/macbook?series=${queryVal}&size=16` },
-                  ],
-                };
-              });
-              return { ...menuItem, groups: dynamicGroups };
-            }
-
-            return menuItem;
-          });
-
-          setNavData(updated);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setNavData(parsed);
         }
       }
     } catch (e) {
-      console.error('Lỗi nạp navigation động:', e);
+      console.error('Lỗi nạp navigation động từ Admin:', e);
     }
   }, []);
 
-  // src/components/layout/Navbar.tsx
   return (
     <nav className="hidden lg:block bg-[#d70018] text-white select-none relative z-30 shadow-md">
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
@@ -110,7 +40,7 @@ export const Navbar: React.FC = () => {
               )}
             </Link>
 
-            {/* Menu cấp 2 & cấp 3 giữ nguyên như cũ */}
+            {/* Menu cấp 2 & cấp 3 */}
             {item.groups && item.groups.length > 0 && (
               <div className="hidden group-hover/level1:block absolute left-0 top-full w-64 bg-white text-gray-800 shadow-xl border border-gray-100 rounded-b-md z-50 py-2">
                 {item.groups.map((group, gIdx) => (
