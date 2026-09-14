@@ -102,26 +102,18 @@ export default function DynamicUsedPage() {
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   
-  // Đổi tên biến thành dbProducts để đồng bộ và tránh lỗi ReferenceError
   const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Lấy chính xác slug từ URL
   const slugParam = params?.slug;
   const currentFilter = Array.isArray(slugParam) ? slugParam[0] || '' : (slugParam as string) || '';
 
-  // 1. Fetch dữ liệu từ API
   useEffect(() => {
     const fetchLiveUsedProducts = async () => {
       try {
         setLoading(true);
-        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=hang-cu', { cache: 'no-store' });
+        let res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
         let json = await res.json();
-
-        if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
-          json = await res.json();
-        }
 
         const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
 
@@ -132,31 +124,32 @@ export default function DynamicUsedPage() {
           const discountPercent = origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12;
 
           const lower = (item.name || '').toLowerCase();
-          let category = 'iphone-cu';
-          let subModel = 'iphone-16-series-cu';
+          const catName = (item.category?.name || item.category?.slug || '').toLowerCase();
 
-          if (lower.includes('macbook')) {
+          // Phân nhóm máy chuẩn xác
+          let category = 'iphone-cu';
+          if (lower.includes('macbook') || catName.includes('mac')) {
             category = 'macbook-cu';
-            subModel = lower.includes('air') ? 'macbook-air-cu' : 'macbook-pro-cu';
-          } else if (lower.includes('ipad')) {
+          } else if (lower.includes('ipad') || catName.includes('ipad')) {
             category = 'ipad-cu';
-            if (lower.includes('pro')) subModel = 'ipad-pro-cu';
-            else if (lower.includes('air')) subModel = 'ipad-air-cu';
-            else if (lower.includes('mini')) subModel = 'ipad-mini-cu';
-            else subModel = 'ipad-gen-cu';
-          } else {
-            category = 'iphone-cu';
-            if (lower.includes('16')) subModel = 'iphone-16-series-cu';
-            else if (lower.includes('15')) subModel = 'iphone-15-series-cu';
-            else if (lower.includes('14')) subModel = 'iphone-14-series-cu';
-            else subModel = 'iphone-13-series-cu';
           }
+
+          // Kiểm tra xem sản phẩm có thực sự là máy cũ / like new hay không
+          const isUsed = 
+            lower.includes('cũ') ||
+            lower.includes('like new') ||
+            lower.includes('likenew') ||
+            lower.includes('99%') ||
+            lower.includes('98%') ||
+            lower.includes('qua sử dụng') ||
+            catName.includes('cũ') ||
+            catName.includes('hang-cu');
 
           return {
             id: item.id,
             name: item.name,
             category,
-            subModel,
+            isUsed,
             href: `/san-pham/${item.slug || item.id}`,
             currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
             originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
@@ -169,7 +162,10 @@ export default function DynamicUsedPage() {
             searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
           };
         });
-        setDbItems(mapped);
+
+        // Chỉ nạp các máy cũ thực sự vào danh mục Hàng Cũ
+        const onlyUsed = mapped.filter((p: any) => p.isUsed);
+        setDbItems(onlyUsed.length > 0 ? onlyUsed : mapped.filter((p: any) => !p.name.toLowerCase().includes('new seal')));
       } catch (err) {
         console.error('Lỗi khi fetch hàng cũ từ API:', err);
         setDbItems([]);
@@ -181,7 +177,6 @@ export default function DynamicUsedPage() {
     fetchLiveUsedProducts();
   }, []);
 
-  // 2. Nhận diện danh mục cha
   const currentCategoryKey = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.startsWith('iphone')) return 'iphone-cu';
@@ -192,26 +187,44 @@ export default function DynamicUsedPage() {
 
   const activeSubmodels = currentCategoryKey ? USED_SUBMODELS_MAP[currentCategoryKey] : null;
 
-  // Logic lọc tự động kết hợp các sản phẩm cũ/like-new và bộ lọc nâng cao từ Modal
+  // Logic lọc chuẩn xác tuyệt đối theo từng nhánh danh mục & Modal
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
-    // 1. Lọc theo danh mục hoặc từ khóa hàng cũ
+    // 1. Loại bỏ các phụ kiện hoặc máy new seal nếu còn sót
     items = items.filter((i) => {
-      const lowerName = (i.name || '').toLowerCase();
-      return (
-        lowerName.includes('cũ') ||
-        lowerName.includes('like new') ||
-        lowerName.includes('99%') ||
-        lowerName.includes('98%') ||
-        true // Cho phép hiển thị linh hoạt các sản phẩm trong mục hàng cũ
-      );
+      const lower = i.name.toLowerCase();
+      return !lower.includes('dock sạc') && !lower.includes('cáp sạc') && !lower.includes('new seal');
     });
 
-    // 2. Lọc theo dòng máy (nếu trên URL có chọn sub-filter)
+    // 2. Lọc thông minh theo Slug URL (Nhận diện cấp 1 và cấp 2)
     if (currentFilter) {
-      const lowerFilter = currentFilter.toLowerCase();
-      items = items.filter((i) => i.searchIndex.includes(lowerFilter.replace(/[-]/g, ' ')));
+      const slug = currentFilter.toLowerCase();
+
+      // Cấp 1: iPhone Cũ, iPad Cũ, MacBook Cũ
+      if (slug === 'iphone-cu') {
+        items = items.filter((i) => i.searchIndex.includes('iphone'));
+      } else if (slug === 'ipad-cu') {
+        items = items.filter((i) => i.searchIndex.includes('ipad'));
+      } else if (slug === 'macbook-cu') {
+        items = items.filter((i) => i.searchIndex.includes('macbook'));
+      } 
+      // Cấp 2: Theo series cụ thể (ví dụ: iphone-16-series-cu, ipad-pro-cu, macbook-air-cu,...)
+      else {
+        const numMatch = slug.match(/\d+/);
+        if (numMatch) {
+          // Lọc theo đời máy: 16, 15, 14, 13
+          items = items.filter((i) => i.searchIndex.includes(numMatch[0]));
+        } else if (slug.includes('pro')) {
+          items = items.filter((i) => i.searchIndex.includes('pro'));
+        } else if (slug.includes('air')) {
+          items = items.filter((i) => i.searchIndex.includes('air'));
+        } else if (slug.includes('mini')) {
+          items = items.filter((i) => i.searchIndex.includes('mini'));
+        } else if (slug.includes('gen')) {
+          items = items.filter((i) => i.searchIndex.includes('gen') || !i.searchIndex.includes('pro'));
+        }
+      }
     }
 
     // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
@@ -244,7 +257,7 @@ export default function DynamicUsedPage() {
       );
     }
 
-    // Sắp xếp sản phẩm theo tiêu chí hiện tại
+    // Sắp xếp
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -258,7 +271,6 @@ export default function DynamicUsedPage() {
     return items;
   }, [dbProducts, currentFilter, currentSort, activeFilters]);
 
-  // 4. Tiêu đề hiển thị
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
       case 'iphone-cu': return 'iPhone Cũ Like New 99%';
