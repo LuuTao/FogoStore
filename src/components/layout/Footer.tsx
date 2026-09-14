@@ -131,8 +131,7 @@ export const Footer: React.FC = () => {
               <li><Link href="/hang-cu/macbook-cu" className="hover:text-[#d70018] transition-colors font-medium">• Macbook Cũ</Link></li>
               <li><Link href="/watch" className="hover:text-[#d70018] transition-colors font-medium">• Watch</Link></li>
               <li><Link href="/phu-kien" className="hover:text-[#d70018] transition-colors font-medium">• Phụ Kiện</Link></li>
-              <li><Link href="/khuyen-mai" className="hover:text-[#d70018] transition-colors font-medium">• Sản phẩm khuyến mãi</Link></li>
-              <li><Link href="/noi-bat" className="hover:text-[#d70018] transition-colors font-medium">• Sản phẩm nổi bật</Link></li>
+        
             </ul>
           </div>
 
