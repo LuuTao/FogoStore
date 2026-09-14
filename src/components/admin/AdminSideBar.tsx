@@ -17,13 +17,12 @@ interface Props {
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
 }
-
 const MENU_ITEMS = [
   { href: '/admin/thong-ke', label: 'Doanh Thu & Thống Kê', icon: TrendingUp },
   { href: '/admin/don-hang', label: 'Quản Lý Đơn Hàng', icon: ShoppingCart },
   { href: '/admin/ton-kho', label: 'Quản Lý Tồn Kho', icon: Layers },
   { href: '/admin/nhap-excel', label: 'Nhập Sản Phẩm Excel', icon: FileSpreadsheet },
-  { href: '/admin/blog', label: 'Bài Viết & SEO Blog', icon: FileText },
+  { href: '/admin/bai-viet', label: 'Bài Viết & SEO Blog', icon: FileText },
   { href: '/admin/menu', label: 'Quản Lý Banner', icon: ImageIcon },
 ];
 
