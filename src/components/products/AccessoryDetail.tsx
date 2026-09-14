@@ -14,7 +14,6 @@ import {
   PhoneCall,
   MessageCircle,
   ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -39,7 +38,8 @@ export default function AccessoryDetail({
   const searchParams = useSearchParams();
   const initialProId = searchParams?.get('proid') || '';
 
-  const { addToCart } = useCart();
+  const cartContext = useCart();
+  const { addToCart, setIsCartOpen } = cartContext as any;
 
   const [product, setProduct] = useState<any>(initialProduct);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -184,7 +184,8 @@ export default function AccessoryDetail({
 
   const formatVnd = (num: number) => (!num || num <= 0 ? '0đ' : num.toLocaleString('vi-VN') + 'đ');
 
-  const handleAddToCart = (redirectCart = false) => {
+  // Thêm vào giỏ hàng thông thường
+  const handleAddToCartOnly = () => {
     if (!currentVariant || Number(currentVariant.stock || 0) <= 0) return;
 
     addToCart({
@@ -199,14 +200,34 @@ export default function AccessoryDetail({
       quantity: quantity,
     });
 
-    if (redirectCart) {
-      router.push('/gio-hang');
-    } else {
-      setToast({
-        show: true,
-        message: `Đã thêm ${product.name} vào giỏ hàng thành công!`,
-      });
+    setToast({
+      show: true,
+      message: `Đã thêm ${product.name} vào giỏ hàng thành công!`,
+    });
+  };
+
+  // Mua ngay: Thêm vào giỏ hàng, đóng Cart Drawer và nhảy thẳng tới /thanh-toan
+  const handleBuyNowDirect = () => {
+    if (!currentVariant || Number(currentVariant.stock || 0) <= 0) return;
+
+    // Chặn Drawer mở lên gây nháy giỏ hàng
+    if (typeof setIsCartOpen === 'function') {
+      setIsCartOpen(false);
     }
+
+    addToCart({
+      id: currentVariant.id,
+      name: `${product.name} ${typeList.length > 1 ? selectedType : ''}`.trim(),
+      modelSlug: baseSlug,
+      price: currentVariant.price,
+      originalPrice: currentVariant.originalPrice || currentVariant.price,
+      storage: selectedType,
+      color: selectedColor,
+      imageUrl: imagesList[currentImageIndex] || imagesList[0],
+      quantity: quantity,
+    });
+
+    router.push('/thanh-toan');
   };
 
   return (
@@ -452,13 +473,15 @@ export default function AccessoryDetail({
               ) : (
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button
-                    onClick={() => handleAddToCart(false)}
+                    type="button"
+                    onClick={handleAddToCartOnly}
                     className="w-full py-3 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 font-bold text-xs uppercase rounded-sm transition-colors text-center cursor-pointer"
                   >
                     THÊM VÀO GIỎ
                   </button>
                   <button
-                    onClick={() => handleAddToCart(true)}
+                    type="button"
+                    onClick={handleBuyNowDirect}
                     className="w-full py-3 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-xs uppercase rounded-sm shadow text-center cursor-pointer"
                   >
                     MUA NGAY
