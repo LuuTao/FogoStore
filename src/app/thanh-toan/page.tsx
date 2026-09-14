@@ -23,10 +23,24 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useCart } from '@/context/CartContext';
 import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
+import { ToastNotification } from '@/components/common/ToastNotification';
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, updateQuantity, removeItem, clearCart, totalPrice } = useCart();
+
+  // Trạng thái thông báo Toast
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success',
+  });
 
   // Trạng thái xử lý gửi đơn
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,14 +83,30 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState('');
 
   const handleApplyCoupon = () => {
-    if (couponCode.trim().toUpperCase() === 'FOGO100') {
+    const code = couponCode.trim().toUpperCase();
+    if (code === 'FOGO100') {
       setDiscountAmount(100000);
       setCouponError('');
-    } else if (couponCode.trim().toUpperCase() === 'VIPAPPLE') {
+      setToast({
+        show: true,
+        type: 'success',
+        message: 'Áp dụng mã giảm giá FOGO100 thành công: Giảm 100.000đ',
+      });
+    } else if (code === 'VIPAPPLE') {
       setDiscountAmount(500000);
       setCouponError('');
+      setToast({
+        show: true,
+        type: 'success',
+        message: 'Áp dụng mã giảm giá VIPAPPLE thành công: Giảm 500.000đ',
+      });
     } else {
       setCouponError('Mã ưu đãi không hợp lệ hoặc đã hết hạn.');
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Mã ưu đãi không hợp lệ hoặc đã hết hạn.',
+      });
     }
   };
 
@@ -91,36 +121,74 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName.trim() || !customerPhone.trim()) {
-      alert('Vui lòng điền họ tên và số điện thoại người nhận.');
+    if (!customerName.trim()) {
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Vui lòng điền họ và tên người nhận hàng.',
+      });
       return;
     }
+
+    if (!customerPhone.trim()) {
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Vui lòng điền số điện thoại nhận hàng.',
+      });
+      return;
+    }
+
     if (deliveryMethod === 'delivery' && !address.trim()) {
-      alert('Vui lòng nhập địa chỉ giao hàng cụ thể.');
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Vui lòng nhập địa chỉ giao hàng cụ thể.',
+      });
+      return;
+    }
+
+    if (!cartItems || cartItems.length === 0) {
+      setToast({
+        show: true,
+        type: 'error',
+        message: 'Giỏ hàng đang trống, không thể tạo đơn hàng.',
+      });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('https://fogo-store-api.onrender.com/api/orders', {
+      const response = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          customerName,
-          customerPhone,
-          customerEmail,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          customerEmail: customerEmail.trim() || undefined,
           gender: customerGender,
-          deliveryMethod,
+          deliveryMethod: deliveryMethod === 'delivery' ? 'Giao hàng tận nơi' : 'Nhận tại cửa hàng',
           province,
           district,
-          address,
-          storeAddress: selectedStore,
-          note,
+          address: address.trim(),
+          storeAddress: deliveryMethod === 'store' ? selectedStore : undefined,
+          note: note.trim(),
           paymentMethod,
-          cartItems,
+          items: cartItems.map((item) => ({
+            id: item.id,
+            variantId: item.variantId || item.id,
+            name: item.name || item.productName,
+            storage: item.storage || 'Tiêu chuẩn',
+            color: item.color || 'Mặc định',
+            price: Number(item.price || 0),
+            quantity: Number(item.quantity || 1),
+            imageUrl: item.imageUrl || item.image || '',
+          })),
+          subTotal: totalPrice,
+          totalAmount: finalPrice,
           discountAmount,
           shippingFee,
           needVat,
@@ -131,28 +199,41 @@ export default function CheckoutPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Đặt hàng thất bại');
+        throw new Error(result.error || result.message || 'Đặt hàng không thành công');
       }
 
-      // Nếu khách chọn quét QR hoặc MoMo -> Mở Popup QR trước
+      // Thông báo thành công màu xanh lá chuẩn Fogo Admin
+      setToast({
+        show: true,
+        type: 'success',
+        message: `Đặt hàng thành công! Mã đơn: ${result.data?.orderCode || ''}`,
+      });
+
+      // Nếu chọn quét QR hoặc MoMo -> Mở Modal thanh toán QR
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
         setCreatedOrderCode(result.data.orderCode);
         setCreatedTotalAmount(finalPrice);
         setIsQrModalOpen(true);
       } else {
-        // Thanh toán COD -> Xóa giỏ hàng và chuyển luôn sang trang tra cứu hóa đơn
+        // Thanh toán COD -> Xóa giỏ hàng và điều hướng sang trang kết quả đơn hàng
         clearCart();
-        router.push(`/don-hang/${result.data.orderCode}`);
+        setTimeout(() => {
+          router.push(`/don-hang/${result.data.orderCode}`);
+        }, 1200);
       }
     } catch (error: any) {
       console.error('Lỗi khi gửi đơn hàng:', error);
-      alert(error.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại backend!');
+      setToast({
+        show: true,
+        type: 'error',
+        message: error.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại backend!',
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Xử lý sau khi khách bấm "Tôi đã thanh toán thành công" trên modal QR
+  // Xử lý sau khi bấm "Tôi đã thanh toán thành công" trên modal QR
   const handleConfirmQrSuccess = () => {
     clearCart();
     setIsQrModalOpen(false);
@@ -160,7 +241,15 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] flex flex-col justify-between select-none">
+    <div className="min-h-screen bg-[#f4f6f8] flex flex-col justify-between select-none relative">
+      {/* Toast thông báo hiển thị góc trên màn hình */}
+      <ToastNotification
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
       <div>
         <div className="sticky top-0 z-50 shadow-md">
           <Header />
@@ -294,7 +383,7 @@ export default function CheckoutPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod('delivery')}
-                      className={`py-2.5 px-3 rounded border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                      className={`py-2.5 px-3 rounded border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                         deliveryMethod === 'delivery'
                           ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/50 shadow-xs'
                           : 'border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-white'
@@ -307,7 +396,7 @@ export default function CheckoutPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod('store')}
-                      className={`py-2.5 px-3 rounded border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                      className={`py-2.5 px-3 rounded border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                         deliveryMethod === 'store'
                           ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/50 shadow-xs'
                           : 'border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-white'
@@ -528,13 +617,13 @@ export default function CheckoutPage() {
                     {cartItems.map((item) => (
                       <div key={item.id} className="py-3.5 flex gap-3 items-start">
                         <div className="w-16 h-16 shrink-0 bg-gray-50 border border-gray-200 rounded p-1 flex items-center justify-center">
-                          <img src={item.imageUrl || '/placeholder.png'} alt={item.productName || 'Sản phẩm'} className="max-h-full max-w-full object-contain" />
+                          <img src={item.imageUrl || '/placeholder.png'} alt={item.name || 'Sản phẩm'} className="max-h-full max-w-full object-contain" />
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-xs font-bold text-gray-900 leading-snug line-clamp-2">{item.name}</h3>
                           <p className="text-[11px] text-gray-500 mt-0.5">
-                            Phân loại: <strong className="text-gray-700">{item.storage}</strong> - {item.color}
+                            Phân loại: <strong className="text-gray-700">{item.storage || 'Tiêu chuẩn'}</strong> - {item.color || 'Mặc định'}
                           </p>
 
                           <div className="flex items-center justify-between mt-2">
@@ -542,7 +631,7 @@ export default function CheckoutPage() {
                               <button
                                 type="button"
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-gray-100"
+                                className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                               >
                                 -
                               </button>
@@ -550,7 +639,7 @@ export default function CheckoutPage() {
                               <button
                                 type="button"
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-gray-100"
+                                className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
                               >
                                 +
                               </button>
@@ -565,7 +654,7 @@ export default function CheckoutPage() {
                         <button
                           type="button"
                           onClick={() => removeItem(item.id)}
-                          className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
                         >
                           <Trash2 size={15} />
                         </button>
