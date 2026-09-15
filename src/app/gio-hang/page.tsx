@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus, Minus, ArrowLeft, ArrowRight, ShoppingBag } from 'lucide-react';
@@ -11,18 +11,10 @@ import { useCart } from '@/context/CartContext';
 
 export default function CartPage() {
   const router = useRouter();
-  
-  const { cartItems, updateQuantity, removeFromCart, totalPrice, totalQuantity, refreshCart } = useCart();
-
-  useEffect(() => {
-    if (refreshCart) {
-      refreshCart();
-    }
-  }, [refreshCart]);
+  const { cartItems, updateQuantity, removeFromCart, totalPrice, totalQuantity } = useCart();
 
   const formatVnd = (num: number) => (!num || num <= 0 ? '0đ' : num.toLocaleString('vi-VN') + 'đ');
 
-  // Hàm tạo khóa định danh duy nhất cho từng biến thể sản phẩm trong giỏ hàng
   const getCartItemKey = (item: any) => {
     return `${item.id || item.productId}-${item.storage || 'default'}-${item.color || 'default'}`;
   };
