@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Star, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -16,7 +16,13 @@ interface SeriesTabItem {
   queryTag: string | null;
 }
 
-// 1. Danh mục phụ kiện mặc định kèm nút "Tất cả"
+interface SubModelItem {
+  name: string;
+  tag: string;
+  img: string;
+}
+
+// 1. Danh mục phụ kiện chính mặc định kèm nút "Tất cả"
 const DEFAULT_ACCESSORY_CATEGORIES: SeriesTabItem[] = [
   {
     name: 'Tất cả',
@@ -42,6 +48,76 @@ const DEFAULT_ACCESSORY_CATEGORIES: SeriesTabItem[] = [
     queryTag: 'phu-kien-mac',
   },
 ];
+
+// 2. Danh mục model con nhỏ hơn 2 size kèm hình ảnh tròn
+const ACCESSORY_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
+  'sac-cap': [
+    {
+      name: 'Tất cả Sạc Cáp',
+      tag: 'sac-cap',
+      img: 'https://cdn.hstatic.net/products/200000768357/mw2l3_geo_vn_de11bc805a154184b143c3eb18f4da05_master.jpeg?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'Củ Sạc Nhanh 20W',
+      tag: 'sac-20w',
+      img: 'https://cdn.hstatic.net/products/200000768357/mw2l3_geo_vn_de11bc805a154184b143c3eb18f4da05_master.jpeg?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'Củ Sạc Kép 35W',
+      tag: 'sac-35w',
+      img: 'https://cdn.hstatic.net/products/200000768357/mw2l3_geo_vn_de11bc805a154184b143c3eb18f4da05_master.jpeg?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'Cáp C to C Dù',
+      tag: 'cap-c-to-c',
+      img: 'https://cdn.hstatic.net/products/200000768357/mw2l3_geo_vn_de11bc805a154184b143c3eb18f4da05_master.jpeg?auto=format&fit=crop&w=150&q=80',
+    },
+  ],
+  'tai-nghe': [
+    {
+      name: 'Tất cả Âm Thanh',
+      tag: 'tai-nghe',
+      img: 'https://product.hstatic.net/200000768357/product/a3_1_42b1bd6f73de43ea8152bb40d71e610d_997dc83fdca54d0fb00c189095d50e21_master.png?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'AirPods 4',
+      tag: 'airpods-4',
+      img: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'AirPods Pro 2',
+      tag: 'airpods-pro-2',
+      img: 'https://product.hstatic.net/200000768357/product/a3_1_42b1bd6f73de43ea8152bb40d71e610d_997dc83fdca54d0fb00c189095d50e21_master.png?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'AirPods Max',
+      tag: 'airpods-max',
+      img: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=150&q=80',
+    },
+  ],
+  'phu-kien-mac': [
+    {
+      name: 'Tất cả Phụ Kiện Mac',
+      tag: 'phu-kien-mac',
+      img: 'https://product.hstatic.net/200000768357/product/magic-keyboard-for-ipad-pro-11-inch-m4-white-4-square_medium_344b97d0559244a485169928d75bb5a7_master.jpg?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'Apple Pencil Pro',
+      tag: 'pencil-pro',
+      img: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'Magic Keyboard',
+      tag: 'magic-keyboard',
+      img: 'https://product.hstatic.net/200000768357/product/magic-keyboard-for-ipad-pro-11-inch-m4-white-4-square_medium_344b97d0559244a485169928d75bb5a7_master.jpg?auto=format&fit=crop&w=150&q=80',
+    },
+    {
+      name: 'Magic Mouse 2',
+      tag: 'magic-mouse',
+      img: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&w=150&q=80',
+    },
+  ],
+};
 
 const DEFAULT_ACCESSORY_SEO_TEXT = `Phụ kiện Apple chính hãng là giải pháp tối ưu giúp bảo vệ thiết bị, duy trì tuổi thọ pin và nâng cao trải nghiệm sử dụng hàng ngày của bạn. Việc dùng củ sạc, cáp sạc và phụ kiện chuẩn zin đảm bảo nguồn điện ổn định, chống cháy nổ và tương thích hoàn hảo với hệ điều hành iOS, iPadOS và macOS.
 
@@ -236,7 +312,7 @@ export default function DynamicAccessoryPage() {
                 v.images?.[0] ||
                 item.imageUrl ||
                 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=400&q=80',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+              downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
               rating: 5,
               searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
             };
@@ -253,6 +329,17 @@ export default function DynamicAccessoryPage() {
 
     fetchAccessoryFromDB();
   }, []);
+
+  // Nhận diện dòng category cha đang chọn (sac-cap, tai-nghe, phu-kien-mac)
+  const currentCategoryTag = useMemo(() => {
+    if (!currentFilter) return null;
+    if (currentFilter.includes('sac') || currentFilter.includes('cap')) return 'sac-cap';
+    if (currentFilter.includes('tai-nghe') || currentFilter.includes('airpods')) return 'tai-nghe';
+    if (currentFilter.includes('mac') || currentFilter.includes('pencil') || currentFilter.includes('phim')) return 'phu-kien-mac';
+    return null;
+  }, [currentFilter]);
+
+  const activeSubmodels = currentCategoryTag ? ACCESSORY_SUBMODELS_MAP[currentCategoryTag] || [] : [];
 
   // Lọc sản phẩm
   const filteredProducts = useMemo(() => {
@@ -301,19 +388,17 @@ export default function DynamicAccessoryPage() {
     }
   }, [currentFilter]);
 
-  // Cấu hình 2 Banner đôi (ưu tiên dữ liệu Admin)
+  // Cấu hình 2 Banner đôi chuẩn thuần ảnh 600x200px (ưu tiên dữ liệu Admin)
   const banner1 = adminBanners[0] || {
     name: 'Củ Sạc & Cáp Zin Apple',
-    subtitle: 'Bảo vệ tuổi thọ pin tối đa. Bảo hành 12 tháng 1 đổi 1.',
-    tag: 'Giảm sốc 25% Hôm Nay',
-    imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=400&q=80',
+    link: '/phu-kien',
+    imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=600&h=200&q=80',
   };
 
   const banner2 = adminBanners[1] || {
     name: 'AirPods Pro 2 USB-C',
-    subtitle: 'Âm thanh studio. Chống ồn chủ động đỉnh cao.',
-    tag: 'Sẵn hàng Giá tốt nhất',
-    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=400&q=80',
+    link: '/phu-kien',
+    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=600&h=200&q=80',
   };
 
   return (
@@ -340,53 +425,41 @@ export default function DynamicAccessoryPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* BANNER ĐÔI TRANG PHỤ KIỆN (CẬP NHẬT ĐỘNG TỪ ADMIN) */}
-          <div className="relative mb-6 group">
+          {/* ========================================================================= */}
+          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN TỶ LỆ 600x200px (KHÔNG CHỮ ĐÈ, KHÔNG KHUNG) */}
+          {/* ========================================================================= */}
+          <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative rounded-sm bg-gradient-to-r from-[#1c1d21] to-[#30333d] border border-gray-800 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm text-white">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1.5 font-bold text-lg md:text-xl text-white">
-                    <Zap size={20} className="text-amber-400" />
-                    <span>{banner1.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-300 font-medium my-2">{banner1.subtitle}</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    {banner1.tag}
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
-                  <img
-                    src={banner1.imageUrl}
-                    alt={banner1.name}
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 1 */}
+              <Link
+                href={banner1.link || '/phu-kien'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner1.imageUrl}
+                  alt={banner1.name || 'Banner 1'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
 
-              <div className="relative rounded-sm bg-gradient-to-r from-[#fbf8f5] to-[#f4eef9] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
-                    <span></span>
-                    <span>{banner2.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">{banner2.subtitle}</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    {banner2.tag}
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
-                  <img
-                    src={banner2.imageUrl}
-                    alt={banner2.name}
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 2 */}
+              <Link
+                href={banner2.link || '/phu-kien'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner2.imageUrl}
+                  alt={banner2.name || 'Banner 2'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
             </div>
           </div>
 
-          {/* HÀNG ICON TRÒN 80PX (CHUẨN VIỀN ĐỎ BO TRÒN KHI CHỌN) */}
-          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
+          {/* ========================================================================= */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
+          {/* ========================================================================= */}
+          <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {categories.map((cat, idx) => {
                 const isAllButton = cat.queryTag === null;
@@ -399,7 +472,7 @@ export default function DynamicAccessoryPage() {
                   <Link
                     key={cat.slug || idx}
                     href={isAllButton ? '/phu-kien' : `/phu-kien?series=${cat.queryTag}`}
-                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
+                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
                   >
                     <div
                       className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
@@ -426,6 +499,53 @@ export default function DynamicAccessoryPage() {
               })}
             </div>
           </div>
+
+          {/* ========================================================================= */}
+          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
+          {/* ========================================================================= */}
+          {activeSubmodels.length > 0 && (
+            <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
+              <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
+                {activeSubmodels.map((model) => {
+                  const isSubSelected = currentFilter === model.tag;
+
+                  return (
+                    <Link
+                      key={model.tag}
+                      href={`/phu-kien?series=${model.tag}`}
+                      className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
+                    >
+                      {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
+                      <div
+                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                          isSubSelected
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
+                        }`}
+                      >
+                        <img
+                          src={model.img}
+                          alt={model.name}
+                          className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
+                        />
+                      </div>
+
+                      {/* Tên Submodel con */}
+                      <span
+                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
+                          isSubSelected
+                            ? 'text-[#d70018] font-bold'
+                            : 'text-gray-700 group-hover:text-[#d70018]'
+                        }`}
+                      >
+                        {model.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* TIÊU ĐỀ & BỘ LỌC */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">

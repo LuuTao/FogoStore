@@ -48,10 +48,7 @@ const DEFAULT_CATEGORY_BANNERS = [
 ];
 
 export const CategoryGrid: React.FC = () => {
-  // State 1: 4 Banner Category chữ nhật 350x250px
   const [categoryBanners, setCategoryBanners] = useState<any[]>(DEFAULT_CATEGORY_BANNERS);
-
-  // State 2: Lưới icon các dòng máy (Categories Item nhỏ)
   const [categories, setCategories] = useState<any[]>(QUICK_CATEGORIES);
 
   const loadData = useCallback(() => {
@@ -98,39 +95,39 @@ export const CategoryGrid: React.FC = () => {
 
   useEffect(() => {
     loadData();
-
     const handleUpdate = () => loadData();
     window.addEventListener('fogo_banners_updated', handleUpdate);
     return () => window.removeEventListener('fogo_banners_updated', handleUpdate);
   }, [loadData]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-6 select-none space-y-6">
+    <div className="max-w-7xl mx-auto px-4 mt-6 select-none space-y-7">
 
       {/* ========================================================================= */}
-      {/* PHẦN 2: THANH CAM KẾT 3 TIÊU CHÍ                                          */}
+      {/* PHẦN 2: THANH 3 CAM KẾT - KHÔNG BACKGROUND, CĂN GIỮA, TO LÊN 4 SIZE       */}
       {/* ========================================================================= */}
-      <div className="bg-white border-y border-gray-100 py-3 px-2">
-        <div className="flex items-center justify-center gap-6 sm:gap-12 md:gap-16 flex-wrap text-gray-800 text-xs sm:text-sm font-bold">
-          {/* Tiêu chí 1 */}
-          <div className="flex items-center gap-2">
-            <Award size={18} strokeWidth={2.2} className="text-gray-700 shrink-0" />
+      <div className="w-full py-4 flex items-center justify-center">
+        <div className="flex items-center justify-center gap-8 sm:gap-14 md:gap-20 flex-wrap text-gray-900 text-sm sm:text-base md:text-lg font-bold">
+          {/* 1. Đảm bảo chất lượng */}
+          <div className="flex items-center gap-2.5">
+            <Award size={26} strokeWidth={2.2} className="text-gray-800 shrink-0" />
             <span>Đảm bảo chất lượng</span>
           </div>
 
-          {/* Tiêu chí 2 */}
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} strokeWidth={2.2} className="text-gray-700 shrink-0" />
+          {/* 2. Thu cũ đổi mới */}
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 size={26} strokeWidth={2.2} className="text-gray-800 shrink-0" />
             <span>Thu cũ đổi mới</span>
           </div>
 
-          {/* Tiêu chí 3 */}
-          <div className="flex items-center gap-2">
-            <Truck size={19} strokeWidth={2.2} className="text-gray-700 shrink-0" />
+          {/* 3. Miễn phí vận chuyển */}
+          <div className="flex items-center gap-2.5">
+            <Truck size={28} strokeWidth={2.2} className="text-gray-800 shrink-0" />
             <span>Miễn phí vận chuyển</span>
           </div>
         </div>
       </div>
+
 
       {/* ========================================================================= */}
       {/* PHẦN 3: LƯỚI CATEGORIES ITEM NHỎ (CẬP NHẬT ĐỘNG TỪ ADMIN)                 */}
@@ -143,7 +140,6 @@ export const CategoryGrid: React.FC = () => {
               href={item.href || '/'}
               className="flex flex-col items-center justify-between p-2 md:p-2.5 rounded-lg border border-gray-100/90 hover:border-[#d70018]/50 hover:shadow-md transition-all group bg-white text-center min-h-[110px]"
             >
-              {/* Hình ảnh đại diện dòng máy */}
               <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
                 <img
                   src={resolveImageUrl(item.imageUrl)}
@@ -151,8 +147,6 @@ export const CategoryGrid: React.FC = () => {
                   className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
-
-              {/* Tên dòng máy */}
               <span className="text-[11px] md:text-xs font-semibold text-gray-700 group-hover:text-[#d70018] transition-colors leading-tight mt-1.5 line-clamp-2">
                 {item.name}
               </span>
@@ -191,7 +185,6 @@ export const CategoryGrid: React.FC = () => {
           </Link>
         ))}
       </div>
-
     </div>
   );
 };

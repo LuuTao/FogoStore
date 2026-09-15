@@ -17,6 +17,12 @@ interface SeriesTabItem {
   queryTag: string | null;
 }
 
+interface SubModelItem {
+  name: string;
+  tag: string;
+  img: string;
+}
+
 // 1. Danh sách Series iPad mặc định có nút "Tất cả"
 const DEFAULT_IPAD_SERIES: SeriesTabItem[] = [
   {
@@ -50,27 +56,75 @@ const DEFAULT_IPAD_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// 2. Danh mục model con tương ứng từng dòng máy
-const IPAD_SUBMODELS_MAP: Record<string, { name: string; tag: string }[]> = {
+// 2. Danh mục model con nhỏ hơn 2 size kèm hình ảnh tròn
+const IPAD_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   pro: [
-    { name: 'Tất cả iPad Pro', tag: 'pro' },
-    { name: 'iPad Pro M4', tag: 'pro-m4' },
-    { name: 'iPad Pro M2', tag: 'pro-m2' },
+    {
+      name: 'Tất cả Pro',
+      tag: 'pro',
+      img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?w=150',
+    },
+    {
+      name: 'iPad Pro M4',
+      tag: 'pro-m4',
+      img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?w=150',
+    },
+    {
+      name: 'iPad Pro M2',
+      tag: 'pro-m2',
+      img: 'https://product.hstatic.net/200000768357/product/ipad_pro_m2_-_11_inch__colors__c4189cc924bb40b181351e979df29f64_master.png?w=150',
+    },
   ],
   air: [
-    { name: 'Tất cả iPad Air', tag: 'air' },
-    { name: 'iPad Air M2', tag: 'air-m2' },
-    { name: 'iPad Air 5', tag: 'air-5' },
+    {
+      name: 'Tất cả Air',
+      tag: 'air',
+      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?w=150',
+    },
+    {
+      name: 'iPad Air M2',
+      tag: 'air-m2',
+      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?w=150',
+    },
+    {
+      name: 'iPad Air 5',
+      tag: 'air-5',
+      img: 'https://product.hstatic.net/200000768357/product/ipad_air_5__colors__06251c7b63d5478188404b205b5b5fdb_master.png?w=150',
+    },
   ],
   gen: [
-    { name: 'Tất cả iPad Gen', tag: 'gen' },
-    { name: 'iPad Gen 10', tag: 'gen-10' },
-    { name: 'iPad Gen 9', tag: 'gen-9' },
+    {
+      name: 'Tất cả Gen',
+      tag: 'gen',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?w=150',
+    },
+    {
+      name: 'iPad Gen 10',
+      tag: 'gen-10',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?w=150',
+    },
+    {
+      name: 'iPad Gen 9',
+      tag: 'gen-9',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?w=150',
+    },
   ],
   mini: [
-    { name: 'Tất cả iPad Mini', tag: 'mini' },
-    { name: 'iPad Mini 7', tag: 'mini-7' },
-    { name: 'iPad Mini 6', tag: 'mini-6' },
+    {
+      name: 'Tất cả Mini',
+      tag: 'mini',
+      img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?w=150',
+    },
+    {
+      name: 'iPad Mini 7',
+      tag: 'mini-7',
+      img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?w=150',
+    },
+    {
+      name: 'iPad Mini 6',
+      tag: 'mini-6',
+      img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?w=150',
+    },
   ],
 };
 
@@ -339,19 +393,17 @@ export default function DynamicIPadPage() {
     }
   }, [currentFilter]);
 
-  // Cấu hình 2 Banner đôi (ưu tiên Admin)
+  // Cấu hình 2 Banner đôi chuẩn thuần ảnh 600x200px (ưu tiên Admin)
   const banner1 = adminBanners[0] || {
-    name: 'iPad Pro Thế Hệ Mới',
-    subtitle: 'Mỏng siêu thực. Sức mạnh AI không giới hạn.',
-    tag: 'Sẵn hàng Giá tốt nhất',
-    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
+    name: 'iPad Pro M5',
+    link: '/ipad',
+    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&h=200&q=80',
   };
 
   const banner2 = adminBanners[1] || {
     name: displayTitle,
-    subtitle: 'Chính hãng Apple VN/A - Bảo hành 1 đổi 1',
-    tag: 'Trả trước 0đ - Lãi suất 0%',
-    imageUrl: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=400&q=80',
+    link: '/ipad',
+    imageUrl: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=600&h=200&q=80',
   };
 
   return (
@@ -378,53 +430,41 @@ export default function DynamicIPadPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* BANNER ĐÔI TRANG IPAD (CẬP NHẬT ĐỘNG TỪ ADMIN) */}
-          <div className="relative mb-6 group">
+          {/* ========================================================================= */}
+          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN TỶ LỆ 600x200px (KHÔNG CHỮ ĐÈ, KHÔNG KHUNG) */}
+          {/* ========================================================================= */}
+          <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative rounded-sm bg-gradient-to-r from-[#f3f5f8] to-[#e7ebf0] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
-                    <span></span>
-                    <span>{banner1.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">{banner1.subtitle}</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    {banner1.tag}
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
-                  <img
-                    src={banner1.imageUrl}
-                    alt={banner1.name}
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 1 */}
+              <Link
+                href={banner1.link || '/ipad'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner1.imageUrl}
+                  alt={banner1.name || 'Banner 1'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
 
-              <div className="relative rounded-sm bg-gradient-to-r from-[#fbf8f5] to-[#f4eef9] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
-                    <span></span>
-                    <span>{banner2.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">{banner2.subtitle}</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    {banner2.tag}
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
-                  <img
-                    src={banner2.imageUrl}
-                    alt={banner2.name}
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 2 */}
+              <Link
+                href={banner2.link || '/ipad'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner2.imageUrl}
+                  alt={banner2.name || 'Banner 2'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
             </div>
           </div>
 
-          {/* HÀNG ICON TRÒN 80PX (CHUẨN VIỀN ĐỎ BO TRÒN KHI CHỌN) */}
-          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
+          {/* ========================================================================= */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
+          {/* ========================================================================= */}
+          <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
@@ -438,7 +478,7 @@ export default function DynamicIPadPage() {
                   <Link
                     key={series.slug || idx}
                     href={isAllButton ? '/ipad' : `/ipad?series=${series.queryTag}`}
-                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
+                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
                   >
                     <div
                       className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
@@ -455,9 +495,7 @@ export default function DynamicIPadPage() {
                     </div>
                     <span
                       className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
-                        isSelected
-                          ? 'text-[#d70018] font-bold'
-                          : 'text-gray-800 group-hover:text-[#d70018]'
+                        isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                       }`}
                     >
                       {series.name}
@@ -468,25 +506,50 @@ export default function DynamicIPadPage() {
             </div>
           </div>
 
-          {/* HÀNG NHẢY MODEL CON NẾU ĐANG CHỌN 1 DÒNG MÁY */}
+          {/* ========================================================================= */}
+          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
+          {/* ========================================================================= */}
           {activeSubmodels.length > 0 && (
-            <div className="mb-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-              {activeSubmodels.map((m) => {
-                const isSubSelected = currentFilter === m.tag;
-                return (
-                  <Link
-                    key={m.tag}
-                    href={`/ipad?series=${m.tag}`}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                      isSubSelected
-                        ? 'bg-[#d70018] text-white border-[#d70018] shadow-sm scale-105'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#d70018] hover:text-[#d70018]'
-                    }`}
-                  >
-                    {m.name}
-                  </Link>
-                );
-              })}
+            <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
+              <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
+                {activeSubmodels.map((model) => {
+                  const isSubSelected = currentFilter === model.tag;
+
+                  return (
+                    <Link
+                      key={model.tag}
+                      href={`/ipad?series=${model.tag}`}
+                      className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
+                    >
+                      {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
+                      <div
+                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                          isSubSelected
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
+                        }`}
+                      >
+                        <img
+                          src={model.img}
+                          alt={model.name}
+                          className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
+                        />
+                      </div>
+
+                      {/* Tên Submodel con */}
+                      <span
+                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
+                          isSubSelected
+                            ? 'text-[#d70018] font-bold'
+                            : 'text-gray-700 group-hover:text-[#d70018]'
+                        }`}
+                      >
+                        {model.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
 

@@ -20,13 +20,19 @@ interface SeriesTabItem {
 interface SubModelItem {
   name: string;
   tag: string;
+  img: string;
 }
 
 const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   {
+    name: 'Tất cả',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    queryTag: null,
+  },
+  {
     name: 'iPhone Dou Series',
     slug: 'iphone-dou',
-    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w100',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
     queryTag: 'dou',
   },
   {
@@ -38,7 +44,7 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   {
     name: 'iPhone 17 Series',
     slug: 'iphone-17',
-    imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w100',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
     queryTag: '17',
   },
   {
@@ -49,34 +55,110 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// Danh sách các model con nhảy theo từng Series
+// Danh sách các model con nhỏ hơn 2 size kèm hình ảnh tròn
 const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '18': [
-    { name: 'Tất cả 18', tag: '18' },
-    { name: 'iPhone 18 Pro Max', tag: '18-pro-max' },
-    { name: 'iPhone 18 Pro', tag: '18-pro' },
-    { name: 'iPhone 18 Plus', tag: '18-plus' },
-    { name: 'iPhone 18', tag: '18-standard' },
+    {
+      name: 'Tất cả 18',
+      tag: '18',
+      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
+    },
+    {
+      name: '18 Pro Max',
+      tag: '18-pro-max',
+      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
+    },
+    {
+      name: '18 Pro',
+      tag: '18-pro',
+      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
+    },
+    {
+      name: '18 Plus',
+      tag: '18-plus',
+      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
+    },
+    {
+      name: 'iPhone 18',
+      tag: '18-standard',
+      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
+    },
   ],
   '17': [
-    { name: 'Tất cả 17', tag: '17' },
-    { name: 'iPhone 17 Pro Max', tag: '17-pro-max' },
-    { name: 'iPhone 17 Pro', tag: '17-pro' },
-    { name: 'iPhone 17 Plus', tag: '17-plus' },
-    { name: 'iPhone 17 Air', tag: '17-air' },
-    { name: 'iPhone 17', tag: '17-standard' },
+    {
+      name: 'Tất cả 17',
+      tag: '17',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
+    },
+    {
+      name: '17 Pro Max',
+      tag: '17-pro-max',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
+    },
+    {
+      name: '17 Pro',
+      tag: '17-pro',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
+    },
+    {
+      name: '17 Plus',
+      tag: '17-plus',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
+    },
+    {
+      name: '17 Air',
+      tag: '17-air',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
+    },
+    {
+      name: 'iPhone 17',
+      tag: '17-standard',
+      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
+    },
   ],
   '16': [
-    { name: 'Tất cả 16', tag: '16' },
-    { name: 'iPhone 16 Pro Max', tag: '16-pro-max' },
-    { name: 'iPhone 16 Pro', tag: '16-pro' },
-    { name: 'iPhone 16 Plus', tag: '16-plus' },
-    { name: 'iPhone 16', tag: '16-standard' },
+    {
+      name: 'Tất cả 16',
+      tag: '16',
+      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
+    },
+    {
+      name: '16 Pro Max',
+      tag: '16-pro-max',
+      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
+    },
+    {
+      name: '16 Pro',
+      tag: '16-pro',
+      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
+    },
+    {
+      name: '16 Plus',
+      tag: '16-plus',
+      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
+    },
+    {
+      name: 'iPhone 16',
+      tag: '16-standard',
+      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
+    },
   ],
   'dou': [
-    { name: 'Tất cả Dou', tag: 'dou' },
-    { name: 'iPhone Dou Fold', tag: 'dou-fold' },
-    { name: 'iPhone Dou Flip', tag: 'dou-flip' },
+    {
+      name: 'Tất cả Dou',
+      tag: 'dou',
+      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    },
+    {
+      name: 'iPhone Dou Fold',
+      tag: 'dou-fold',
+      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    },
+    {
+      name: 'iPhone Dou Flip',
+      tag: 'dou-flip',
+      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    },
   ],
 };
 
@@ -115,6 +197,7 @@ export default function DynamicIPhonePage() {
   const [dbProducts, setDbProducts] = useState<any[]>([]);
   const [loadingDb, setLoadingDb] = useState(true);
   const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_IPHONE_SERIES);
+  const [adminBanners, setAdminBanners] = useState<any[]>([]);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
   const slugParam = params?.slug;
@@ -144,12 +227,20 @@ export default function DynamicIPhonePage() {
     }
   }, []);
 
+  // Nạp Banner đôi & Danh mục Submodel từ Admin qua LocalStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
+          // Lọc 2 Banner đôi iPhone
+          const ipBanners = parsed.filter((it: any) => it.group === 'iphone_banners');
+          if (ipBanners.length > 0) {
+            setAdminBanners(ipBanners);
+          }
+
+          // Lọc Icon tròn Submodel iPhone (sub_iphone)
           const adminSubs = parsed.filter(
             (it: any) => it.group === 'sub_iphone' && it.name.toLowerCase() !== 'tất cả'
           );
@@ -343,6 +434,19 @@ export default function DynamicIPhonePage() {
       .replace('Iphone', 'iPhone');
   }, [currentFilter]);
 
+  // Cấu hình 2 Banner đôi (ưu tiên Admin)
+  const banner1 = adminBanners[0] || {
+    name: 'Thế Hệ iPhone Mới Nhất',
+    link: '/iphone',
+    imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&h=200&q=80',
+  };
+
+  const banner2 = adminBanners[1] || {
+    name: 'iPhone Dou Series',
+    link: '/iphone',
+    imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&h=200&q=80',
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
       <div>
@@ -367,67 +471,57 @@ export default function DynamicIPhonePage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* BANNER ĐÔI */}
-          <div className="relative mb-6 group">
+          {/* ========================================================================= */}
+          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN TỶ LỆ 600x200px (KHÔNG CHỮ ĐÈ, KHÔNG KHUNG) */}
+          {/* ========================================================================= */}
+          <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative rounded-sm bg-gradient-to-r from-[#f3f5f8] to-[#e7ebf0] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
-                    <span></span>
-                    <span>Thế Hệ iPhone Mới Nhất</span>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">Sức mạnh Apple Intelligence đỉnh cao.</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Giá cam kết tốt nhất thị trường
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
-                  <img
-                    src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80"
-                    alt="iPhone"
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 1 */}
+              <Link
+                href={banner1.link || '/iphone'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner1.imageUrl}
+                  alt={banner1.name || 'Banner 1'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
 
-              <div className="relative rounded-sm bg-gradient-to-r from-[#fbf8f5] to-[#f4eef9] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
-                    <span></span>
-                    <span>{displayTitle}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">Chính hãng Apple VN/A - Bảo hành 1 đổi 1</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Trả trước <span>0đ - Lãi suất 0%</span>
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
-                  <img
-                    src="https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=400&q=80"
-                    alt={displayTitle}
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 2 */}
+              <Link
+                href={banner2.link || '/iphone'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner2.imageUrl}
+                  alt={banner2.name || 'Banner 2'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
             </div>
           </div>
 
-          {/* HÀNG ICON TRÒN SERIES CẤP 2 (80PX BO TRÒN) */}
+          {/* ========================================================================= */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
+          {/* ========================================================================= */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
-            <div className="flex items-center justify-center gap-5 sm:gap-8 min-w-max px-2">
+            <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
                   ? !currentFilter
-                  : currentFilter === series.slug ||
+                  : currentFilter === series.queryTag ||
+                    (series.slug && currentFilter.includes(series.slug)) ||
                     (series.queryTag && currentFilter.includes(series.queryTag));
 
                 return (
                   <Link
                     key={series.slug || idx}
                     href={isAllButton ? '/iphone' : `/iphone?series=${series.queryTag}`}
-                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
+                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
                   >
+                    {/* Vòng tròn 80px bo tròn chuẩn tuyệt đối */}
                     <div
                       className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                         isSelected
@@ -443,9 +537,7 @@ export default function DynamicIPhonePage() {
                     </div>
                     <span
                       className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
-                        isSelected
-                          ? 'text-[#d70018] font-bold'
-                          : 'text-gray-800 group-hover:text-[#d70018]'
+                        isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                       }`}
                     >
                       {series.name}
@@ -456,25 +548,50 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* HÀNG NHẢY MODEL CON (CẤP 3: PRO MAX, PRO, PLUS, THƯỜNG) */}
+          {/* ========================================================================= */}
+          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
+          {/* ========================================================================= */}
           {subModels.length > 0 && (
-            <div className="mb-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-              {subModels.map((m) => {
-                const isSubSelected = currentFilter === m.tag;
-                return (
-                  <Link
-                    key={m.tag}
-                    href={`/iphone?series=${m.tag}`}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                      isSubSelected
-                        ? 'bg-[#d70018] text-white border-[#d70018] shadow-sm scale-105'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#d70018] hover:text-[#d70018]'
-                    }`}
-                  >
-                    {m.name}
-                  </Link>
-                );
-              })}
+            <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
+              <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
+                {subModels.map((model) => {
+                  const isSubSelected = currentFilter === model.tag;
+
+                  return (
+                    <Link
+                      key={model.tag}
+                      href={`/iphone?series=${model.tag}`}
+                      className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
+                    >
+                      {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
+                      <div
+                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                          isSubSelected
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
+                        }`}
+                      >
+                        <img
+                          src={model.img}
+                          alt={model.name}
+                          className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
+                        />
+                      </div>
+
+                      {/* Tên Submodel con */}
+                      <span
+                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
+                          isSubSelected
+                            ? 'text-[#d70018] font-bold'
+                            : 'text-gray-700 group-hover:text-[#d70018]'
+                        }`}
+                      >
+                        {model.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
 

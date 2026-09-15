@@ -17,6 +17,12 @@ interface SeriesTabItem {
   queryTag: string | null;
 }
 
+interface SubModelItem {
+  name: string;
+  tag: string;
+  img: string;
+}
+
 // 1. Danh sách Series MacBook mặc định kèm nút "Tất cả"
 const DEFAULT_MACBOOK_SERIES: SeriesTabItem[] = [
   {
@@ -44,27 +50,83 @@ const DEFAULT_MACBOOK_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// 2. Danh mục model con tương ứng
-const MACBOOK_SUBMODELS_MAP: Record<string, { name: string; tag: string }[]> = {
+// 2. Danh mục model con nhỏ hơn 2 size kèm hình ảnh tròn
+const MACBOOK_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   pro: [
-    { name: 'Tất cả MacBook Pro', tag: 'pro' },
-    { name: 'MacBook Pro M5', tag: 'pro-m5' },
-    { name: 'MacBook Pro M4', tag: 'pro-m4' },
-    { name: 'MacBook Pro M3', tag: 'pro-m3' },
-    { name: 'MacBook Pro M2', tag: 'pro-m2' },
-    { name: 'MacBook Pro M1', tag: 'pro-m1' },
+    {
+      name: 'Tất cả Pro',
+      tag: 'pro',
+      img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?w=150',
+    },
+    {
+      name: 'MacBook Pro M5',
+      tag: 'pro-m5',
+      img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?w=150',
+    },
+    {
+      name: 'MacBook Pro M4',
+      tag: 'pro-m4',
+      img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?w=150',
+    },
+    {
+      name: 'MacBook Pro M3',
+      tag: 'pro-m3',
+      img: 'https://cdn.hstatic.net/products/200000768357/space-black-gia-tot-tai-vender_4c05978b386c4855905e3df8a4af82e4_master_f1dd9fb4b7f84a86bb86fc31720cbed8_master.png?w=150',
+    },
+    {
+      name: 'MacBook Pro M2',
+      tag: 'pro-m2',
+      img: 'https://product.hstatic.net/200000768357/product/color_64cbaa85726e49dab23ec2a848b54521_master.png?w=150',
+    },
+    {
+      name: 'MacBook Pro M1',
+      tag: 'pro-m1',
+      img: 'https://product.hstatic.net/200000768357/product/gray_9303e56f1307413da72dfe5a4826b5f2_master.png?w=150',
+    },
   ],
   air: [
-    { name: 'Tất cả MacBook Air', tag: 'air' },
-    { name: 'MacBook Air M5', tag: 'air-m5' },
-    { name: 'MacBook Air M4', tag: 'air-m4' },
-    { name: 'MacBook Air M3', tag: 'air-m3' },
-    { name: 'MacBook Air M2', tag: 'air-m2' },
-    { name: 'MacBook Air M1', tag: 'air-m1' },
+    {
+      name: 'Tất cả Air',
+      tag: 'air',
+      img: 'https://cdn.hstatic.net/products/200000768357/hinh_anh_3_ae4b6b83d56744018803cb8c1211dc15_large_2b8556643ad34d4bbc8c1aae0d5e25ce_master.jpg?w=150',
+    },
+    {
+      name: 'MacBook Air M5',
+      tag: 'air-m5',
+      img: 'https://cdn.hstatic.net/products/200000768357/hinh_anh_3_ae4b6b83d56744018803cb8c1211dc15_large_2b8556643ad34d4bbc8c1aae0d5e25ce_master.jpg?w=150',
+    },
+    {
+      name: 'MacBook Air M4',
+      tag: 'air-m4',
+      img: 'https://cdn.hstatic.net/products/200000768357/acbook-air-m5-starlight-gia-re_60f0d7d0a60f4ce3af41eecce1fb680c_master_1ac5ec3477844421bb8fb62b6a3af448_master.png?w=150',
+    },
+    {
+      name: 'MacBook Air M3',
+      tag: 'air-m3',
+      img: 'https://cdn.hstatic.net/products/200000768357/hinh_anh_10_792652cbafb04dfba6e6ca428ebf159b_large_95b5ce2b3ecc4ad8947d823544eff163_master.jpeg?w=150',
+    },
+    {
+      name: 'MacBook Air M2',
+      tag: 'air-m2',
+      img: 'https://product.hstatic.net/200000768357/product/hinh_anh_17_d0d916bb3df444d0aa6b013449985c07_master.jpeg?w=150',
+    },
+    {
+      name: 'MacBook Air M1',
+      tag: 'air-m1',
+      img: 'https://product.hstatic.net/200000768357/product/gray_643bc60631144e5690acfcc271e05901_master.png?w=150',
+    },
   ],
   neo: [
-    { name: 'Tất cả MacBook Neo', tag: 'neo' },
-    { name: 'MacBook NEO (2026)', tag: 'neo-2026' },
+    {
+      name: 'Tất cả Neo',
+      tag: 'neo',
+      img: 'https://cdn.hstatic.net/products/200000768357/mbn-vang_01c8b19230654bdbb81f87daae826525_master.jpg?w=150',
+    },
+    {
+      name: 'MacBook NEO (2026)',
+      tag: 'neo-2026',
+      img: 'https://cdn.hstatic.net/products/200000768357/mbn-vang_01c8b19230654bdbb81f87daae826525_master.jpg?w=150',
+    },
   ],
 };
 
@@ -368,19 +430,17 @@ export default function DynamicMacBookPage() {
     }
   }, [currentFilter]);
 
-  // Cấu hình 2 Banner đôi (ưu tiên dữ liệu Admin)
+  // Cấu hình 2 Banner đôi chuẩn thuần ảnh 600x200px (ưu tiên dữ liệu Admin)
   const banner1 = adminBanners[0] || {
     name: 'MacBook Pro M5 / M4',
-    subtitle: 'Hiệu năng tối thượng cho chuyên gia đồ họa.',
-    tag: 'Sẵn hàng Ưu đãi hôm nay',
-    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80',
+    link: '/macbook',
+    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&h=200&q=80',
   };
 
   const banner2 = adminBanners[1] || {
     name: displayTitle,
-    subtitle: 'Chính hãng Apple VN/A - Bảo hành 12 tháng',
-    tag: 'Trả trước 0đ - Lãi suất 0%',
-    imageUrl: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=400&q=80',
+    link: '/macbook',
+    imageUrl: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=600&h=200&q=80',
   };
 
   return (
@@ -407,53 +467,41 @@ export default function DynamicMacBookPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* BANNER ĐÔI TRANG MACBOOK (CẬP NHẬT ĐỘNG TỪ ADMIN) */}
-          <div className="relative mb-6 group">
+          {/* ========================================================================= */}
+          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN TỶ LỆ 600x200px (KHÔNG CHỮ ĐÈ, KHÔNG KHUNG) */}
+          {/* ========================================================================= */}
+          <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative rounded-sm bg-gradient-to-r from-[#1c1d21] to-[#2b2d35] border border-gray-800 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm text-white">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1 font-bold text-lg md:text-xl text-white">
-                    <span></span>
-                    <span>{banner1.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-300 font-medium mb-3">{banner1.subtitle}</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    {banner1.tag}
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
-                  <img
-                    src={banner1.imageUrl}
-                    alt={banner1.name}
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 1 */}
+              <Link
+                href={banner1.link || '/macbook'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner1.imageUrl}
+                  alt={banner1.name || 'Banner 1'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
 
-              <div className="relative rounded-sm bg-gradient-to-r from-[#fbf8f5] to-[#f4eef9] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
-                <div className="flex-1 pr-3">
-                  <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
-                    <span></span>
-                    <span>{banner2.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">{banner2.subtitle}</p>
-                  <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    {banner2.tag}
-                  </div>
-                </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
-                  <img
-                    src={banner2.imageUrl}
-                    alt={banner2.name}
-                    className="w-full h-full object-contain drop-shadow"
-                  />
-                </div>
-              </div>
+              {/* Banner 2 */}
+              <Link
+                href={banner2.link || '/macbook'}
+                className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
+              >
+                <img
+                  src={banner2.imageUrl}
+                  alt={banner2.name || 'Banner 2'}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </Link>
             </div>
           </div>
 
-          {/* HÀNG ICON TRÒN 80PX (CHUẨN VIỀN ĐỎ BO TRÒN KHI CHỌN) */}
-          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
+          {/* ========================================================================= */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
+          {/* ========================================================================= */}
+          <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
@@ -467,7 +515,7 @@ export default function DynamicMacBookPage() {
                   <Link
                     key={series.slug || idx}
                     href={isAllButton ? '/macbook' : `/macbook?series=${series.queryTag}`}
-                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
+                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
                   >
                     <div
                       className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
@@ -484,9 +532,7 @@ export default function DynamicMacBookPage() {
                     </div>
                     <span
                       className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
-                        isSelected
-                          ? 'text-[#d70018] font-bold'
-                          : 'text-gray-800 group-hover:text-[#d70018]'
+                        isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                       }`}
                     >
                       {series.name}
@@ -497,25 +543,50 @@ export default function DynamicMacBookPage() {
             </div>
           </div>
 
-          {/* HÀNG NHẢY MODEL CON (NẾU ĐANG CHỌN PRO, AIR HOẶC NEO) */}
+          {/* ========================================================================= */}
+          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
+          {/* ========================================================================= */}
           {activeSubmodels.length > 0 && (
-            <div className="mb-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-              {activeSubmodels.map((m) => {
-                const isSubSelected = currentFilter === m.tag;
-                return (
-                  <Link
-                    key={m.tag}
-                    href={`/macbook?series=${m.tag}`}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                      isSubSelected
-                        ? 'bg-[#d70018] text-white border-[#d70018] shadow-sm scale-105'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#d70018] hover:text-[#d70018]'
-                    }`}
-                  >
-                    {m.name}
-                  </Link>
-                );
-              })}
+            <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
+              <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
+                {activeSubmodels.map((model) => {
+                  const isSubSelected = currentFilter === model.tag;
+
+                  return (
+                    <Link
+                      key={model.tag}
+                      href={`/macbook?series=${model.tag}`}
+                      className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
+                    >
+                      {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
+                      <div
+                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                          isSubSelected
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
+                        }`}
+                      >
+                        <img
+                          src={model.img}
+                          alt={model.name}
+                          className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
+                        />
+                      </div>
+
+                      {/* Tên Submodel con */}
+                      <span
+                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
+                          isSubSelected
+                            ? 'text-[#d70018] font-bold'
+                            : 'text-gray-700 group-hover:text-[#d70018]'
+                        }`}
+                      >
+                        {model.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
 
