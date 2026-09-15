@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { MapPin, Phone, Clock, Mail, CheckCircle2 } from 'lucide-react';
+import { Header } from '@/components/layout/Header';
+import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/layout/Footer';
 
 export default function ContactPage() {
   const [fullName, setFullName] = useState('');
@@ -25,167 +28,204 @@ export default function ContactPage() {
       setPhone('');
       setContent('');
       setTimeout(() => setSubmitted(false), 5000);
-    }, 1000);
+    }, 800);
   };
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Breadcrumb */}
-      <div className="bg-[#f8f9fa] border-b border-gray-100 py-3">
-        <div className="max-w-7xl mx-auto px-4 text-xs text-gray-600 flex items-center gap-1.5">
-          <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
-          <span>/</span>
-          <span className="font-semibold text-gray-800">Liên hệ</span>
+    <div className="min-h-screen bg-white flex flex-col justify-between select-none">
+      <div>
+        {/* HEADER & NAVBAR CHUẨN GIAO DIỆN FOGO STORE */}
+        <div className="sticky top-0 z-50 shadow-xs">
+          <Header />
+          <Navbar />
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          
-          {/* CỘT TRÁI: THÔNG TIN & FORM LIÊN HỆ */}
-          <div className="lg:col-span-7 space-y-8">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 mb-6">Thông tin liên hệ</h1>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs text-gray-700">
-                {/* Địa chỉ */}
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <MapPin size={16} className="text-gray-700" />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-gray-900 mb-0.5">Địa chỉ</h2>
-                    <p className="leading-relaxed">298 Trần Hưng Đạo, phường Nguyễn Cư Trinh, Quận 1, TP.HCM</p>
-                  </div>
-                </div>
+        <main className="max-w-7xl mx-auto px-4 py-4 md:py-6">
+          {/* BREADCRUMB TEXT ĐƠN GIẢN CHUẨN MẪU GỐC */}
+          <div className="text-[12px] text-gray-500 flex items-center gap-1.5 mb-6">
+            <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
+            <span>/</span>
+            <span className="text-gray-800 font-normal">Liên hệ</span>
+          </div>
 
-                {/* Thời gian làm việc */}
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Clock size={16} className="text-gray-700" />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-gray-900 mb-0.5">Thời gian làm việc</h2>
-                    <p>Thứ 2 đến Thứ 7: từ 9h đến 21h;</p>
-                    <p>Chủ nhật: từ 9h đến 19h</p>
-                  </div>
-                </div>
+          {/* BỐ CỤC 2 CỘT: TRÁI LÀ FORM, PHẢI LÀ GOOGLE MAPS */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+            
+            {/* ========================================================= */}
+            {/* CỘT TRÁI: THÔNG TIN LIÊN HỆ & FORM GỬI THẮC MẮC           */}
+            {/* ========================================================= */}
+            <div className="lg:col-span-6 space-y-7">
+              {/* KHỐI THÔNG TIN LIÊN HỆ */}
+              <div>
+                <h1 className="text-lg md:text-[20px] font-bold text-gray-900 mb-6">
+                  Thông tin liên hệ
+                </h1>
 
-                {/* Điện thoại */}
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Phone size={16} className="text-gray-700" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 text-[12px] text-gray-700">
+                  {/* Địa chỉ */}
+                  <div className="flex items-start gap-2.5">
+                    <MapPin size={16} strokeWidth={1.75} className="text-gray-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h2 className="font-bold text-gray-900 mb-0.5">Địa chỉ</h2>
+                      <p className="leading-snug text-gray-600">
+                        298 Trần Hưng Đạo, phường Nguyễn Cư Trinh, Quận 1, TP.HCM
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-bold text-gray-900 mb-0.5">Điện thoại</h2>
-                    <a href="tel:0566003333" className="hover:text-[#d70018] font-semibold">0566003333</a>
-                  </div>
-                </div>
 
-                {/* Email */}
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail size={16} className="text-gray-700" />
+                  {/* Thời gian làm việc */}
+                  <div className="flex items-start gap-2.5">
+                    <Clock size={16} strokeWidth={1.75} className="text-gray-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h2 className="font-bold text-gray-900 mb-0.5">Thời gian làm việc</h2>
+                      <p className="leading-snug text-gray-600">Thứ 2 đến Thứ 7: từ 9h đến 21h;</p>
+                      <p className="leading-snug text-gray-600">Chủ nhật: từ 9h đến 19h</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-bold text-gray-900 mb-0.5">Email</h2>
-                    <a href="mailto:fogostore9393@gmail.com" className="hover:text-[#d70018]">fogostore9393@gmail.com</a>
+
+                  {/* Điện thoại */}
+                  <div className="flex items-start gap-2.5">
+                    <Phone size={16} strokeWidth={1.75} className="text-gray-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h2 className="font-bold text-gray-900 mb-0.5">Điện thoại</h2>
+                      <a href="tel:0566003333" className="hover:text-[#d70018] text-gray-700">
+                        0566003333
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-start gap-2.5">
+                    <Mail size={16} strokeWidth={1.75} className="text-gray-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h2 className="font-bold text-gray-900 mb-0.5">Email</h2>
+                      <a href="mailto:fogostore9393@gmail.com" className="hover:text-[#d70018] text-gray-700">
+                        fogostore9393@gmail.com
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* FORM GỬI THẮC MẮC */}
-            <div className="pt-4 border-t border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 mb-1">Gửi thắc mắc cho chúng tôi</h2>
-              <p className="text-xs text-gray-500 mb-6">
-                Nếu bạn có thắc mắc gì, có thể gửi yêu cầu cho chúng tôi, và chúng tôi sẽ liên lạc lại với bạn sớm nhất có thể.
-              </p>
-
-              {submitted && (
-                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-600" />
-                  <span>Cảm ơn bạn! Yêu cầu của bạn đã được gửi thành công. Chúng tôi sẽ phản hồi sớm nhất.</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Tên của bạn"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full text-xs px-3.5 py-3 border border-gray-200 rounded-md outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input
-                    type="email"
-                    required
-                    placeholder="Email của bạn"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full text-xs px-3.5 py-3 border border-gray-200 rounded-md outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400"
-                  />
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Số điện thoại của bạn"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full text-xs px-3.5 py-3 border border-gray-200 rounded-md outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div>
-                  <textarea
-                    rows={4}
-                    required
-                    placeholder="Nội dung"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="w-full text-xs px-3.5 py-3 border border-gray-200 rounded-md outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400 resize-none"
-                  />
-                </div>
-
-                <p className="text-[11px] text-gray-400">
-                  This site is protected by reCAPTCHA and the Google{' '}
-                  <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline hover:text-gray-600">Privacy Policy</a> and{' '}
-                  <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline hover:text-gray-600">Terms of Service</a> apply.
+              {/* KHỐI FORM GỬI THẮC MẮC */}
+              <div className="pt-2">
+                <h2 className="text-base md:text-[17px] font-bold text-gray-900 mb-1.5">
+                  Gửi thắc mắc cho chúng tôi
+                </h2>
+                <p className="text-[12px] text-gray-500 mb-5 leading-normal">
+                  Nếu bạn có thắc mắc gì, có thể gửi yêu cầu cho chúng tôi, và chúng tôi sẽ liên lạc lại với bạn sớm nhất có thể.
                 </p>
 
-                <div>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-[#d70018] hover:bg-red-700 text-white font-bold text-xs px-6 py-3 rounded uppercase tracking-wider transition-colors disabled:opacity-70 cursor-pointer shadow-sm"
-                  >
-                    {isSubmitting ? 'ĐANG GỬI...' : 'GỬI CHO CHÚNG TÔI'}
-                  </button>
-                </div>
-              </form>
+                {submitted && (
+                  <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                    <span>Cảm ơn bạn! Yêu cầu của bạn đã được gửi thành công. Chúng tôi sẽ phản hồi sớm.</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-3.5">
+                  {/* Tên */}
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Tên của bạn"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2.5 border border-gray-300 rounded-[3px] outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {/* Email & Phone */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <input
+                      type="email"
+                      required
+                      placeholder="Email của bạn"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2.5 border border-gray-300 rounded-[3px] outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400"
+                    />
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Số điện thoại của bạn"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2.5 border border-gray-300 rounded-[3px] outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {/* Nội dung */}
+                  <div>
+                    <textarea
+                      rows={4}
+                      required
+                      placeholder="Nội dung"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2.5 border border-gray-300 rounded-[3px] outline-none focus:border-[#d70018] transition-colors placeholder:text-gray-400 resize-none"
+                    />
+                  </div>
+
+                  {/* Captcha Disclaimer */}
+                  <p className="text-[11px] text-gray-400 leading-normal">
+                    This site is protected by reCAPTCHA and the Google{' '}
+                    <a
+                      href="https://policies.google.com/privacy"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline hover:text-gray-600"
+                    >
+                      Privacy Policy
+                    </a>{' '}
+                    and{' '}
+                    <a
+                      href="https://policies.google.com/terms"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline hover:text-gray-600"
+                    >
+                      Terms of Service
+                    </a>{' '}
+                    apply.
+                  </p>
+
+                  {/* Nút Submit */}
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-[#d70018] hover:bg-red-700 text-white font-bold text-[11px] px-5 py-2.5 rounded-[3px] uppercase tracking-wide transition-colors disabled:opacity-70 cursor-pointer shadow-xs"
+                    >
+                      {isSubmitting ? 'ĐANG GỬI...' : 'GỬI CHO CHÚNG TÔI'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </div>
 
-          {/* CỘT PHẢI: GOOGLE MAPS */}
-          <div className="lg:col-span-5 h-[450px] lg:h-[540px] w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm sticky top-24">
-            <iframe
-              title="Địa chỉ Fogo Store"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.645579998142!2d106.68735227583803!3d10.761775759458933!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f16a695dbb3%3A0x6ce8017c66e2c342!2zMjk4IMSQLiBUcuG6p24gSMawbmcgxJDhuqFvLCBQaMaw4budbmcgTmd1eeG7hW4gQ8awIFRyaW5oLCBRdeG6rW4gMSwgSOG7kyBDaMOtIE1pbmgsIFZp4buHdCBOYW0!5e0!3m2!1svi!2s!4v1710000000000!5m2!1svi!2s"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen={false}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
+            {/* ========================================================= */}
+            {/* CỘT PHẢI: GOOGLE MAPS GHIM ĐÚNG TÊN CỬA HÀNG FOGO STORE   */}
+            {/* ========================================================= */}
+            <div className="lg:col-span-6 h-[420px] lg:h-[500px] w-full rounded-[4px] overflow-hidden border border-gray-200 shadow-xs">
+              <iframe
+                title="Cửa Hàng Điện Thoại FOGO STORE - 298 Trần Hưng Đạo"
+                src="https://maps.google.com/maps?q=C%E1%BB%ACA+H%C3%80NG+%C4%90I%E1%BB%86N+THO%E1%BA%A0I+FOGO+STORE,+298+%C4%90.+Tr%E1%BA%A7n+H%C6%B0ng+%C4%90%E1%BA%A1o,+Ph%C6%B0%E1%BB%9Dng+Nguy%E1%BB%85n+C%C6%B0+Trinh,+Qu%E1%BA%ADn+1,+H%E1%BB%93+Ch%C3%AD+Minh&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen={false}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
 
-        </div>
+          </div>
+        </main>
       </div>
-    </main>
+
+      <Footer />
+    </div>
   );
 }
