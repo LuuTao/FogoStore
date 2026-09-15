@@ -30,10 +30,10 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
     queryTag: null,
   },
   {
-    name: 'iPhone Dou Series',
-    slug: 'iphone-dou',
+    name: 'iPhone Duo Series',
+    slug: 'iphone-duo',
     imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
-    queryTag: 'dou',
+    queryTag: 'duo',
   },
   {
     name: 'iPhone 18 Series',
@@ -143,23 +143,6 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
       img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
     },
   ],
-  'dou': [
-    {
-      name: 'Tất cả Dou',
-      tag: 'dou',
-      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
-    },
-    {
-      name: 'iPhone Dou Fold',
-      tag: 'dou-fold',
-      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
-    },
-    {
-      name: 'iPhone Dou Flip',
-      tag: 'dou-flip',
-      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
-    },
-  ],
 };
 
 const IPHONE_HELPFUL_NEWS = [
@@ -207,10 +190,10 @@ export default function DynamicIPhonePage() {
     '';
   const currentFilter = (rawFilter || '').toLowerCase().trim();
 
-  // Nhận diện series cha đang chọn (18, 17, 16, dou)
+  // Nhận diện series cha đang chọn (18, 17, 16, duo)
   const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
-    if (currentFilter.includes('dou')) return 'dou';
+    if (currentFilter.includes('duo')) return 'duo';
     const num = currentFilter.match(/\d+/);
     return num ? num[0] : null;
   }, [currentFilter]);
@@ -249,13 +232,13 @@ export default function DynamicIPhonePage() {
               DEFAULT_IPHONE_SERIES[0],
               ...adminSubs.map((it: any) => {
                 const numMatch = it.name.match(/\d+/);
-                const isDou = it.name.toLowerCase().includes('dou');
+                const isDuo = it.name.toLowerCase().includes('duo');
                 const fallbackSlug = it.name.toLowerCase().replace(/\s+/g, '-');
                 return {
                   name: it.name,
-                  slug: isDou ? 'iphone-dou' : numMatch ? `iphone-${numMatch[0]}` : fallbackSlug,
+                  slug: isDuo ? 'iphone-duo' : numMatch ? `iphone-${numMatch[0]}` : fallbackSlug,
                   imageUrl: it.imageUrl,
-                  queryTag: isDou ? 'dou' : numMatch ? numMatch[0] : it.name.toLowerCase(),
+                  queryTag: isDuo ? 'duo' : numMatch ? numMatch[0] : it.name.toLowerCase(),
                 };
               }),
             ];
@@ -353,8 +336,8 @@ export default function DynamicIPhonePage() {
         } else if (lowerFilter.includes('standard') || lowerFilter.includes('thuong')) {
           items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('plus') && !i.searchIndex.includes('air'));
         }
-      } else if (lowerFilter.includes('dou')) {
-        items = items.filter((i) => i.searchIndex.includes('dou'));
+      } else if (lowerFilter.includes('duo')) {
+        items = items.filter((i) => i.searchIndex.includes('duo'));
         if (lowerFilter.includes('fold')) items = items.filter((i) => i.searchIndex.includes('fold'));
         if (lowerFilter.includes('flip')) items = items.filter((i) => i.searchIndex.includes('flip'));
       } else {
@@ -421,10 +404,8 @@ export default function DynamicIPhonePage() {
       return `iPhone ${num} Series`;
     }
 
-    if (currentFilter.includes('dou')) {
-      if (currentFilter.includes('fold')) return 'iPhone Dou Fold';
-      if (currentFilter.includes('flip')) return 'iPhone Dou Flip';
-      return 'iPhone Dou Series';
+    if (currentFilter.includes('duo')) {
+      return 'iPhone Duo Series';
     }
 
     return currentFilter
@@ -442,8 +423,8 @@ export default function DynamicIPhonePage() {
   };
 
   const banner2 = adminBanners[1] || {
-    name: 'iPhone Dou Series',
-    link: '/iphone',
+    name: 'iPhone Duo Series',
+    link: '/iphone/iphone-duo',
     imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&h=200&q=80',
   };
 

@@ -102,32 +102,34 @@ export const IPadShowcaseSection: React.FC = () => {
     <section className="max-w-7xl mx-auto px-2 sm:px-4 mt-6 sm:mt-10 select-none w-full overflow-hidden">
       <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-xl p-3 sm:p-5 md:p-8 shadow-xs">
         
-       {/* ================= 1. HÀNG ICON DANH MỤC: FIT ĐỀU 5 CỘT BẰNG NHAU ================= */}
-        <div className="grid grid-cols-5 gap-1 sm:gap-3 md:gap-6 mb-6 sm:mb-8 max-w-2xl mx-auto w-full">
+        {/* ================= 1. HÀNG ICON DANH MỤC: BO TRÒN TUYỆT ĐỐI ================= */}
+        <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 md:gap-x-9 gap-y-3 mb-6 sm:mb-8 max-w-3xl mx-auto w-full">
           {IPAD_SERIES_TABS.map((tab) => {
             const isSelected = activeSeries === tab.series;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => handleTabClick(tab.series)}
-                className="flex flex-col items-center gap-1 group cursor-pointer w-full transition-transform active:scale-95"
+                className="flex flex-col items-center gap-1.5 group cursor-pointer w-[72px] sm:w-[88px] md:w-[100px] transition-transform active:scale-95"
               >
+                {/* Khung tròn chuẩn 80px, bo tròn hoàn toàn và khóa góc lòi bằng overflow-hidden */}
                 <div
-                  className={`w-11 h-11 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white p-1 shadow-xs flex items-center justify-center border-2 transition-all ${
+                  className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                     isSelected
-                      ? 'border-[#d70018] shadow-md scale-105 ring-2 ring-red-100'
-                      : 'border-transparent group-hover:border-red-200'
+                      ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
+                      : 'border-2 border-transparent bg-white hover:border-gray-200 shadow-xs'
                   }`}
                 >
                   <img
                     src={tab.imageUrl}
                     alt={tab.name}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
                   />
                 </div>
 
                 <span
-                  className={`text-[10px] sm:text-xs md:text-sm text-center whitespace-nowrap transition-colors ${
+                  className={`text-[11px] sm:text-xs md:text-sm text-center whitespace-nowrap transition-colors w-full ${
                     isSelected
                       ? 'text-[#d70018] font-black'
                       : 'text-gray-700 font-semibold group-hover:text-[#d70018]'
@@ -140,7 +142,7 @@ export const IPadShowcaseSection: React.FC = () => {
           })}
         </div>
 
-        {/* 2. LƯỚI CARD SẢN PHẨM */}
+        {/* ================= 2. LƯỚI CARD SẢN PHẨM ================= */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3.5">
           {displayedItems.map((product) => (
             <div
@@ -216,7 +218,7 @@ export const IPadShowcaseSection: React.FC = () => {
           ))}
         </div>
 
-        {/* 3. NÚT XEM TẤT CẢ */}
+        {/* ================= 3. NÚT XEM TẤT CẢ ================= */}
         <div className="flex justify-center items-center mt-6 sm:mt-8">
           <Link
             href={activeSeries ? `/ipad/${activeSeries}` : '/ipad'}

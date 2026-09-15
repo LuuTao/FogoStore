@@ -34,7 +34,7 @@ interface Props {
 
 // 1. Bổ sung 3 danh mục máy cũ vào cấu trúc phân cấp khi đăng sản phẩm
 const SUB_SERIES_PRESETS: Record<string, string[]> = {
-  iPhone: ['iPhone Dou Series', 'iPhone 18 Series', 'iPhone 17 Series', 'iPhone 16 Series'],
+  iPhone: ['iPhone Duo Series', 'iPhone 18 Series', 'iPhone 17 Series', 'iPhone 16 Series'],
   iPad: ['iPad Pro', 'iPad Air', 'iPad Gen', 'iPad Mini'],
   MacBook: ['MacBook Pro', 'MacBook Air', 'MacBook Neo'],
   Watch: ['Apple Watch Ultra', 'Apple Watch Series', 'Apple Watch SE'],

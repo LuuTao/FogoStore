@@ -766,7 +766,7 @@ export default function AdminMenuPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: iPhone 18 Series, 18 Pro Max, iPhone Dou..."
+                  placeholder="Ví dụ: iPhone 18 Series, 18 Pro Max, iPhone Duo..."
                   value={inputTitle}
                   onChange={(e) => setInputTitle(e.target.value)}
                   className="w-full border border-gray-300 rounded p-2 outline-none focus:border-[#d70018] font-bold"

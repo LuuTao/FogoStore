@@ -101,33 +101,32 @@ export const CategoryGrid: React.FC = () => {
   }, [loadData]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-6 select-none space-y-7">
-
+    <div className="max-w-7xl mx-auto px-4 mt-3 select-none space-y-4">
+      
       {/* ========================================================================= */}
-      {/* PHẦN 2: THANH 3 CAM KẾT - KHÔNG BACKGROUND, CĂN GIỮA, TO LÊN 4 SIZE       */}
+      {/* PHẦN 2: THANH 3 CAM KẾT - SÁT LÊN TRÊN, CĂN GIỮA, TO THÊM 4 SIZE           */}
       {/* ========================================================================= */}
-      <div className="w-full py-4 flex items-center justify-center">
-        <div className="flex items-center justify-center gap-8 sm:gap-14 md:gap-20 flex-wrap text-gray-900 text-sm sm:text-base md:text-lg font-bold">
+      <div className="w-full pt-1 pb-2 flex items-center justify-center">
+        <div className="flex items-center justify-center gap-8 sm:gap-14 md:gap-20 flex-wrap text-gray-950 text-base sm:text-lg md:text-xl lg:text-2xl font-black tracking-tight">
           {/* 1. Đảm bảo chất lượng */}
-          <div className="flex items-center gap-2.5">
-            <Award size={26} strokeWidth={2.2} className="text-gray-800 shrink-0" />
+          <div className="flex items-center gap-3">
+            <Award size={34} strokeWidth={2.4} className="text-gray-900 shrink-0" />
             <span>Đảm bảo chất lượng</span>
           </div>
 
           {/* 2. Thu cũ đổi mới */}
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 size={26} strokeWidth={2.2} className="text-gray-800 shrink-0" />
+          <div className="flex items-center gap-3">
+            <CheckCircle2 size={34} strokeWidth={2.4} className="text-gray-900 shrink-0" />
             <span>Thu cũ đổi mới</span>
           </div>
 
           {/* 3. Miễn phí vận chuyển */}
-          <div className="flex items-center gap-2.5">
-            <Truck size={28} strokeWidth={2.2} className="text-gray-800 shrink-0" />
+          <div className="flex items-center gap-3">
+            <Truck size={36} strokeWidth={2.4} className="text-gray-900 shrink-0" />
             <span>Miễn phí vận chuyển</span>
           </div>
         </div>
       </div>
-
 
       {/* ========================================================================= */}
       {/* PHẦN 3: LƯỚI CATEGORIES ITEM NHỎ (CẬP NHẬT ĐỘNG TỪ ADMIN)                 */}
@@ -155,7 +154,6 @@ export const CategoryGrid: React.FC = () => {
         </div>
       </div>
 
-
       {/* ========================================================================= */}
       {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / RENDER 350x250px)         */}
       {/* ========================================================================= */}
@@ -174,17 +172,11 @@ export const CategoryGrid: React.FC = () => {
               loading="lazy"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 pointer-events-none"
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent p-2.5 pt-5 flex items-end justify-between pointer-events-none">
-              <span className="text-white text-[11px] sm:text-xs font-bold truncate drop-shadow-sm group-hover:text-red-200 transition-colors">
-                {item.name}
-              </span>
-              <span className="text-[9px] bg-white/20 backdrop-blur-xs text-white px-2 py-0.5 rounded-full font-medium shrink-0 ml-1.5">
-                Xem ngay
-              </span>
-            </div>
+
           </Link>
         ))}
       </div>
+
     </div>
   );
 };

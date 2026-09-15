@@ -15,14 +15,14 @@ const DEFAULT_TABS: TabItem[] = [
   {
     id: 'sub-ip-1',
     name: 'Tất cả',
-    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w100',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
     queryValue: null,
   },
   {
     id: 'sub-ip-2',
-    name: 'iPhone Dou',
-    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w100',
-    queryValue: 'dou',
+    name: 'iPhone Duo',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    queryValue: 'duo',
   },
   {
     id: 'sub-ip-3',
@@ -33,8 +33,8 @@ const DEFAULT_TABS: TabItem[] = [
   {
     id: 'sub-ip-4',
     name: 'iPhone 17 Series',
-    imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w100',
-    queryValue: '17',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
+    queryTag: '17',
   },
   {
     id: 'sub-ip-5',
@@ -108,6 +108,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
               discountPercent,
               imageUrl:
                 v.images?.[0] ||
+                item.imageUrl ||
                 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500',
               downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
               rating: 5,
@@ -154,8 +155,8 @@ export const IPhoneShowcaseSection: React.FC = () => {
     <section className="max-w-7xl mx-auto px-2 sm:px-4 mt-6 sm:mt-10 select-none w-full overflow-hidden">
       <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-xl p-3 sm:p-5 md:p-8 shadow-xs">
         
-        {/* ================= 1. HÀNG ICON SERIES: TỰ XUỐNG HÀNG & CĂN GIỮA MỤC DƯ ================= */}
-        <div className="flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-4 md:gap-x-8 gap-y-3 mb-6 sm:mb-8">
+        {/* ================= 1. HÀNG ICON SERIES: BO TRÒN TUYỆT ĐỐI KHÔNG LÒI GÓC VUÔNG ================= */}
+        <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 md:gap-x-9 gap-y-3 mb-6 sm:mb-8">
           {tabs.map((tab) => {
             const isSelected =
               (!selectedTab && !tab.queryValue) || selectedTab?.id === tab.id;
@@ -163,17 +164,23 @@ export const IPhoneShowcaseSection: React.FC = () => {
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => handleTabClick(tab)}
-                className="flex flex-col items-center gap-1 group cursor-pointer w-[68px] sm:w-[84px] md:w-[96px] transition-transform active:scale-95"
+                className="flex flex-col items-center gap-1.5 group cursor-pointer w-[72px] sm:w-[88px] md:w-[100px] transition-transform active:scale-95"
               >
+                {/* Khung tròn chuẩn 80px, bo tròn hoàn toàn và khóa góc lòi bằng overflow-hidden */}
                 <div
-                  className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white p-1 shadow-xs flex items-center justify-center border-2 transition-all ${
+                  className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                     isSelected
-                      ? 'border-[#d70018] shadow-md scale-105 ring-2 ring-red-100'
-                      : 'border-transparent group-hover:border-red-200'
+                      ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
+                      : 'border-2 border-transparent bg-white hover:border-gray-200 shadow-xs'
                   }`}
                 >
-                  <img src={tab.imageUrl} alt={tab.name} className="w-full h-full object-contain" />
+                  <img
+                    src={tab.imageUrl}
+                    alt={tab.name}
+                    className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
+                  />
                 </div>
 
                 <span
@@ -190,7 +197,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
           })}
         </div>
 
-        {/* 2. LƯỚI SẢN PHẨM: 2 cột Mobile | 3 cột Tablet/iPad | 5 cột Desktop */}
+        {/* ================= 2. LƯỚI SẢN PHẨM ================= */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3.5">
           {displayedItems.map((product) => (
             <div
@@ -208,7 +215,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Khung ảnh vuông chuẩn, chống méo tỉ lệ */}
+                {/* Khung ảnh sản phẩm */}
                 <Link
                   href={product.href}
                   className="w-full aspect-square my-2 flex items-center justify-center overflow-hidden"
@@ -229,7 +236,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
               </div>
 
               <div>
-                {/* Box Trả góp 0% tinh gọn cho mobile */}
+                {/* Box Trả góp 0% */}
                 <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-1.5 text-center">
                   <div className="text-[8px] sm:text-[9px] font-bold text-gray-500 flex items-center justify-around">
                     <span>Trả Góp</span>
@@ -269,7 +276,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
           ))}
         </div>
 
-        {/* 3. NÚT XEM TẤT CẢ */}
+        {/* ================= 3. NÚT XEM TẤT CẢ ================= */}
         <div className="flex justify-center items-center mt-6 sm:mt-8">
           <Link
             href={
@@ -291,3 +298,5 @@ export const IPhoneShowcaseSection: React.FC = () => {
     </section>
   );
 };
+
+export default IPhoneShowcaseSection;
