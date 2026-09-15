@@ -17,7 +17,7 @@ interface SeriesTabItem {
   queryTag: string | null;
 }
 
-// 1. Danh mục cấp 1: Kèm nút "Tất cả" (Icon to 80px)
+// 1. Danh mục cấp 1: Kèm nút "Tất cả"
 const DEFAULT_USED_CATEGORIES: SeriesTabItem[] = [
   {
     name: 'Tất cả',
@@ -44,7 +44,7 @@ const DEFAULT_USED_CATEGORIES: SeriesTabItem[] = [
   },
 ];
 
-// 2. Danh mục cấp 2: Sub-models nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15)
+// 2. Danh mục cấp 2: Phân loại theo đời máy
 const USED_SUBMODELS_MAP: Record<string, { name: string; slug: string; img: string }[]> = {
   'iphone-cu': [
     {
@@ -152,7 +152,7 @@ export default function DynamicUsedPage() {
   const slugParam = params?.slug;
   const currentFilter = Array.isArray(slugParam) ? slugParam[0] || '' : (slugParam as string) || '';
 
-  // 1. Nạp Banner đôi Hàng Cũ từ Admin qua LocalStorage
+  // 1. Nạp Banner đôi Hàng Cũ từ Admin
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -211,11 +211,14 @@ export default function DynamicUsedPage() {
           const lower = (item.name || '').toLowerCase();
           const catName = (item.category?.name || item.category?.slug || '').toLowerCase();
 
-          let category = 'iphone-cu';
-          if (lower.includes('macbook') || catName.includes('mac')) {
-            category = 'macbook-cu';
+          // Phân loại thiết bị chính xác ngay từ đầu
+          let deviceType: 'iphone' | 'ipad' | 'macbook' = 'iphone';
+          if (lower.includes('macbook') || lower.includes('mac mini') || catName.includes('mac')) {
+            deviceType = 'macbook';
           } else if (lower.includes('ipad') || catName.includes('ipad')) {
-            category = 'ipad-cu';
+            deviceType = 'ipad';
+          } else if (lower.includes('iphone') || catName.includes('iphone')) {
+            deviceType = 'iphone';
           }
 
           const isUsed =
@@ -231,7 +234,7 @@ export default function DynamicUsedPage() {
           return {
             id: item.id,
             name: item.name,
-            category,
+            deviceType,
             isUsed,
             href: `/san-pham/${item.slug || item.id}`,
             currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
@@ -246,6 +249,7 @@ export default function DynamicUsedPage() {
           };
         });
 
+        // Chỉ lấy sản phẩm máy cũ
         const onlyUsed = mapped.filter((p: any) => p.isUsed);
         setDbItems(onlyUsed.length > 0 ? onlyUsed : mapped.filter((p: any) => !p.name.toLowerCase().includes('new seal')));
       } catch (err) {
@@ -269,9 +273,13 @@ export default function DynamicUsedPage() {
 
   const activeSubmodels = currentCategoryKey ? USED_SUBMODELS_MAP[currentCategoryKey] || [] : null;
 
+  // =========================================================================
+  // LOGIC LỌC CHUẨN XÁC THEO TỪNG THIẾT BỊ VÀ THẾ HỆ
+  // =========================================================================
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
+    // Loại trừ phụ kiện
     items = items.filter((i) => {
       const lower = i.name.toLowerCase();
       return !lower.includes('dock sạc') && !lower.includes('cáp sạc') && !lower.includes('new seal');
@@ -280,28 +288,52 @@ export default function DynamicUsedPage() {
     if (currentFilter) {
       const slug = currentFilter.toLowerCase();
 
-      if (slug === 'iphone-cu') {
-        items = items.filter((i) => i.searchIndex.includes('iphone'));
-      } else if (slug === 'ipad-cu') {
-        items = items.filter((i) => i.searchIndex.includes('ipad'));
-      } else if (slug === 'macbook-cu') {
-        items = items.filter((i) => i.searchIndex.includes('macbook'));
-      } else {
-        const numMatch = slug.match(/\d+/);
-        if (numMatch) {
-          items = items.filter((i) => i.searchIndex.includes(numMatch[0]));
-        } else if (slug.includes('pro')) {
-          items = items.filter((i) => i.searchIndex.includes('pro'));
-        } else if (slug.includes('air')) {
-          items = items.filter((i) => i.searchIndex.includes('air'));
-        } else if (slug.includes('mini')) {
+      // 1. NHÓM IPHONE CŨ
+      if (slug.startsWith('iphone')) {
+        // Bắt buộc phải là điện thoại iPhone
+        items = items.filter((i) => i.deviceType === 'iphone' && i.searchIndex.includes('iphone'));
+
+        if (slug === 'iphone-17-series-cu') {
+          items = items.filter((i) => i.searchIndex.includes('17'));
+        } else if (slug === 'iphone-16-series-cu') {
+          items = items.filter((i) => i.searchIndex.includes('16'));
+        } else if (slug === 'iphone-15-series-cu') {
+          items = items.filter((i) => i.searchIndex.includes('15'));
+        } else if (slug === 'iphone-14-series-cu') {
+          items = items.filter((i) => i.searchIndex.includes('14'));
+        } else if (slug === 'iphone-13-series-cu') {
+          items = items.filter((i) => i.searchIndex.includes('13'));
+        }
+      }
+      // 2. NHÓM IPAD CŨ
+      else if (slug.startsWith('ipad')) {
+        // Bắt buộc phải là máy tính bảng iPad
+        items = items.filter((i) => i.deviceType === 'ipad' && i.searchIndex.includes('ipad'));
+
+        if (slug === 'ipad-pro-cu') {
+          items = items.filter((i) => i.searchIndex.includes('pro') && !i.searchIndex.includes('air'));
+        } else if (slug === 'ipad-air-cu') {
+          items = items.filter((i) => i.searchIndex.includes('air') && !i.searchIndex.includes('pro'));
+        } else if (slug === 'ipad-mini-cu') {
           items = items.filter((i) => i.searchIndex.includes('mini'));
-        } else if (slug.includes('gen')) {
-          items = items.filter((i) => i.searchIndex.includes('gen') || !i.searchIndex.includes('pro'));
+        } else if (slug === 'ipad-gen-cu') {
+          items = items.filter((i) => i.searchIndex.includes('gen') || (!i.searchIndex.includes('pro') && !i.searchIndex.includes('air') && !i.searchIndex.includes('mini')));
+        }
+      }
+      // 3. NHÓM MACBOOK CŨ
+      else if (slug.startsWith('macbook')) {
+        // Bắt buộc phải là máy MacBook
+        items = items.filter((i) => i.deviceType === 'macbook' && (i.searchIndex.includes('macbook') || i.searchIndex.includes('mac')));
+
+        if (slug === 'macbook-pro-cu') {
+          items = items.filter((i) => i.searchIndex.includes('pro'));
+        } else if (slug === 'macbook-air-cu') {
+          items = items.filter((i) => i.searchIndex.includes('air'));
         }
       }
     }
 
+    // Lọc theo giá
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -331,6 +363,7 @@ export default function DynamicUsedPage() {
       );
     }
 
+    // Sắp xếp
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -349,6 +382,7 @@ export default function DynamicUsedPage() {
       case 'iphone-cu': return 'iPhone Cũ Like New 99%';
       case 'ipad-cu': return 'iPad Cũ Like New 99%';
       case 'macbook-cu': return 'MacBook Cũ Like New 99%';
+      case 'iphone-17-series-cu': return 'iPhone 17 Series Cũ';
       case 'iphone-16-series-cu': return 'iPhone 16 Series Cũ';
       case 'iphone-15-series-cu': return 'iPhone 15 Series Cũ';
       case 'iphone-14-series-cu': return 'iPhone 14 Series Cũ';
@@ -363,7 +397,7 @@ export default function DynamicUsedPage() {
     }
   }, [currentFilter]);
 
-  // Cấu hình 2 Banner đôi chuẩn thuần ảnh 600x200px (ưu tiên Admin)
+  // Cấu hình 2 Banner đôi
   const banner1 = adminBanners[0] || {
     name: 'Cam Kết Máy Cũ Chuẩn Zin',
     link: '/hang-cu',
@@ -400,12 +434,9 @@ export default function DynamicUsedPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* ========================================================================= */}
-          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN TỶ LỆ 600x200px (KHÔNG CHỮ ĐÈ, KHÔNG KHUNG) */}
-          {/* ========================================================================= */}
+          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN 600x200px */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Banner 1 */}
               <Link
                 href={banner1.link || '/hang-cu'}
                 className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
@@ -417,7 +448,6 @@ export default function DynamicUsedPage() {
                 />
               </Link>
 
-              {/* Banner 2 */}
               <Link
                 href={banner2.link || '/hang-cu'}
                 className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
@@ -431,9 +461,7 @@ export default function DynamicUsedPage() {
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
-          {/* ========================================================================= */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20) */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {categories.map((cat, idx) => {
@@ -475,9 +503,7 @@ export default function DynamicUsedPage() {
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
-          {/* ========================================================================= */}
+          {/* 3. HÀNG SUBMODEL CON: ICON TRÒN NHỎ HƠN 2 SIZE (w-14 h-14) */}
           {activeSubmodels && activeSubmodels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex flex-col items-center">
@@ -490,7 +516,6 @@ export default function DynamicUsedPage() {
                         href={`/hang-cu/${model.slug}`}
                         className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
                       >
-                        {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
                         <div
                           className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                             isSelected
@@ -640,20 +665,19 @@ export default function DynamicUsedPage() {
           )}
 
           {/* ========================================================= */}
-          {/* BÀI VIẾT SEO CHÂN TRANG HÀNG CŨ (LẤY ĐỘNG TỪ ADMIN)       */}
+          {/* BÀI VIẾT SEO CHÂN TRANG HÀNG CŨ (HỖ TRỢ HTML)             */}
           {/* ========================================================= */}
           <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
             <div
-              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line ${
+              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal ${
                 isSeoExpanded ? 'max-h-full pb-2' : 'max-h-[170px]'
               }`}
-            >
-              {seoContent}
+              dangerouslySetInnerHTML={{ __html: seoContent }}
+            />
 
-              {!isSeoExpanded && (
-                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
-              )}
-            </div>
+            {!isSeoExpanded && (
+              <div className="absolute bottom-12 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+            )}
 
             <div className="flex justify-center mt-4 border-t border-gray-100 pt-3">
               <button
