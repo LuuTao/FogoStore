@@ -23,7 +23,6 @@ interface SubModelItem {
   img: string;
 }
 
-// 1. Danh sách Series MacBook mặc định kèm nút "Tất cả"
 const DEFAULT_MACBOOK_SERIES: SeriesTabItem[] = [
   {
     name: 'Tất cả',
@@ -50,7 +49,6 @@ const DEFAULT_MACBOOK_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// 2. Danh mục model con nhỏ hơn 2 size kèm hình ảnh tròn
 const MACBOOK_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   pro: [
     {
@@ -183,31 +181,27 @@ export default function DynamicMacBookPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
-  // State Banner & Submodel nạp từ Admin
   const [adminBanners, setAdminBanners] = useState<any[]>([]);
   const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_MACBOOK_SERIES);
 
-  // State bài viết SEO
   const [seoContent, setSeoContent] = useState<string>(DEFAULT_MACBOOK_SEO_TEXT);
   const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
 
   const slugArray = (params?.slug as string[]) || [];
   const rawParam = slugArray[0] || searchParams?.get('series') || '';
 
-  // 1. Nạp Banner đôi & Danh mục Submodel từ Admin qua LocalStorage
+  // 1. Nạp Banner & Danh mục từ Admin
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          // Lọc 2 Banner đôi MacBook
           const macBanners = parsed.filter((it: any) => it.group === 'macbook_banners');
           if (macBanners.length > 0) {
             setAdminBanners(macBanners);
           }
 
-          // Lọc Icon tròn dòng MacBook (sub_macbook)
           const adminSubs = parsed.filter(
             (it: any) => it.group === 'sub_macbook' && it.name.toLowerCase() !== 'tất cả'
           );
@@ -237,7 +231,7 @@ export default function DynamicMacBookPage() {
     }
   }, []);
 
-  // 2. Nạp nội dung SEO MacBook đã lưu từ Admin
+  // 2. Nạp nội dung SEO Rich Text
   useEffect(() => {
     try {
       const savedSeo = localStorage.getItem('fogo_seo_macbook_seo_desc');
@@ -249,7 +243,7 @@ export default function DynamicMacBookPage() {
     }
   }, []);
 
-  // 3. Đọc sản phẩm đã xem gần đây
+  // 3. Đọc sản phẩm đã xem
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
@@ -259,7 +253,7 @@ export default function DynamicMacBookPage() {
     }
   }, []);
 
-  // 4. Fetch sản phẩm MacBook từ API Backend
+  // 4. Fetch danh sách sản phẩm
   useEffect(() => {
     const fetchLiveMacbook = async () => {
       try {
@@ -323,7 +317,6 @@ export default function DynamicMacBookPage() {
 
   const currentFilter = useMemo(() => resolveMacbookSlug(rawParam), [rawParam]);
 
-  // Nhận diện dòng máy đang chọn
   const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.includes('pro')) return 'pro';
@@ -334,7 +327,6 @@ export default function DynamicMacBookPage() {
 
   const activeSubmodels = currentSeriesTag ? MACBOOK_SUBMODELS_MAP[currentSeriesTag] || [] : [];
 
-  // Lọc sản phẩm
   const filteredProducts = useMemo(() => {
     let items = [...dbItems];
 
@@ -430,7 +422,6 @@ export default function DynamicMacBookPage() {
     }
   }, [currentFilter]);
 
-  // Cấu hình 2 Banner đôi chuẩn thuần ảnh 600x200px (ưu tiên dữ liệu Admin)
   const banner1 = adminBanners[0] || {
     name: 'MacBook Pro M5 / M4',
     link: '/macbook',
@@ -467,12 +458,9 @@ export default function DynamicMacBookPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* ========================================================================= */}
-          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN TỶ LỆ 600x200px (KHÔNG CHỮ ĐÈ, KHÔNG KHUNG) */}
-          {/* ========================================================================= */}
+          {/* ================= 1. BANNER ĐÔI 600x200px THUẦN ẢNH ================= */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Banner 1 */}
               <Link
                 href={banner1.link || '/macbook'}
                 className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
@@ -484,7 +472,6 @@ export default function DynamicMacBookPage() {
                 />
               </Link>
 
-              {/* Banner 2 */}
               <Link
                 href={banner2.link || '/macbook'}
                 className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
@@ -498,17 +485,14 @@ export default function DynamicMacBookPage() {
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
-          {/* ========================================================================= */}
+          {/* ================= 2. HÀNG SERIES CHA: BO TRÒN TUYỆT ĐỐI (80PX) ================= */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
                   ? !currentFilter
-                  : currentFilter === series.queryTag ||
-                    (series.slug && currentFilter.includes(series.slug)) ||
+                  : currentFilter === series.slug ||
                     (series.queryTag && currentFilter.includes(series.queryTag));
 
                 return (
@@ -518,16 +502,16 @@ export default function DynamicMacBookPage() {
                     className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
                   >
                     <div
-                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                         isSelected
-                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
-                          : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
+                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
+                          : 'border-2 border-transparent hover:border-gray-200 bg-[#f8f9fa] shadow-2xs'
                       }`}
                     >
                       <img
                         src={series.imageUrl}
                         alt={series.name}
-                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
+                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
                       />
                     </div>
                     <span
@@ -543,9 +527,7 @@ export default function DynamicMacBookPage() {
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
-          {/* ========================================================================= */}
+          {/* ================= 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE (BO TRÒN TUYỆT ĐỐI) ================= */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
@@ -558,11 +540,10 @@ export default function DynamicMacBookPage() {
                       href={`/macbook?series=${model.tag}`}
                       className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
                     >
-                      {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
                       <div
-                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-1.5 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                           isSubSelected
-                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 scale-105 ring-2 ring-red-100/50'
                             : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
                         }`}
                       >
@@ -573,7 +554,6 @@ export default function DynamicMacBookPage() {
                         />
                       </div>
 
-                      {/* Tên Submodel con */}
                       <span
                         className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
                           isSubSelected
@@ -709,21 +689,18 @@ export default function DynamicMacBookPage() {
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* BÀI VIẾT SEO CHÂN TRANG MACBOOK (LẤY ĐỘNG TỪ TRANG ADMIN) */}
-          {/* ========================================================= */}
+          {/* ================= 4. BÀI VIẾT SEO CHÂN TRANG (HỖ TRỢ RICH TEXT WORD) ================= */}
           <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
             <div
-              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line ${
+              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal ${
                 isSeoExpanded ? 'max-h-full pb-2' : 'max-h-[170px]'
               }`}
-            >
-              {seoContent}
+              dangerouslySetInnerHTML={{ __html: seoContent }}
+            />
 
-              {!isSeoExpanded && (
-                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
-              )}
-            </div>
+            {!isSeoExpanded && (
+              <div className="absolute bottom-12 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+            )}
 
             <div className="flex justify-center mt-4 border-t border-gray-100 pt-3">
               <button

@@ -19,31 +19,30 @@ const resolveImageUrl = (url?: string | null): string => {
   return `${API_URL}${cleanPath}`;
 };
 
-// 4 Banner Category mặc định (Render 350x250px / Intrinsic 700x500px)
 const DEFAULT_CATEGORY_BANNERS = [
   {
     id: 'cat-b1',
-    name: 'Trợ Giá Thu Cũ Lên Tới 90%',
-    link: '/hang-cu',
+    name: 'banner1',
+    link: '/iphone',
     imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=700&h=500&q=80',
   },
   {
     id: 'cat-b2',
-    name: 'iPad Pro M5 Hiệu Năng Vô Hạn',
+    name: 'banner2',
     link: '/ipad',
     imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=700&h=500&q=80',
   },
   {
     id: 'cat-b3',
-    name: 'iPhone 18 Pro Max',
-    link: '/iphone',
+    name: 'banner3',
+    link: '/macbook',
     imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=700&h=500&q=80',
   },
   {
     id: 'cat-b4',
-    name: 'iPhone 17 Pro Max',
-    link: '/iphone',
-    imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=700&h=500&q=80',
+    name: 'banner4',
+    link: '/phu-kien',
+    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=700&h=500&q=80',
   },
 ];
 
@@ -51,45 +50,90 @@ export const CategoryGrid: React.FC = () => {
   const [categoryBanners, setCategoryBanners] = useState<any[]>(DEFAULT_CATEGORY_BANNERS);
   const [categories, setCategories] = useState<any[]>(QUICK_CATEGORIES);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
+    // 1. Đọc nhanh từ localStorage
     try {
       const raw = localStorage.getItem('fogo_banners_config');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          // 1. Nạp 4 Banner Category chữ nhật
-          const adminCategoryBanners = parsed.filter(
-            (it: any) => it.group === 'category_banners' || it.group === 'promo_cards'
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const adminCatBanners = parsed.filter(
+            (it: any) => it.group === 'category_banners' || it.position === 'category_banners'
           );
-          if (adminCategoryBanners.length > 0) {
+          if (adminCatBanners.length > 0) {
             setCategoryBanners(
-              adminCategoryBanners.slice(0, 4).map((it: any, idx: number) => ({
+              adminCatBanners.slice(0, 4).map((it: any, idx: number) => ({
                 id: it.id || `cb-${idx}`,
-                name: it.name || it.title || 'Banner',
+                name: it.name || it.title || `banner${idx + 1}`,
                 link: it.link || it.linkUrl || '/',
-                imageUrl: resolveImageUrl(it.imageUrl) || DEFAULT_CATEGORY_BANNERS[idx]?.imageUrl,
+                imageUrl: resolveImageUrl(it.imageUrl),
               }))
             );
           }
 
-          // 2. Nạp Lưới icon nhỏ các dòng máy
-          const adminCategories = parsed.filter((it: any) => it.group === 'all_categories');
-          if (adminCategories.length > 0) {
-            const mapped = adminCategories.map((it: any, index: number) => {
-              const fallback = QUICK_CATEGORIES[index] || {};
-              return {
-                id: it.id || fallback.id || index,
-                name: it.name || fallback.name || '',
-                href: it.link || fallback.href || '/iphone',
-                imageUrl: resolveImageUrl(it.imageUrl) || fallback.imageUrl,
-              };
-            });
-            setCategories(mapped);
+          const adminCats = parsed.filter(
+            (it: any) => it.group === 'all_categories' || it.position === 'all_categories'
+          );
+          if (adminCats.length > 0) {
+            setCategories(
+              adminCats.map((it: any, index: number) => {
+                const fallback = QUICK_CATEGORIES[index] || {};
+                return {
+                  id: it.id || fallback.id || index,
+                  name: it.name || it.title || fallback.name || '',
+                  href: it.link || it.linkUrl || fallback.href || '/iphone',
+                  imageUrl: resolveImageUrl(it.imageUrl) || fallback.imageUrl,
+                };
+              })
+            );
           }
         }
       }
     } catch (e) {
-      console.error('Lỗi khi nạp dữ liệu CategoryGrid:', e);
+      console.warn('Lỗi nạp cache localStorage:', e);
+    }
+
+    // 2. Fetch mới nhất từ API Neon Backend
+    try {
+      const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        const dataList = json.data || json;
+        if (Array.isArray(dataList) && dataList.length > 0) {
+          const liveCatBanners = dataList.filter(
+            (it: any) => it.group === 'category_banners' || it.position === 'category_banners'
+          );
+          if (liveCatBanners.length > 0) {
+            setCategoryBanners(
+              liveCatBanners.slice(0, 4).map((it: any, idx: number) => ({
+                id: it.id || `cb-${idx}`,
+                name: it.name || it.title || `banner${idx + 1}`,
+                link: it.link || it.linkUrl || '/',
+                imageUrl: resolveImageUrl(it.imageUrl),
+              }))
+            );
+          }
+
+          const liveCats = dataList.filter(
+            (it: any) => it.group === 'all_categories' || it.position === 'all_categories'
+          );
+          if (liveCats.length > 0) {
+            setCategories(
+              liveCats.map((it: any, index: number) => {
+                const fallback = QUICK_CATEGORIES[index] || {};
+                return {
+                  id: it.id || fallback.id || index,
+                  name: it.name || it.title || fallback.name || '',
+                  href: it.link || it.linkUrl || fallback.href || '/iphone',
+                  imageUrl: resolveImageUrl(it.imageUrl) || fallback.imageUrl,
+                };
+              })
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Không thể fetch live banners:', err);
     }
   }, []);
 
@@ -102,25 +146,23 @@ export const CategoryGrid: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 mt-3 select-none space-y-4">
-      
+
+
       {/* ========================================================================= */}
-      {/* PHẦN 2: THANH 3 CAM KẾT - SÁT LÊN TRÊN, CĂN GIỮA, TO THÊM 4 SIZE           */}
+      {/* PHẦN 2: THANH 3 CAM KẾT - SÁT LÊN TRÊN, CĂN GIỮA, TO RÕ                   */}
       {/* ========================================================================= */}
       <div className="w-full pt-1 pb-2 flex items-center justify-center">
         <div className="flex items-center justify-center gap-8 sm:gap-14 md:gap-20 flex-wrap text-gray-950 text-base sm:text-lg md:text-xl lg:text-2xl font-black tracking-tight">
-          {/* 1. Đảm bảo chất lượng */}
           <div className="flex items-center gap-3">
             <Award size={34} strokeWidth={2.4} className="text-gray-900 shrink-0" />
             <span>Đảm bảo chất lượng</span>
           </div>
 
-          {/* 2. Thu cũ đổi mới */}
           <div className="flex items-center gap-3">
             <CheckCircle2 size={34} strokeWidth={2.4} className="text-gray-900 shrink-0" />
             <span>Thu cũ đổi mới</span>
           </div>
 
-          {/* 3. Miễn phí vận chuyển */}
           <div className="flex items-center gap-3">
             <Truck size={36} strokeWidth={2.4} className="text-gray-900 shrink-0" />
             <span>Miễn phí vận chuyển</span>
@@ -129,7 +171,7 @@ export const CategoryGrid: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* PHẦN 3: LƯỚI CATEGORIES ITEM NHỎ (CẬP NHẬT ĐỘNG TỪ ADMIN)                 */}
+      {/* PHẦN 3: LƯỚI CATEGORIES ITEM NHỎ BO TRÒN GÓC TUYỆT ĐỐI                     */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-100">
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5 md:gap-3">
@@ -139,11 +181,11 @@ export const CategoryGrid: React.FC = () => {
               href={item.href || '/'}
               className="flex flex-col items-center justify-between p-2 md:p-2.5 rounded-lg border border-gray-100/90 hover:border-[#d70018]/50 hover:shadow-md transition-all group bg-white text-center min-h-[110px]"
             >
-              <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#f8f9fa] border border-gray-200 p-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300">
                 <img
                   src={resolveImageUrl(item.imageUrl)}
                   alt={item.name}
-                  className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300"
+                  className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
                 />
               </div>
               <span className="text-[11px] md:text-xs font-semibold text-gray-700 group-hover:text-[#d70018] transition-colors leading-tight mt-1.5 line-clamp-2">
@@ -154,8 +196,9 @@ export const CategoryGrid: React.FC = () => {
         </div>
       </div>
 
+      
       {/* ========================================================================= */}
-      {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / RENDER 350x250px)         */}
+      {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / 350x250px)                */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {categoryBanners.map((item) => (
@@ -172,11 +215,9 @@ export const CategoryGrid: React.FC = () => {
               loading="lazy"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 pointer-events-none"
             />
-
           </Link>
         ))}
       </div>
-
     </div>
   );
 };

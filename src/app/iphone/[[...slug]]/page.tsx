@@ -55,7 +55,6 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// Danh sách các model con nhỏ hơn 2 size kèm hình ảnh tròn
 const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '18': [
     {
@@ -143,6 +142,23 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
       img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
     },
   ],
+  'duo': [
+    {
+      name: 'Tất cả Duo',
+      tag: 'duo',
+      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    },
+    {
+      name: 'iPhone Duo Fold',
+      tag: 'duo-fold',
+      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    },
+    {
+      name: 'iPhone Duo Flip',
+      tag: 'duo-flip',
+      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
+    },
+  ],
 };
 
 const IPHONE_HELPFUL_NEWS = [
@@ -190,7 +206,6 @@ export default function DynamicIPhonePage() {
     '';
   const currentFilter = (rawFilter || '').toLowerCase().trim();
 
-  // Nhận diện series cha đang chọn (18, 17, 16, duo)
   const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.includes('duo')) return 'duo';
@@ -198,7 +213,6 @@ export default function DynamicIPhonePage() {
     return num ? num[0] : null;
   }, [currentFilter]);
 
-  // Đọc danh sách model con tương ứng
   const subModels = currentSeriesTag ? SUB_MODELS_MAP[currentSeriesTag] || [] : [];
 
   useEffect(() => {
@@ -210,20 +224,17 @@ export default function DynamicIPhonePage() {
     }
   }, []);
 
-  // Nạp Banner đôi & Danh mục Submodel từ Admin qua LocalStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          // Lọc 2 Banner đôi iPhone
           const ipBanners = parsed.filter((it: any) => it.group === 'iphone_banners');
           if (ipBanners.length > 0) {
             setAdminBanners(ipBanners);
           }
 
-          // Lọc Icon tròn Submodel iPhone (sub_iphone)
           const adminSubs = parsed.filter(
             (it: any) => it.group === 'sub_iphone' && it.name.toLowerCase() !== 'tất cả'
           );
@@ -415,7 +426,6 @@ export default function DynamicIPhonePage() {
       .replace('Iphone', 'iPhone');
   }, [currentFilter]);
 
-  // Cấu hình 2 Banner đôi (ưu tiên Admin)
   const banner1 = adminBanners[0] || {
     name: 'Thế Hệ iPhone Mới Nhất',
     link: '/iphone',
@@ -457,7 +467,6 @@ export default function DynamicIPhonePage() {
           {/* ========================================================================= */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Banner 1 */}
               <Link
                 href={banner1.link || '/iphone'}
                 className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
@@ -469,7 +478,6 @@ export default function DynamicIPhonePage() {
                 />
               </Link>
 
-              {/* Banner 2 */}
               <Link
                 href={banner2.link || '/iphone'}
                 className="w-full aspect-[3/1] rounded-lg overflow-hidden block shadow-2xs hover:shadow-md transition-shadow bg-transparent"
@@ -484,7 +492,7 @@ export default function DynamicIPhonePage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (BO TRÒN TUYỆT ĐỐI)           */}
           {/* ========================================================================= */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
@@ -492,8 +500,7 @@ export default function DynamicIPhonePage() {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
                   ? !currentFilter
-                  : currentFilter === series.queryTag ||
-                    (series.slug && currentFilter.includes(series.slug)) ||
+                  : currentFilter === series.slug ||
                     (series.queryTag && currentFilter.includes(series.queryTag));
 
                 return (
@@ -502,18 +509,17 @@ export default function DynamicIPhonePage() {
                     href={isAllButton ? '/iphone' : `/iphone?series=${series.queryTag}`}
                     className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
                   >
-                    {/* Vòng tròn 80px bo tròn chuẩn tuyệt đối */}
                     <div
-                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                         isSelected
-                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
-                          : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
+                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
+                          : 'border-2 border-transparent hover:border-gray-200 bg-[#f8f9fa] shadow-2xs'
                       }`}
                     >
                       <img
                         src={series.imageUrl}
                         alt={series.name}
-                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
+                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
                       />
                     </div>
                     <span
@@ -530,7 +536,7 @@ export default function DynamicIPhonePage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
+          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE (BO TRÒN TUYỆT ĐỐI)                   */}
           {/* ========================================================================= */}
           {subModels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
@@ -544,11 +550,10 @@ export default function DynamicIPhonePage() {
                       href={`/iphone?series=${model.tag}`}
                       className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
                     >
-                      {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
                       <div
-                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-1.5 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                           isSubSelected
-                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 scale-105 ring-2 ring-red-100/50'
                             : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
                         }`}
                       >
@@ -559,7 +564,6 @@ export default function DynamicIPhonePage() {
                         />
                       </div>
 
-                      {/* Tên Submodel con */}
                       <span
                         className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
                           isSubSelected

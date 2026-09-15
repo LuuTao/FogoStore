@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export interface CartItem {
-  id: string | number; // variantId
+  id: string | number; // variantId hoặc id sản phẩm
   name: string;
   price: number;
   originalPrice?: number;
@@ -19,8 +19,8 @@ interface CartContextType {
   totalQuantity: number;
   totalPrice: number;
   addToCart: (item: CartItem) => Promise<void>;
-  updateQuantity: (id: string | number, quantity: number) => Promise<void>;
-  removeFromCart: (id: string | number) => Promise<void>;
+  updateQuantity: (id: string | number, quantity: number, storage?: string, color?: string) => Promise<void>;
+  removeFromCart: (id: string | number, storage?: string, color?: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
 }
@@ -52,11 +52,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return null;
   };
 
+  // Hàm tạo khóa duy nhất phân biệt sản phẩm theo ID + Dung lượng + Màu sắc
+  const makeUniqueKey = (id: string | number, storage?: string, color?: string) => {
+    return `${String(id)}_${(storage || 'default').trim().toLowerCase()}_${(color || 'default').trim().toLowerCase()}`;
+  };
+
   const fetchCartFromDB = useCallback(async (userId: string) => {
     try {
       const res = await fetch(`${API_BASE}/cart/${userId}`, { cache: 'no-store' });
       
-      // Chặn lỗi parse HTML khi gặp 404 hoặc 500
       if (!res.ok) {
         setCartItems([]);
         return;
@@ -74,8 +78,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: item.variantId || item.id,
           name: item.name,
           price: item.price,
-          storage: item.storage,
-          color: item.color,
+          storage: item.storage || '',
+          color: item.color || '',
           imageUrl: (item.imageUrl || '').replace('http://localhost:5000', 'https://fogo-store-api.onrender.com'),
           quantity: item.quantity,
         }));
@@ -107,12 +111,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = async (item: CartItem) => {
     const userId = currentUserId || getActiveUserId();
+    const itemKey = makeUniqueKey(item.id, item.storage, item.color);
 
     setCartItems((prev) => {
-      const existing = prev.find((p) => String(p.id) === String(item.id));
-      if (existing) {
-        return prev.map((p) =>
-          String(p.id) === String(item.id) ? { ...p, quantity: p.quantity + item.quantity } : p
+      const existingIndex = prev.findIndex(
+        (p) => makeUniqueKey(p.id, p.storage, p.color) === itemKey
+      );
+
+      if (existingIndex > -1) {
+        return prev.map((p, idx) =>
+          idx === existingIndex ? { ...p, quantity: p.quantity + item.quantity } : p
         );
       }
       return [...prev, item];
@@ -140,16 +148,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateQuantity = async (id: string | number, quantity: number) => {
+  const updateQuantity = async (id: string | number, quantity: number, storage?: string, color?: string) => {
     const userId = currentUserId || getActiveUserId();
+    const targetKey = makeUniqueKey(id, storage, color);
 
     if (quantity <= 0) {
-      removeFromCart(id);
+      removeFromCart(id, storage, color);
       return;
     }
 
     setCartItems((prev) =>
-      prev.map((p) => (String(p.id) === String(id) ? { ...p, quantity } : p))
+      prev.map((p) =>
+        makeUniqueKey(p.id, p.storage, p.color) === targetKey ? { ...p, quantity } : p
+      )
     );
 
     if (userId) {
@@ -157,7 +168,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetch(`${API_BASE}/cart/update-quantity`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, variantId: String(id), quantity }),
+          body: JSON.stringify({ userId, variantId: String(id), storage: storage || '', color: color || '', quantity }),
         });
       } catch (err) {
         console.error(err);
@@ -165,17 +176,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const removeFromCart = async (id: string | number) => {
+  const removeFromCart = async (id: string | number, storage?: string, color?: string) => {
     const userId = currentUserId || getActiveUserId();
+    const targetKey = makeUniqueKey(id, storage, color);
 
-    setCartItems((prev) => prev.filter((p) => String(p.id) !== String(id)));
+    setCartItems((prev) =>
+      prev.filter((p) => makeUniqueKey(p.id, p.storage, p.color) !== targetKey)
+    );
 
     if (userId) {
       try {
         await fetch(`${API_BASE}/cart/remove`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, variantId: String(id) }),
+          body: JSON.stringify({ userId, variantId: String(id), storage: storage || '', color: color || '' }),
         });
       } catch (err) {
         console.error(err);

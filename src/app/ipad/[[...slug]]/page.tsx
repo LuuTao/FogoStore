@@ -216,7 +216,7 @@ export default function DynamicIPadPage() {
     }
   }, []);
 
-  // 2. Nạp nội dung SEO iPad đã lưu từ Admin
+  // 2. Nạp nội dung SEO iPad đã lưu từ Admin (Hỗ trợ Rich Text HTML)
   useEffect(() => {
     try {
       const savedSeo = localStorage.getItem('fogo_seo_ipad_seo_desc');
@@ -462,7 +462,7 @@ export default function DynamicIPadPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20)                   */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (BO TRÒN TUYỆT ĐỐI)           */}
           {/* ========================================================================= */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
@@ -481,16 +481,16 @@ export default function DynamicIPadPage() {
                     className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
                   >
                     <div
-                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                         isSelected
-                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
-                          : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
+                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
+                          : 'border-2 border-transparent hover:border-gray-200 bg-[#f8f9fa] shadow-2xs'
                       }`}
                     >
                       <img
                         src={series.imageUrl}
                         alt={series.name}
-                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
+                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
                       />
                     </div>
                     <span
@@ -507,7 +507,7 @@ export default function DynamicIPadPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* 3. HÀNG SUBMODEL CON: CŨNG LÀ ICON TRÒN NHƯNG NHỎ HƠN 2 SIZE (w-14 h-14)  */}
+          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE (BO TRÒN TUYỆT ĐỐI)                   */}
           {/* ========================================================================= */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
@@ -521,11 +521,10 @@ export default function DynamicIPadPage() {
                       href={`/ipad?series=${model.tag}`}
                       className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
                     >
-                      {/* Vòng tròn nhỏ hơn 2 size (w-13 h-13 sm:w-15 sm:h-15 ~ 56-60px) */}
                       <div
-                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-1.5 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                           isSubSelected
-                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 scale-105 ring-2 ring-red-100/50'
                             : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
                         }`}
                       >
@@ -536,7 +535,6 @@ export default function DynamicIPadPage() {
                         />
                       </div>
 
-                      {/* Tên Submodel con */}
                       <span
                         className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
                           isSubSelected
@@ -672,21 +670,18 @@ export default function DynamicIPadPage() {
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* BÀI VIẾT SEO CHÂN TRANG IPAD (LẤY ĐỘNG TỪ TRANG ADMIN)     */}
-          {/* ========================================================= */}
+          {/* ================= 4. BÀI VIẾT SEO CHÂN TRANG (HỖ TRỢ RICH TEXT WORD) ================= */}
           <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
             <div
-              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line ${
+              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal ${
                 isSeoExpanded ? 'max-h-full pb-2' : 'max-h-[170px]'
               }`}
-            >
-              {seoContent}
+              dangerouslySetInnerHTML={{ __html: seoContent }}
+            />
 
-              {!isSeoExpanded && (
-                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
-              )}
-            </div>
+            {!isSeoExpanded && (
+              <div className="absolute bottom-12 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+            )}
 
             <div className="flex justify-center mt-4 border-t border-gray-100 pt-3">
               <button
