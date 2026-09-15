@@ -2,142 +2,108 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Ticket, RefreshCw, Wallet, CalendarDays } from 'lucide-react';
-import { QUICK_CATEGORIES } from '@/data/quickCategories';
+
+interface CategoryBanner {
+  id: string | number;
+  name: string;
+  href: string;
+  imageUrl: string;
+}
+
+// 4 Banner danh mục mẫu theo chuẩn Intrinsic size 700x500 (Render 350x250)
+const DEFAULT_CATEGORY_BANNERS: CategoryBanner[] = [
+  {
+    id: 1,
+    name: 'MacBook Air M5',
+    href: '/macbook',
+    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=700&h=500&q=80',
+  },
+  {
+    id: 2,
+    name: 'iPhone Thế Hệ Mới',
+    href: '/iphone',
+    imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=700&h=500&q=80',
+  },
+  {
+    id: 3,
+    name: 'iPad Pro M4',
+    href: '/ipad',
+    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=700&h=500&q=80',
+  },
+  {
+    id: 4,
+    name: 'Phụ Kiện Chính Hãng',
+    href: '/phu-kien',
+    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=700&h=500&q=80',
+  },
+];
 
 export const CategoryGrid: React.FC = () => {
-  const [categories, setCategories] = useState(QUICK_CATEGORIES);
+  const [banners, setBanners] = useState<CategoryBanner[]>(DEFAULT_CATEGORY_BANNERS);
 
-  // Lắng nghe và đọc dữ liệu danh mục do Admin cấu hình
+  // Đọc dữ liệu từ Admin nếu có cấu hình nhóm promo_cards hoặc all_categories
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          const adminCategories = parsed.filter((it: any) => it.group === 'all_categories');
-          if (adminCategories.length > 0) {
-            const mapped = adminCategories.map((it: any, index: number) => {
-              const fallback = QUICK_CATEGORIES[index] || {};
-              return {
-                id: it.id || fallback.id || index,
-                name: it.name || fallback.name || '',
-                href: it.link || fallback.href || '/iphone',
-                imageUrl: it.imageUrl || fallback.imageUrl,
-              };
-            });
-            setCategories(mapped);
+          const adminItems = parsed.filter(
+            (it: any) => it.group === 'promo_cards' || it.group === 'all_categories'
+          );
+          if (adminItems.length > 0) {
+            const mapped = adminItems.slice(0, 4).map((it: any, idx: number) => ({
+              id: it.id || idx,
+              name: it.name || it.title || 'Banner',
+              href: it.link || it.linkUrl || '/',
+              imageUrl: it.imageUrl || DEFAULT_CATEGORY_BANNERS[idx]?.imageUrl,
+            }));
+            setBanners(mapped);
           }
         }
       }
     } catch (e) {
-      console.error('Lỗi khi nạp danh mục cấu hình:', e);
+      console.warn('Lỗi nạp banner CategoryGrid:', e);
     }
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-6 select-none">
-      {/* ================= 1. DẢI BANNER ƯU ĐÃI NẰM NGANG ================= */}
-      <div className="bg-[#fff1f2] border border-[#ffd1d7] rounded-xl p-3 md:p-4 mb-6 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center divide-y md:divide-y-0 md:divide-x divide-red-200">
-          
-          {/* Cột 1: Tựu trường rộn ràng */}
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-full bg-[#d70018]/10 flex items-center justify-center text-[#d70018] shrink-0">
-              🎓
-            </div>
-            <div>
-              <span className="text-xs md:text-sm font-black text-[#d70018] uppercase tracking-tight block">
-                TỰU TRƯỜNG RỘN RÀNG
-              </span>
-              <span className="text-[11px] font-semibold text-gray-600">Ưu đãi ngập tràn</span>
-            </div>
-          </div>
+    <section className="max-w-7xl mx-auto px-4 my-6 select-none">
+      {/* 
+        Grid 4 cột trên Desktop (mỗi cột hiển thị chuẩn ~350x250px) 
+        Trên Mobile/Tablet chia 2 cột với tỷ lệ aspect-[7/5] chuẩn 100% 
+      */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        {banners.map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            className="group relative block w-full aspect-[7/5] max-w-[350px] mx-auto rounded-xl overflow-hidden border border-gray-200/80 bg-gray-50 shadow-2xs hover:shadow-lg hover:border-[#d70018]/50 transition-all duration-300"
+          >
+            {/* Ảnh banner: intrinsic size chuẩn 700x500 render về 350x250 */}
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              width={700}
+              height={500}
+              loading="lazy"
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 pointer-events-none"
+            />
 
-          {/* Cột 2: Đổi giấy báo trúng tuyển */}
-          <div className="flex items-center gap-3 px-3 pt-3 md:pt-0">
-            <div className="w-9 h-9 rounded-lg bg-[#d70018] text-white flex items-center justify-center shrink-0">
-              <Ticket size={20} />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-gray-900 block leading-tight">
-                ĐỔI GIẤY BÁO TRÚNG TUYỂN
-              </span>
-              <span className="text-[11px] text-gray-500">
-                Nhận voucher đến <strong className="text-[#d70018]">1.5 TRIỆU</strong>
-              </span>
-            </div>
-          </div>
-
-          {/* Cột 3: Thu cũ lên đời trợ giá */}
-          <div className="flex items-center gap-3 px-3 pt-3 md:pt-0">
-            <div className="w-9 h-9 rounded-lg bg-[#d70018] text-white flex items-center justify-center shrink-0">
-              <RefreshCw size={20} />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-gray-900 block leading-tight">
-                THU CŨ LÊN ĐỜI, TRỢ GIÁ
-              </span>
-              <span className="text-[11px] text-gray-500">
-                iPad <strong className="text-[#d70018]">500K</strong> | MacBook <strong className="text-[#d70018]">1 TRIỆU</strong>
-              </span>
-            </div>
-          </div>
-
-          {/* Cột 4: Dùng trước trả sau 0% */}
-          <div className="flex items-center justify-between px-3 pt-3 md:pt-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-[#d70018] text-white flex items-center justify-center shrink-0">
-                <Wallet size={20} />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-gray-900 block leading-tight">
-                  DÙNG TRƯỚC TRẢ SAU
-                </span>
-                <span className="text-[11px] text-gray-600 font-semibold">
-                  Góp <span className="text-[#d70018]">0%</span> | Trả trước <span className="text-[#d70018]">0đ</span> | Phí <span className="text-[#d70018]">0đ</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Khung thời gian áp dụng */}
-            <div className="hidden lg:flex flex-col items-end border border-red-300 rounded px-2 py-0.5 bg-white/70 text-[9px] text-[#d70018] font-bold shrink-0">
-              <span className="flex items-center gap-0.5">
-                <CalendarDays size={10} /> Áp dụng từ:
-              </span>
-              <span className="text-gray-700">01.09 - 30.09</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ================= 2. BẢNG LƯỚI ICON CẬP NHẬT ĐỘNG TỪ ADMIN ================= */}
-      <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-100">
-        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5 md:gap-3">
-          {categories.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href || '/'}
-              className="flex flex-col items-center justify-between p-2 md:p-2.5 rounded-lg border border-gray-100/90 hover:border-[#d70018]/50 hover:shadow-md transition-all group bg-white text-center min-h-[110px]"
-            >
-              {/* Hình ảnh đại diện model máy */}
-              <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center overflow-hidden">
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-
-              {/* Tên dòng máy */}
-              <span className="text-[11px] md:text-xs font-semibold text-gray-700 group-hover:text-[#d70018] transition-colors leading-tight mt-1.5 line-clamp-2">
+            {/* Lớp phủ mờ nhẹ & Tên danh mục bên dưới chân card */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent p-3 pt-6 flex items-end justify-between pointer-events-none">
+              <span className="text-white text-xs sm:text-sm font-bold truncate drop-shadow-sm group-hover:text-red-300 transition-colors">
                 {item.name}
               </span>
-            </Link>
-          ))}
-        </div>
+              <span className="text-[10px] bg-white/20 backdrop-blur-xs text-white px-2 py-0.5 rounded-full font-medium shrink-0 ml-2">
+                Xem ngay
+              </span>
+            </div>
+          </Link>
+        ))}
       </div>
-    </div>
+    </section>
   );
 };
+
+export default CategoryGrid;

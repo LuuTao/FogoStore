@@ -21,6 +21,10 @@ import {
   CreditCard,
   X,
   RefreshCw,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
+  LayoutGrid,
 } from 'lucide-react';
 
 interface Props {
@@ -31,6 +35,7 @@ interface Props {
 type BannerGroup =
   | 'hero_banners'       // Banner Lớn Đầu Trang
   | 'promo_cards'        // 2 Banner Nhỏ Đè Hero
+  | 'category_banners'   // [MỚI] 4 Banner Category (Render 350x250 / Intrinsic 700x500)
   | 'all_categories'     // Tất cả danh mục
   | 'iphone_banners'     // Banner Trang iPhone
   | 'ipad_banners'       // Banner Trang iPad
@@ -70,7 +75,6 @@ const resolveImageUrl = (url?: string | null): string => {
   return `${API_URL}${cleanPath}`;
 };
 
-// Hàm nén ảnh giữ chuẩn tỷ lệ gốc (không bị bè hay méo)
 const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -88,6 +92,10 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
         if (targetGroup === 'hero_banners') {
           width = 1920;
           height = 540;
+        } else if (targetGroup === 'category_banners') {
+          // Chuẩn Intrinsic 700x500 (Tỷ lệ 7:5 Render 350x250)
+          width = 700;
+          height = 500;
         } else if (targetGroup === 'promo_cards') {
           width = 800;
           height = Math.round(800 * ratio);
@@ -111,7 +119,7 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedBase64 = canvas.toDataURL('image/webp', 0.82);
+        const compressedBase64 = canvas.toDataURL('image/webp', 0.85);
         resolve(compressedBase64);
       };
       img.onerror = () => reject(new Error('Lỗi load ảnh vào canvas'));
@@ -161,6 +169,43 @@ const INITIAL_ITEMS: ItemConfig[] = [
     group: 'promo_cards',
     imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=300&q=80',
   },
+  // 4 mục mặc định cho 4 Banner Category (350x250px)
+  {
+    id: 'cat-banner-1',
+    name: 'MacBook Air M5',
+    link: '/macbook',
+    group: 'category_banners',
+    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=700&h=500&q=80',
+    subtitle: 'Cập Nhật Giá Mới',
+    tag: 'MỚI',
+  },
+  {
+    id: 'cat-banner-2',
+    name: 'iPhone Thế Hệ Mới',
+    link: '/iphone',
+    group: 'category_banners',
+    imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=700&h=500&q=80',
+    subtitle: 'Camera 48MP Dual Fusion',
+    tag: 'HOT',
+  },
+  {
+    id: 'cat-banner-3',
+    name: 'iPad Pro M4',
+    link: '/ipad',
+    group: 'category_banners',
+    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=700&h=500&q=80',
+    subtitle: 'Mở Ứng Dụng Song Song',
+    tag: 'GIÁ TỐT',
+  },
+  {
+    id: 'cat-banner-4',
+    name: 'Phụ Kiện Chính Hãng',
+    link: '/phu-kien',
+    group: 'category_banners',
+    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=700&h=500&q=80',
+    subtitle: 'Chuẩn Zin Apple',
+    tag: 'ƯU ĐÃI',
+  },
 ];
 
 export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
@@ -181,7 +226,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const [itemPriceText, setItemPriceText] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // FETCH TRỰC TIẾP TỪ DATABASE NEON QUA API (Không sợ F5 hay Deploy mất dữ liệu)
+  // FETCH TRỰC TIẾP TỪ DATABASE NEON QUA API
   const fetchBannersFromBackend = useCallback(async () => {
     setIsLoadingDB(true);
     try {
@@ -215,8 +260,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
           return;
         }
       }
-      
-      // Fallback: Kiểm tra propBanners hoặc localStorage nếu API chưa phản hồi
+
       if (propBanners && Array.isArray(propBanners) && propBanners.length > 0) {
         const mapped = propBanners.map((b: any, idx: number) => ({
           id: String(b.id || `item-${idx}`),
@@ -248,6 +292,52 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
 
   const currentItems = items.filter((it) => it.group === activeGroup);
 
+  // =========================================================
+  // LOGIC DI CHUYỂN THỨ TỰ (MOVE UP / MOVE DOWN)
+  // =========================================================
+  const handleMoveItem = (indexInGroup: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? indexInGroup - 1 : indexInGroup + 1;
+    if (targetIdx < 0 || targetIdx >= currentItems.length) return;
+
+    const sourceItem = currentItems[indexInGroup];
+    const targetItem = currentItems[targetIdx];
+
+    const realIdxA = items.findIndex((it) => it.id === sourceItem.id);
+    const realIdxB = items.findIndex((it) => it.id === targetItem.id);
+
+    if (realIdxA !== -1 && realIdxB !== -1) {
+      const nextItems = [...items];
+      const temp = nextItems[realIdxA];
+      nextItems[realIdxA] = nextItems[realIdxB];
+      nextItems[realIdxB] = temp;
+
+      setItems(nextItems);
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  // =========================================================
+  // LOGIC KÉO THẢ (HTML5 DRAG & DROP)
+  // =========================================================
+  const handleDropItem = (fromIdxInGroup: number, toIdxInGroup: number) => {
+    if (fromIdxInGroup === toIdxInGroup) return;
+
+    const sourceItem = currentItems[fromIdxInGroup];
+    const targetItem = currentItems[toIdxInGroup];
+
+    const realSourceIdx = items.findIndex((it) => it.id === sourceItem.id);
+    const realTargetIdx = items.findIndex((it) => it.id === targetItem.id);
+
+    if (realSourceIdx !== -1 && realTargetIdx !== -1) {
+      const nextItems = [...items];
+      const [moved] = nextItems.splice(realSourceIdx, 1);
+      nextItems.splice(realTargetIdx, 0, moved);
+
+      setItems(nextItems);
+      setHasUnsavedChanges(true);
+    }
+  };
+
   // LƯU CẤU HÌNH VÀO NEON DATABASE
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
@@ -268,7 +358,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
       let syncSuccess = false;
       let syncError = '';
 
-      // Thử Route 1: /api/admin/banners/sync
       try {
         const res1 = await fetch(`${API_URL}/api/admin/banners/sync`, {
           method: 'POST',
@@ -281,7 +370,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         syncError = e.message;
       }
 
-      // Thử Route 2: /api/banners
       if (!syncSuccess) {
         try {
           const res2 = await fetch(`${API_URL}/api/banners`, {
@@ -297,6 +385,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
 
       try {
         localStorage.setItem('fogo_banners_config', JSON.stringify(items));
+        window.dispatchEvent(new Event('fogo_banners_updated'));
       } catch (_) {}
 
       if (!syncSuccess) {
@@ -306,9 +395,8 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
       setHasUnsavedChanges(false);
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3000);
-      
+
       if (onRefresh) onRefresh();
-      // Load lại để đồng bộ state sạch
       fetchBannersFromBackend();
     } catch (err: any) {
       alert('Đã xảy ra lỗi khi lưu vào cơ sở dữ liệu: ' + err.message);
@@ -322,6 +410,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
     setItems(INITIAL_ITEMS);
     try {
       localStorage.removeItem('fogo_banners_config');
+      window.dispatchEvent(new Event('fogo_banners_updated'));
     } catch (_) {}
     setHasUnsavedChanges(true);
   };
@@ -430,7 +519,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
             {isLoadingDB && <RefreshCw size={15} className="animate-spin text-gray-400" />}
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Dữ liệu đồng bộ trực tiếp từ <b>Database Neon</b>, đảm bảo an toàn vĩnh viễn khi deploy lại website.
+            Dùng mũi tên hoặc kéo thả biểu tượng <b>Grip</b> để đổi thứ tự. Sau đó nhấn <b>LƯU CẤU HÌNH</b>.
           </p>
         </div>
 
@@ -479,6 +568,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         {[
           { id: 'hero_banners', label: 'Banner Lớn (Hero)', icon: Sliders },
           { id: 'promo_cards', label: '2 Banner Nhỏ Đè Hero', icon: CreditCard },
+          { id: 'category_banners', label: '4 Banner Category (350x250)', icon: LayoutGrid },
           { id: 'iphone_banners', label: 'Banner iPhone', icon: Smartphone },
           { id: 'ipad_banners', label: 'Banner iPad', icon: Tablet },
           { id: 'macbook_banners', label: 'Banner MacBook', icon: Laptop },
@@ -513,117 +603,115 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         })}
       </div>
 
-      {/* DANH SÁCH BANNER */}
+      {/* DANH SÁCH BANNER (TÍCH HỢP NÚT DI CHUYỂN & KÉO THẢ) */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        {activeGroup === 'hero_banners' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {currentItems.map((item) => (
+        {currentItems.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 text-xs border border-dashed rounded-lg">
+            Chưa có mục nào trong nhóm này. Bấm &quot;Thêm Mục Vào Nhóm&quot; để tạo mới.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {currentItems.map((item, idx) => (
               <div
                 key={item.id}
-                className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[1920/540] flex flex-col justify-between group bg-gray-900"
+                draggable
+                onDragStart={(e) => e.dataTransfer.setData('text/banner-item', idx.toString())}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const fromIdx = Number(e.dataTransfer.getData('text/banner-item'));
+                  if (!isNaN(fromIdx)) handleDropItem(fromIdx, idx);
+                }}
+                className="group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white border border-gray-200 hover:border-gray-300 rounded-lg shadow-2xs transition-all hover:bg-gray-50/70 gap-3"
               >
-                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-90" />
-                <div className="relative p-4 z-10 text-white space-y-1">
-                  <h3 className="font-black text-sm md:text-base drop-shadow-md">{item.name}</h3>
-                  {item.subtitle && <p className="text-xs text-gray-200 drop-shadow-xs">{item.subtitle}</p>}
+                {/* Khu vực ảnh & thông tin */}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Tay cầm kéo thả */}
+                  <GripVertical
+                    size={18}
+                    className="text-gray-300 group-hover:text-gray-600 cursor-grab active:cursor-grabbing shrink-0"
+                    title="Kéo thả để sắp xếp vị trí"
+                  />
+
+                  {/* Số thứ tự */}
+                  <span className="w-6 text-center text-xs font-black text-gray-400 group-hover:text-gray-800 shrink-0">
+                    #{idx + 1}
+                  </span>
+
+                  {/* Thumbnail hiển thị chuẩn tỉ lệ 7:5 khi ở category_banners */}
+                  <div
+                    className={`rounded bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center ${
+                      activeGroup === 'category_banners' ? 'w-24 aspect-[7/5]' : 'w-28 h-14'
+                    }`}
+                  >
+                    <img
+                      src={resolveImageUrl(item.imageUrl)}
+                      alt={item.name}
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
+                  </div>
+
+                  {/* Text */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-gray-900 truncate">{item.name}</h4>
+                      {item.tag && (
+                        <span className="bg-red-50 text-[#d70018] border border-red-200 text-[9px] font-bold px-1.5 py-0.2 rounded shrink-0">
+                          {item.tag}
+                        </span>
+                      )}
+                    </div>
+                    {item.subtitle && <p className="text-[11px] text-gray-500 truncate">{item.subtitle}</p>}
+                    <p className="text-[10px] text-gray-400 font-mono truncate">{item.link || '/'}</p>
+                  </div>
                 </div>
-                <div className="relative p-3 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
+
+                {/* Các nút điều khiển thứ tự & thao tác */}
+                <div className="flex items-center gap-1 shrink-0 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0">
+                  {/* Di chuyển lên */}
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={() => handleMoveItem(idx, 'up')}
+                    className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-200 rounded disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    title="Di chuyển lên trên"
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+
+                  {/* Di chuyển xuống */}
+                  <button
+                    type="button"
+                    disabled={idx === currentItems.length - 1}
+                    onClick={() => handleMoveItem(idx, 'down')}
+                    className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-200 rounded disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    title="Di chuyển xuống dưới"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+
+                  <div className="h-4 w-px bg-gray-200 mx-1" />
+
+                  {/* Sửa */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(item)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                    title="Chỉnh sửa"
+                  >
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
+
+                  {/* Xóa */}
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id)}
+                    className="p-1.5 text-gray-400 hover:text-[#d70018] hover:bg-red-50 rounded transition-colors cursor-pointer"
+                    title="Xóa"
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeGroup === 'promo_cards' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {currentItems.map((item) => (
-              <div
-                key={item.id}
-                className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[2.8/1] flex flex-col justify-between group bg-gray-100"
-              >
-                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                <div className="relative p-2 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-b from-black/60 to-transparent">
-                  <span className="text-[10px] text-white font-bold mr-auto px-2 py-0.5 bg-black/40 rounded">{item.name}</span>
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
-                    <Edit2 size={13} />
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {['iphone_banners', 'ipad_banners', 'macbook_banners', 'watch_banners', 'hang_cu_banners', 'phu_kien_banners'].includes(activeGroup) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {currentItems.map((item) => (
-              <div
-                key={item.id}
-                className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-[21/9] flex flex-col justify-between group bg-gray-900"
-              >
-                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-85" />
-                <div className="relative p-4 z-10 text-white space-y-1">
-                  <h3 className="font-black text-sm md:text-base drop-shadow-md">{item.name}</h3>
-                  {item.subtitle && <p className="text-xs text-gray-300 drop-shadow-xs">{item.subtitle}</p>}
-                </div>
-                <div className="relative p-3 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
-                    <Edit2 size={14} />
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeGroup === 'commit_cards' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {currentItems.map((item) => (
-              <div key={item.id} className="relative rounded-lg overflow-hidden border border-gray-200 aspect-[3/4] flex flex-col justify-between group bg-gray-50">
-                <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="absolute inset-0 w-full h-full object-contain" />
-                <div className="relative p-4 z-10 text-center text-white space-y-1">
-                  <span className="bg-[#d70018] text-white font-black text-xs px-2 py-0.5 rounded uppercase shadow">{item.name}</span>
-                </div>
-                <div className="relative p-3 z-10 flex items-center justify-end gap-1.5 bg-gradient-to-t from-black/60 to-transparent">
-                  <button onClick={() => handleOpenEdit(item)} className="p-1.5 bg-white text-blue-600 rounded cursor-pointer shadow">
-                    <Edit2 size={14} />
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-white text-red-600 rounded cursor-pointer shadow">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {['all_categories', 'sub_iphone', 'sub_ipad', 'sub_macbook', 'sub_watch', 'sub_phu_kien'].includes(activeGroup) && (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {currentItems.map((item) => (
-              <div key={item.id} className="relative bg-[#fafafb] border border-gray-200 rounded-lg p-3 flex flex-col items-center text-center justify-between group min-h-[140px]">
-                <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white p-0.5 rounded border">
-                  <button onClick={() => handleOpenEdit(item)} className="text-blue-600 p-1 cursor-pointer">
-                    <Edit2 size={12} />
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="text-red-600 p-1 cursor-pointer">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-                <div className="w-14 h-14 rounded-md bg-white p-1 border flex items-center justify-center my-auto">
-                  <img src={resolveImageUrl(item.imageUrl)} alt={item.name} className="max-w-full max-h-full object-contain" />
-                </div>
-                <span className="text-[11px] font-bold text-gray-800 line-clamp-2 leading-tight mt-2">{item.name}</span>
               </div>
             ))}
           </div>
@@ -644,11 +732,24 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                 <input type="text" required value={itemName} onChange={(e) => setItemName(e.target.value)} className="w-full border rounded p-2 outline-none font-bold" />
               </div>
               <div>
-                <label className="font-bold text-gray-700 block mb-1">Đường dẫn khi click</label>
+                <label className="font-bold text-gray-700 block mb-1">Đường dẫn khi click (URL)</label>
                 <input type="text" value={itemLink} onChange={(e) => setItemLink(e.target.value)} className="w-full border rounded p-2 outline-none font-mono text-xs" />
               </div>
+              <div>
+                <label className="font-bold text-gray-700 block mb-1">Phụ đề (Subtitle)</label>
+                <input type="text" value={itemSubtitle} onChange={(e) => setItemSubtitle(e.target.value)} className="w-full border rounded p-2 outline-none" />
+              </div>
+              <div>
+                <label className="font-bold text-gray-700 block mb-1">Nhãn Tag (VD: MỚI, HOT, TRỢ GIÁ...)</label>
+                <input type="text" value={itemTag} onChange={(e) => setItemTag(e.target.value)} className="w-full border rounded p-2 outline-none" />
+              </div>
               <div className="space-y-2">
-                <label className="font-bold text-gray-700 block">Hình ảnh (Đường dẫn hoặc tải trực tiếp) *</label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-gray-700 block">Hình ảnh (Đường dẫn hoặc tải trực tiếp) *</label>
+                  {activeGroup === 'category_banners' && (
+                    <span className="text-[10px] text-blue-600 font-bold">Chuẩn: 700x500px (Render 350x250px)</span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -665,7 +766,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                   </label>
                 </div>
                 {uploading && <p className="text-[11px] text-blue-600 font-bold animate-pulse">Đang nén tối ưu và xử lý hình ảnh...</p>}
-                
+
                 <div className="p-2 border rounded-lg bg-gray-50 flex items-center justify-center h-36 overflow-hidden">
                   {itemImageUrl ? (
                     <img

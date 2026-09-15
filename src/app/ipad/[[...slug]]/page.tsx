@@ -2,97 +2,90 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Star, CornerDownLeft } from 'lucide-react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { IPAD_HELPFUL_NEWS } from '@/data/ipadCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 
-// 1. Dữ liệu 4 dòng lớn
-const IPAD_SERIES_LIST = [
+interface SeriesTabItem {
+  name: string;
+  slug?: string;
+  imageUrl: string;
+  queryTag: string | null;
+}
+
+// 1. Danh sách Series iPad mặc định có nút "Tất cả"
+const DEFAULT_IPAD_SERIES: SeriesTabItem[] = [
+  {
+    name: 'Tất cả',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?w=150',
+    queryTag: null,
+  },
   {
     name: 'iPad Pro',
     slug: 'ipad-pro',
-    img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?w=150',
+    queryTag: 'pro',
   },
   {
     name: 'iPad Air',
     slug: 'ipad-air',
-    img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?w=150',
+    queryTag: 'air',
   },
   {
     name: 'iPad Gen',
     slug: 'ipad-gen',
-    img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?w=150',
+    queryTag: 'gen',
   },
   {
     name: 'iPad Mini',
     slug: 'ipad-mini',
-    img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?w=150',
+    queryTag: 'mini',
   },
 ];
 
-// 2. Danh mục model con
-const IPAD_SUBMODELS_MAP: Record<
-  string,
-  { name: string; slug: string; img: string }[]
-> = {
-  'ipad-pro': [
-    {
-      name: 'iPad Pro M5',
-      slug: 'ipad-pro-m5',
-      img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'iPad Pro M4',
-      slug: 'ipad-pro-m4',
-      img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'iPad Pro M2',
-      slug: 'ipad-pro-m2',
-      img: 'https://product.hstatic.net/200000768357/product/ipad_pro_m2_-_11_inch__colors__c4189cc924bb40b181351e979df29f64_master.png?auto=format&fit=crop&w=150&q=80',
-    },
+// 2. Danh mục model con tương ứng từng dòng máy
+const IPAD_SUBMODELS_MAP: Record<string, { name: string; tag: string }[]> = {
+  pro: [
+    { name: 'Tất cả iPad Pro', tag: 'pro' },
+    { name: 'iPad Pro M4', tag: 'pro-m4' },
+    { name: 'iPad Pro M2', tag: 'pro-m2' },
   ],
-  'ipad-air': [
-    {
-      name: 'iPad Air M4',
-      slug: 'ipad-air-m4',
-      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'iPad Air 7',
-      slug: 'ipad-air-7',
-      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'iPad Air 6',
-      slug: 'ipad-air-6',
-      img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?auto=format&fit=crop&w=150&q=80'
-    },
-    {
-      name: 'iPad Air 5',
-      slug: 'ipad-air-5',
-      img: 'https://product.hstatic.net/200000768357/product/ipad_air_5__colors__06251c7b63d5478188404b205b5b5fdb_master.png?auto=format&fit=crop&w=150&q=80'
-    },
+  air: [
+    { name: 'Tất cả iPad Air', tag: 'air' },
+    { name: 'iPad Air M2', tag: 'air-m2' },
+    { name: 'iPad Air 5', tag: 'air-5' },
   ],
-  'ipad-gen': [
-    {
-      name: 'iPad Gen 11',
-      slug: 'ipad-gen-11',
-      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?auto=format&fit=crop&w=150&q=80',
-    },
+  gen: [
+    { name: 'Tất cả iPad Gen', tag: 'gen' },
+    { name: 'iPad Gen 10', tag: 'gen-10' },
+    { name: 'iPad Gen 9', tag: 'gen-9' },
   ],
-  'ipad-mini': [
-    {
-      name: 'iPad Mini 7',
-      slug: 'ipad-mini-7',
-      img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?auto=format&fit=crop&w=150&q=80',
-    },
+  mini: [
+    { name: 'Tất cả iPad Mini', tag: 'mini' },
+    { name: 'iPad Mini 7', tag: 'mini-7' },
+    { name: 'iPad Mini 6', tag: 'mini-6' },
   ],
 };
+
+const DEFAULT_IPAD_SEO_TEXT = `iPad là dòng máy tính bảng tiên phong do Apple thiết kế và phát triển, kết hợp hoàn hảo giữa tính di động của smartphone và hiệu năng mạnh mẽ của laptop. Kể từ khi Steve Jobs giới thiệu chiếc iPad đầu tiên vào năm 2010, dòng sản phẩm này đã liên tục định hình lại phương thức học tập, làm việc và giải trí sáng tạo.
+
+Các dòng iPad hiện nay:
+- iPad Pro: Đỉnh cao công nghệ với vi xử lý Apple Silicon M-Series, màn hình OLED Tandem Ultra Retina XDR siêu mượt mà.
+- iPad Air: Sự cân bằng hoàn hảo giữa hiệu năng khủng và thiết kế siêu nhẹ, phù hợp cho đa số người dùng văn phòng và sáng tạo.
+- iPad Gen (Tiêu chuẩn): Lựa chọn quốc dân tối ưu chi phí dành cho học sinh, sinh viên học tập online và giải trí nhẹ nhàng.
+- iPad Mini: Thiết kế nhỏ gọn tiện lợi bỏ túi, hiệu năng mạnh mẽ cho nhu cầu di chuyển linh hoạt mọi nơi.
+
+Ưu điểm nổi bật của iPad:
+- Hệ điều hành iPadOS trực quan, hỗ trợ đa nhiệm Split View, Stage Manager mượt mà.
+- Tương thích phụ kiện cao cấp: Bút Apple Pencil và bàn phím Magic Keyboard biến iPad thành cỗ máy làm việc thực thụ.
+- Thời lượng pin bền bỉ cả ngày dài và kho ứng dụng chuyên nghiệp phong phú trên App Store.`;
 
 const parsePrice = (priceStr: string | number) => {
   if (typeof priceStr === 'number') return priceStr;
@@ -101,29 +94,97 @@ const parsePrice = (priceStr: string | number) => {
 
 export default function DynamicIPadPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-  
   const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
-  const slugArray = (params?.slug as string[]) || [];
-  const currentFilter = slugArray[0] || '';
+  // State quản lý Banner đôi nạp từ Admin
+  const [adminBanners, setAdminBanners] = useState<any[]>([]);
+  // State quản lý Icon tròn danh mục
+  const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_IPAD_SERIES);
 
-  // Đọc danh sách sản phẩm vừa xem thực tế từ localStorage
+  // State quản lý bài viết SEO chân trang iPad
+  const [seoContent, setSeoContent] = useState<string>(DEFAULT_IPAD_SEO_TEXT);
+  const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
+
+  const slugParam = params?.slug;
+  const rawFilter =
+    (Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)) ||
+    searchParams?.get('series') ||
+    '';
+  const currentFilter = (rawFilter || '').toLowerCase().trim();
+
+  // 1. Nạp Banner đôi & Danh mục Submodel từ Admin qua LocalStorage / API
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('fogo_banners_config');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          // Lọc 2 Banner đôi iPad
+          const ipadBanners = parsed.filter((it: any) => it.group === 'ipad_banners');
+          if (ipadBanners.length > 0) {
+            setAdminBanners(ipadBanners);
+          }
+
+          // Lọc Icon tròn dòng iPad (sub_ipad)
+          const adminSubs = parsed.filter(
+            (it: any) => it.group === 'sub_ipad' && it.name.toLowerCase() !== 'tất cả'
+          );
+          if (adminSubs.length > 0) {
+            const mapped: SeriesTabItem[] = [
+              DEFAULT_IPAD_SERIES[0],
+              ...adminSubs.map((it: any) => {
+                const lower = it.name.toLowerCase();
+                let queryTag = 'pro';
+                if (lower.includes('air')) queryTag = 'air';
+                else if (lower.includes('gen')) queryTag = 'gen';
+                else if (lower.includes('mini')) queryTag = 'mini';
+
+                return {
+                  name: it.name,
+                  slug: `ipad-${queryTag}`,
+                  imageUrl: it.imageUrl,
+                  queryTag,
+                };
+              }),
+            ];
+            setSeriesTabs(mapped);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi nạp cấu hình banner iPad:', e);
+    }
+  }, []);
+
+  // 2. Nạp nội dung SEO iPad đã lưu từ Admin
+  useEffect(() => {
+    try {
+      const savedSeo = localStorage.getItem('fogo_seo_ipad_seo_desc');
+      if (savedSeo && savedSeo.trim()) {
+        setSeoContent(savedSeo);
+      }
+    } catch (e) {
+      console.warn('Lỗi nạp bài viết SEO iPad:', e);
+    }
+  }, []);
+
+  // 3. Đọc danh sách xem gần đây
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
-      if (saved) {
-        setRecentViewed(JSON.parse(saved));
-      }
+      if (saved) setRecentViewed(JSON.parse(saved));
     } catch (err) {
       console.error('Lỗi đọc recent viewed:', err);
     }
   }, []);
 
-  // Kết nối API Backend để đồng bộ với Database
+  // 4. Kết nối API nạp sản phẩm iPad
   useEffect(() => {
     const fetchLiveProducts = async () => {
       try {
@@ -153,28 +214,10 @@ export default function DynamicIPadPage() {
             const discountPercent =
               origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
-            const lower = item.name.toLowerCase();
-            let series = 'ipad-pro';
-            let subModel = 'ipad-pro-m4';
-
-            if (lower.includes('air')) {
-              series = 'ipad-air';
-              subModel = lower.includes('m2') ? 'ipad-air-m2' : 'ipad-air-5';
-            } else if (lower.includes('mini')) {
-              series = 'ipad-mini';
-              subModel = 'ipad-mini-7';
-            } else if (lower.includes('gen')) {
-              series = 'ipad-gen';
-              subModel = 'ipad-gen-11';
-            } else {
-              subModel = lower.includes('m4') ? 'ipad-pro-m4' : 'ipad-pro-m2';
-            }
-
             return {
               id: item.id,
               name: item.name,
-              series,
-              subModel,
+              slug: item.slug,
               href: `/san-pham/${item.slug || item.id}`,
               currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
               originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
@@ -184,7 +227,7 @@ export default function DynamicIPadPage() {
                 v.images?.[0] ||
                 item.imageUrl ||
                 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+              downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
               statusTag: 'Sẵn hàng',
               rating: 5,
               searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
@@ -203,28 +246,24 @@ export default function DynamicIPadPage() {
     fetchLiveProducts();
   }, []);
 
-  const currentSeriesKey = useMemo(() => {
+  // Nhận diện dòng máy đang chọn (pro, air, gen, mini)
+  const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
-    if (currentFilter.startsWith('ipad-pro')) return 'ipad-pro';
-    if (currentFilter.startsWith('ipad-air')) return 'ipad-air';
-    if (currentFilter.startsWith('ipad-gen')) return 'ipad-gen';
-    if (currentFilter.startsWith('ipad-mini')) return 'ipad-mini';
+    if (currentFilter.includes('pro')) return 'pro';
+    if (currentFilter.includes('air')) return 'air';
+    if (currentFilter.includes('gen')) return 'gen';
+    if (currentFilter.includes('mini')) return 'mini';
     return null;
   }, [currentFilter]);
 
-  const activeSubmodels = currentSeriesKey ? IPAD_SUBMODELS_MAP[currentSeriesKey] : null;
+  const activeSubmodels = currentSeriesTag ? IPAD_SUBMODELS_MAP[currentSeriesTag] || [] : [];
 
-  // Lọc sản phẩm chuẩn từ cơ sở dữ liệu kết hợp Modal Bộ Lọc
+  // Lọc sản phẩm
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
-    // 1. Chỉ lọc các sản phẩm thuộc danh mục iPad
-    items = items.filter((i) => {
-      const lowerName = (i.name || '').toLowerCase();
-      return lowerName.includes('ipad');
-    });
+    items = items.filter((i) => (i.name || '').toLowerCase().includes('ipad'));
 
-    // 2. Lọc theo Series hoặc Submodel (iPad Pro, iPad Air, iPad Mini, iPad Gen)
     if (currentFilter) {
       const lowerFilter = currentFilter.toLowerCase();
       if (lowerFilter.includes('pro')) {
@@ -233,12 +272,22 @@ export default function DynamicIPadPage() {
         items = items.filter((i) => i.searchIndex.includes('air'));
       } else if (lowerFilter.includes('mini')) {
         items = items.filter((i) => i.searchIndex.includes('mini'));
-      } else if (lowerFilter.includes('gen') || lowerFilter.includes('thuong')) {
-        items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('air') && !i.searchIndex.includes('mini'));
+      } else if (lowerFilter.includes('gen')) {
+        items = items.filter(
+          (i) =>
+            i.searchIndex.includes('gen') ||
+            (!i.searchIndex.includes('pro') && !i.searchIndex.includes('air') && !i.searchIndex.includes('mini'))
+        );
       }
+
+      if (lowerFilter.includes('m4')) items = items.filter((i) => i.searchIndex.includes('m4'));
+      if (lowerFilter.includes('m2')) items = items.filter((i) => i.searchIndex.includes('m2'));
+      if (lowerFilter.includes('10')) items = items.filter((i) => i.searchIndex.includes('10'));
+      if (lowerFilter.includes('9')) items = items.filter((i) => i.searchIndex.includes('9'));
+      if (lowerFilter.includes('7')) items = items.filter((i) => i.searchIndex.includes('7'));
+      if (lowerFilter.includes('6')) items = items.filter((i) => i.searchIndex.includes('6'));
     }
 
-    // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -252,28 +301,6 @@ export default function DynamicIPadPage() {
       });
     }
 
-    if (activeFilters.screenSize) {
-      const screenVal = activeFilters.screenSize.toLowerCase();
-      items = items.filter((item) => item.searchIndex.includes(screenVal));
-    }
-
-    if (activeFilters.ram) {
-      const ramVal = activeFilters.ram.toLowerCase();
-      items = items.filter((item) => item.searchIndex.includes(ramVal));
-    }
-
-    if (activeFilters.storage) {
-      const storeVal = activeFilters.storage.toLowerCase();
-      items = items.filter((item) => item.searchIndex.includes(storeVal));
-    }
-
-    if (activeFilters.chip && activeFilters.chip.length > 0) {
-      items = items.filter((item) =>
-        activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))
-      );
-    }
-
-    // Sắp xếp sản phẩm theo tiêu chí hiện tại
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -290,31 +317,17 @@ export default function DynamicIPadPage() {
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
       case 'ipad-pro':
+      case 'pro':
         return 'iPad Pro';
       case 'ipad-air':
+      case 'air':
         return 'iPad Air';
       case 'ipad-gen':
+      case 'gen':
         return 'iPad Gen';
       case 'ipad-mini':
+      case 'mini':
         return 'iPad Mini';
-      case 'ipad-pro-m5':
-        return 'iPad Pro M5';
-      case 'ipad-pro-m4':
-        return 'iPad Pro M4';
-      case 'ipad-pro-m2':
-        return 'iPad Pro M2';
-      case 'ipad-air-m4':
-        return 'iPad Air M4';
-      case 'ipad-air-7':
-        return 'iPad Air 7';
-      case 'ipad-air-6':
-        return 'iPad Air 6';
-      case 'ipad-air-5':
-        return 'iPad Air 5';
-      case 'ipad-gen-11':
-        return 'iPad Gen 11';
-      case 'ipad-mini-7':
-        return 'iPad Mini 7';
       default:
         return currentFilter
           ? currentFilter
@@ -326,6 +339,21 @@ export default function DynamicIPadPage() {
     }
   }, [currentFilter]);
 
+  // Cấu hình 2 Banner đôi (ưu tiên Admin)
+  const banner1 = adminBanners[0] || {
+    name: 'iPad Pro Thế Hệ Mới',
+    subtitle: 'Mỏng siêu thực. Sức mạnh AI không giới hạn.',
+    tag: 'Sẵn hàng Giá tốt nhất',
+    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
+  };
+
+  const banner2 = adminBanners[1] || {
+    name: displayTitle,
+    subtitle: 'Chính hãng Apple VN/A - Bảo hành 1 đổi 1',
+    tag: 'Trả trước 0đ - Lãi suất 0%',
+    imageUrl: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=400&q=80',
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
       <div>
@@ -334,7 +362,7 @@ export default function DynamicIPadPage() {
           <Navbar />
         </div>
 
-        {/* Breadcrumb */}
+        {/* BREADCRUMB */}
         <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-2.5 px-4 text-xs">
           <div className="max-w-7xl mx-auto flex items-center gap-1.5 text-gray-600">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
@@ -350,24 +378,24 @@ export default function DynamicIPadPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* Banner */}
+          {/* BANNER ĐÔI TRANG IPAD (CẬP NHẬT ĐỘNG TỪ ADMIN) */}
           <div className="relative mb-6 group">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative rounded-sm bg-gradient-to-r from-[#f3f5f8] to-[#e7ebf0] border border-gray-200 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm">
                 <div className="flex-1 pr-3">
                   <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
                     <span></span>
-                    <span>iPad Pro Thế Hệ Mới</span>
+                    <span>{banner1.name}</span>
                   </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">Mỏng siêu thực. Sức mạnh AI không giới hạn.</p>
+                  <p className="text-xs text-gray-600 font-medium mb-3">{banner1.subtitle}</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Sẵn hàng <span className="text-sm">Giá tốt nhất</span>
+                    {banner1.tag}
                   </div>
                 </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
+                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
                   <img
-                    src="https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80"
-                    alt="iPad Pro"
+                    src={banner1.imageUrl}
+                    alt={banner1.name}
                     className="w-full h-full object-contain drop-shadow"
                   />
                 </div>
@@ -377,119 +405,92 @@ export default function DynamicIPadPage() {
                 <div className="flex-1 pr-3">
                   <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
                     <span></span>
-                    <span>{displayTitle}</span>
+                    <span>{banner2.name}</span>
                   </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">Chính hãng Apple VN/A - Bảo hành 1 đổi 1</p>
+                  <p className="text-xs text-gray-600 font-medium mb-3">{banner2.subtitle}</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Trả trước <span className="text-sm">0đ - Lãi suất 0%</span>
+                    {banner2.tag}
                   </div>
                 </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
+                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
                   <img
-                    src="https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=400&q=80"
-                    alt={displayTitle}
+                    src={banner2.imageUrl}
+                    alt={banner2.name}
                     className="w-full h-full object-contain drop-shadow"
                   />
                 </div>
               </div>
             </div>
-
-            <button className="absolute -left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50">
-              <ChevronLeft size={18} />
-            </button>
-            <button className="absolute -right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50">
-              <ChevronRight size={18} />
-            </button>
           </div>
 
-          {/* Thanh icon chọn Model */}
-          <div className="my-8 py-2">
-            {activeSubmodels ? (
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
-                  {activeSubmodels.map((model) => {
-                    const isSelected = currentFilter === model.slug;
-                    return (
-                      <Link
-                        key={model.slug}
-                        href={`/ipad/${model.slug}`}
-                        className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
-                      >
-                        <div
-                          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full p-2 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
-                            isSelected
-                              ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                              : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
-                          }`}
-                        >
-                          <img
-                            src={model.img}
-                            alt={model.name}
-                            className="w-full h-full object-contain drop-shadow-xs group-hover:scale-110 transition-transform"
-                          />
-                        </div>
-                        <span
-                          className={`text-xs sm:text-sm font-semibold text-center transition-colors max-w-[120px] leading-tight ${
-                            isSelected
-                              ? 'text-[#d70018] font-bold'
-                              : 'text-gray-800 group-hover:text-[#d70018]'
-                          }`}
-                        >
-                          {model.name}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
+          {/* HÀNG ICON TRÒN 80PX (CHUẨN VIỀN ĐỎ BO TRÒN KHI CHỌN) */}
+          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
+            <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
+              {seriesTabs.map((series, idx) => {
+                const isAllButton = series.queryTag === null;
+                const isSelected = isAllButton
+                  ? !currentFilter
+                  : currentFilter === series.queryTag ||
+                    (series.slug && currentFilter.includes(series.slug)) ||
+                    (series.queryTag && currentFilter.includes(series.queryTag));
 
-                <Link
-                  href="/ipad"
-                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#d70018] transition-colors bg-gray-100 hover:bg-red-50 px-3.5 py-1.5 rounded-full border border-gray-200"
-                >
-                  <CornerDownLeft size={13} />
-                  <span>Xem tất cả các dòng iPad khác</span>
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
-                {IPAD_SERIES_LIST.map((series) => {
-                  const isSelected = currentFilter === series.slug;
-                  return (
-                    <Link
-                      key={series.slug}
-                      href={`/ipad/${series.slug}`}
-                      className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
+                return (
+                  <Link
+                    key={series.slug || idx}
+                    href={isAllButton ? '/ipad' : `/ipad?series=${series.queryTag}`}
+                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
+                  >
+                    <div
+                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                        isSelected
+                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
+                          : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
+                      }`}
                     >
-                      <div
-                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full p-2 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
-                          isSelected
-                            ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                            : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
-                        }`}
-                      >
-                        <img
-                          src={series.img}
-                          alt={series.name}
-                          className="w-full h-full object-contain drop-shadow-xs group-hover:scale-110 transition-transform"
-                        />
-                      </div>
-                      <span
-                        className={`text-xs sm:text-sm font-semibold text-center transition-colors whitespace-nowrap ${
-                          isSelected
-                            ? 'text-[#d70018] font-bold'
-                            : 'text-gray-800 group-hover:text-[#d70018]'
-                        }`}
-                      >
-                        {series.name}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+                      <img
+                        src={series.imageUrl}
+                        alt={series.name}
+                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
+                      />
+                    </div>
+                    <span
+                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
+                        isSelected
+                          ? 'text-[#d70018] font-bold'
+                          : 'text-gray-800 group-hover:text-[#d70018]'
+                      }`}
+                    >
+                      {series.name}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Tiêu đề & Cụm Bộ Lọc */}
+          {/* HÀNG NHẢY MODEL CON NẾU ĐANG CHỌN 1 DÒNG MÁY */}
+          {activeSubmodels.length > 0 && (
+            <div className="mb-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+              {activeSubmodels.map((m) => {
+                const isSubSelected = currentFilter === m.tag;
+                return (
+                  <Link
+                    key={m.tag}
+                    href={`/ipad?series=${m.tag}`}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                      isSubSelected
+                        ? 'bg-[#d70018] text-white border-[#d70018] shadow-sm scale-105'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#d70018] hover:text-[#d70018]'
+                    }`}
+                  >
+                    {m.name}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TIÊU ĐỀ & BỘ LỌC */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
@@ -501,14 +502,12 @@ export default function DynamicIPadPage() {
             <FilterAndSortBar
               currentSort={currentSort}
               onSortChange={(sort) => setCurrentSort(sort)}
-              onApplyFilters={(filters) => {
-                setActiveFilters(filters);
-              }}
+              onApplyFilters={(filters) => setActiveFilters(filters)}
               isTabletOrMac={true}
             />
           </div>
 
-          {/* Lưới sản phẩm & Skeleton Loader */}
+          {/* LƯỚI SẢN PHẨM */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -594,13 +593,9 @@ export default function DynamicIPadPage() {
                   </div>
 
                   <div className="flex items-center gap-0.5 mt-2 text-amber-400 h-3">
-                    {product.rating ? (
-                      [...Array(product.rating)].map((_, i) => (
-                        <Star key={i} size={11} className="fill-amber-400" />
-                      ))
-                    ) : (
-                      <div className="h-3" />
-                    )}
+                    {[...Array(product.rating || 5)].map((_, i) => (
+                      <Star key={i} size={11} className="fill-amber-400" />
+                    ))}
                   </div>
                 </div>
               ))}
@@ -614,7 +609,44 @@ export default function DynamicIPadPage() {
             </div>
           )}
 
-          {/* Chân trang danh mục */}
+          {/* ========================================================= */}
+          {/* BÀI VIẾT SEO CHÂN TRANG IPAD (LẤY ĐỘNG TỪ TRANG ADMIN)     */}
+          {/* ========================================================= */}
+          <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
+            <div
+              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line ${
+                isSeoExpanded ? 'max-h-full pb-2' : 'max-h-[170px]'
+              }`}
+            >
+              {seoContent}
+
+              {!isSeoExpanded && (
+                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+              )}
+            </div>
+
+            <div className="flex justify-center mt-4 border-t border-gray-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setIsSeoExpanded(!isSeoExpanded)}
+                className="px-6 py-2 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-xs"
+              >
+                {isSeoExpanded ? (
+                  <>
+                    <span>Rút gọn</span>
+                    <ChevronUp size={14} />
+                  </>
+                ) : (
+                  <>
+                    <span>Xem thêm bài viết</span>
+                    <ChevronDown size={14} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* CHÂN TRANG TIN TỨC VÀ SẢN PHẨM VỪA XEM */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8 border-t border-gray-200">
             <div className="lg:col-span-8">
               <div className="mb-10">
@@ -648,7 +680,6 @@ export default function DynamicIPadPage() {
               </div>
             </div>
 
-            {/* Khối bạn vừa xem đọc động từ localStorage */}
             {recentViewed.length > 0 && (
               <div className="lg:col-span-4">
                 <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">

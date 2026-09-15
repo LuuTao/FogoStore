@@ -3,29 +3,44 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Star, CornerDownLeft, ShieldCheck } from 'lucide-react';
+import { Star, CornerDownLeft, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { USED_HELPFUL_NEWS } from '@/data/usedCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 
-// 1. Danh mục cấp 1: 3 Nhóm lớn Hàng Cũ (Đã khôi phục hoàn chỉnh)
-const USED_CATEGORIES = [
+interface SeriesTabItem {
+  name: string;
+  slug?: string;
+  img: string;
+  queryTag: string | null;
+}
+
+// 1. Danh mục cấp 1: Kèm nút "Tất cả"
+const DEFAULT_USED_CATEGORIES: SeriesTabItem[] = [
+  {
+    name: 'Tất cả',
+    img: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=150&q=80',
+    queryTag: null,
+  },
   {
     name: 'iPhone Cũ',
     slug: 'iphone-cu',
     img: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=150&q=80',
+    queryTag: 'iphone',
   },
   {
     name: 'iPad Cũ',
     slug: 'ipad-cu',
     img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=150&q=80',
+    queryTag: 'ipad',
   },
   {
     name: 'MacBook Cũ',
     slug: 'macbook-cu',
     img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80',
+    queryTag: 'macbook',
   },
 ];
 
@@ -89,6 +104,14 @@ const USED_SUBMODELS_MAP: Record<string, { name: string; slug: string; img: stri
   ],
 };
 
+const DEFAULT_USED_SEO_TEXT = `Tại FoGo Store, toàn bộ các dòng máy cũ bao gồm iPhone Cũ, iPad Cũ và MacBook Cũ đều được trải qua quy trình kiểm định chất lượng nghiêm ngặt 30 bước: màn hình nguyên bản, pin zin dung lượng cao, hoạt động mượt mà không dính tài khoản iCloud ẩn hay khóa cấu hình MDM.
+
+Chính sách ưu đãi độc quyền khi chọn mua máy cũ tại FoGo Store:
+- Cam kết máy đẹp Like New 99%, chuẩn zin chưa qua sửa chữa thay thế linh kiện kém chất lượng.
+- Bảo hành phần cứng toàn diện 1 đổi 1 lên đến 12 tháng, bao test dùng thử 30 ngày.
+- Trợ giá thu cũ đổi mới lên đời cao nhất thị trường, hỗ trợ trả góp 0% lãi suất duyệt hồ sơ nhanh gọn.
+- Tặng kèm gói phụ kiện cao cấp và hỗ trợ cài đặt ứng dụng, vệ sinh máy miễn phí trọn đời.`;
+
 const parsePrice = (priceStr: string | number) => {
   if (typeof priceStr === 'number') return priceStr;
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
@@ -103,9 +126,48 @@ export default function DynamicUsedPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
+  // State Banner & Submodel nạp từ Admin
+  const [adminBanners, setAdminBanners] = useState<any[]>([]);
+  const [categories] = useState<SeriesTabItem[]>(DEFAULT_USED_CATEGORIES);
+
+  // State bài viết SEO
+  const [seoContent, setSeoContent] = useState<string>(DEFAULT_USED_SEO_TEXT);
+  const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
+
   const slugParam = params?.slug;
   const currentFilter = Array.isArray(slugParam) ? slugParam[0] || '' : (slugParam as string) || '';
 
+  // 1. Nạp Banner đôi Hàng Cũ từ Admin qua LocalStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('fogo_banners_config');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const usedBanners = parsed.filter((it: any) => it.group === 'hang_cu_banners');
+          if (usedBanners.length > 0) {
+            setAdminBanners(usedBanners);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi nạp cấu hình banner Hàng Cũ:', e);
+    }
+  }, []);
+
+  // 2. Nạp nội dung SEO Hàng Cũ từ Admin
+  useEffect(() => {
+    try {
+      const savedSeo = localStorage.getItem('fogo_seo_hang_cu_seo_desc');
+      if (savedSeo && savedSeo.trim()) {
+        setSeoContent(savedSeo);
+      }
+    } catch (e) {
+      console.warn('Lỗi nạp bài viết SEO Hàng Cũ:', e);
+    }
+  }, []);
+
+  // 3. Đọc sản phẩm đã xem
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
@@ -115,6 +177,7 @@ export default function DynamicUsedPage() {
     }
   }, []);
 
+  // 4. Fetch danh sách sản phẩm máy cũ
   useEffect(() => {
     const fetchLiveUsedProducts = async () => {
       try {
@@ -285,6 +348,21 @@ export default function DynamicUsedPage() {
     }
   }, [currentFilter]);
 
+  // Cấu hình 2 Banner đôi (ưu tiên Admin)
+  const banner1 = adminBanners[0] || {
+    name: 'Cam Kết Máy Cũ Chuẩn Zin',
+    subtitle: 'Bảo hành 1 đổi 1 trong 12 tháng. Bao test 30 ngày.',
+    tag: 'Tiết kiệm đến 40% So với máy mới',
+    imageUrl: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=400&q=80',
+  };
+
+  const banner2 = adminBanners[1] || {
+    name: 'Thu Cũ Đổi Mới Lên Đời',
+    subtitle: 'Trợ giá thu mua thêm đến 2.000.000đ.',
+    tag: 'Trả trước 0đ - Duyệt hồ sơ 5 phút',
+    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80',
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
       <div>
@@ -293,7 +371,7 @@ export default function DynamicUsedPage() {
           <Navbar />
         </div>
 
-        {/* Breadcrumb */}
+        {/* BREADCRUMB */}
         <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-2.5 px-4 text-xs">
           <div className="max-w-7xl mx-auto flex items-center gap-1.5 text-gray-600">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
@@ -309,24 +387,24 @@ export default function DynamicUsedPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* Banner */}
+          {/* BANNER ĐÔI TRANG HÀNG CŨ (CẬP NHẬT ĐỘNG TỪ ADMIN) */}
           <div className="relative mb-6 group">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative rounded-sm bg-gradient-to-r from-[#1c1d21] to-[#30333d] border border-gray-800 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm text-white">
                 <div className="flex-1 pr-3">
                   <div className="flex items-center gap-1.5 font-bold text-lg md:text-xl text-white">
                     <ShieldCheck size={20} className="text-emerald-400" />
-                    <span>Cam Kết Máy Cũ Chuẩn Zin</span>
+                    <span>{banner1.name}</span>
                   </div>
-                  <p className="text-xs text-gray-300 font-medium my-2">Bảo hành 1 đổi 1 trong 12 tháng. Bao test 30 ngày.</p>
+                  <p className="text-xs text-gray-300 font-medium my-2">{banner1.subtitle}</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Tiết kiệm đến <span className="text-sm">40% So với máy mới</span>
+                    {banner1.tag}
                   </div>
                 </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
+                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
                   <img
-                    src="https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=400&q=80"
-                    alt="iPhone Cũ"
+                    src={banner1.imageUrl}
+                    alt={banner1.name}
                     className="w-full h-full object-contain drop-shadow"
                   />
                 </div>
@@ -336,17 +414,17 @@ export default function DynamicUsedPage() {
                 <div className="flex-1 pr-3">
                   <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
                     <span></span>
-                    <span>Thu Cũ Đổi Mới Lên Đời</span>
+                    <span>{banner2.name}</span>
                   </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">Trợ giá thu mua thêm đến 2.000.000đ.</p>
+                  <p className="text-xs text-gray-600 font-medium mb-3">{banner2.subtitle}</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Trả trước <span className="text-sm">0đ - Duyệt hồ sơ 5 phút</span>
+                    {banner2.tag}
                   </div>
                 </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
+                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
                   <img
-                    src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80"
-                    alt="MacBook Cũ"
+                    src={banner2.imageUrl}
+                    alt={banner2.name}
                     className="w-full h-full object-contain drop-shadow"
                   />
                 </div>
@@ -354,34 +432,34 @@ export default function DynamicUsedPage() {
             </div>
           </div>
 
-          {/* Thanh icon tròn 2 tầng cho Hàng Cũ */}
-          <div className="my-8 py-2">
+          {/* HÀNG ICON TRÒN CẤP 1 & CẤP 2 (80PX CHUẨN BO TRÒN) */}
+          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
             {activeSubmodels && activeSubmodels.length > 0 ? (
               <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
+                <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
                   {activeSubmodels.map((model) => {
                     const isSelected = currentFilter === model.slug;
                     return (
                       <Link
                         key={model.slug}
                         href={`/hang-cu/${model.slug}`}
-                        className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
+                        className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
                       >
                         <div
-                          className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-2.5 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
+                          className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                             isSelected
-                              ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                              : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
+                              ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
+                              : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
                           }`}
                         >
                           <img
                             src={model.img}
                             alt={model.name}
-                            className="w-full h-full object-contain drop-shadow-xs group-hover:scale-110 transition-transform"
+                            className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
                           />
                         </div>
                         <span
-                          className={`text-xs sm:text-sm font-semibold text-center transition-colors max-w-[130px] leading-tight ${
+                          className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
                             isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                           }`}
                         >
@@ -401,31 +479,36 @@ export default function DynamicUsedPage() {
                 </Link>
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-8 sm:gap-14 md:gap-20 flex-wrap">
-                {USED_CATEGORIES.map((cat) => {
-                  const isSelected = currentFilter === cat.slug;
+              <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
+                {categories.map((cat, idx) => {
+                  const isAllButton = cat.queryTag === null;
+                  const isSelected = isAllButton
+                    ? !currentFilter
+                    : currentFilter === cat.slug ||
+                      (cat.queryTag && currentFilter.startsWith(cat.queryTag));
+
                   return (
                     <Link
-                      key={cat.slug}
-                      href={`/hang-cu/${cat.slug}`}
-                      className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
+                      key={cat.slug || idx}
+                      href={isAllButton ? '/hang-cu' : `/hang-cu/${cat.slug}`}
+                      className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
                     >
                       <div
-                        className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
+                        className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                           isSelected
-                            ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                            : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
+                            ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
+                            : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
                         }`}
                       >
                         <img
                           src={cat.img}
                           alt={cat.name}
-                          className="w-full h-full object-contain drop-shadow-xs group-hover:scale-110 transition-transform"
+                          className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
                         />
                       </div>
                       <span
-                        className={`text-xs sm:text-base font-bold text-center transition-colors whitespace-nowrap ${
-                          isSelected ? 'text-[#d70018]' : 'text-gray-800 group-hover:text-[#d70018]'
+                        className={`text-xs sm:text-sm font-semibold text-center transition-colors whitespace-nowrap ${
+                          isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                         }`}
                       >
                         {cat.name}
@@ -437,7 +520,7 @@ export default function DynamicUsedPage() {
             )}
           </div>
 
-          {/* Tiêu đề & Cụm Bộ Lọc */}
+          {/* TIÊU ĐỀ & CỤM BỘ LỌC */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
@@ -454,7 +537,7 @@ export default function DynamicUsedPage() {
             />
           </div>
 
-          {/* Lưới sản phẩm */}
+          {/* LƯỚI SẢN PHẨM */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -549,7 +632,44 @@ export default function DynamicUsedPage() {
             </div>
           )}
 
-          {/* Chân trang danh mục */}
+          {/* ========================================================= */}
+          {/* BÀI VIẾT SEO CHÂN TRANG HÀNG CŨ (LẤY ĐỘNG TỪ ADMIN)       */}
+          {/* ========================================================= */}
+          <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
+            <div
+              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line ${
+                isSeoExpanded ? 'max-h-full pb-2' : 'max-h-[170px]'
+              }`}
+            >
+              {seoContent}
+
+              {!isSeoExpanded && (
+                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+              )}
+            </div>
+
+            <div className="flex justify-center mt-4 border-t border-gray-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setIsSeoExpanded(!isSeoExpanded)}
+                className="px-6 py-2 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-xs"
+              >
+                {isSeoExpanded ? (
+                  <>
+                    <span>Rút gọn</span>
+                    <ChevronUp size={14} />
+                  </>
+                ) : (
+                  <>
+                    <span>Xem thêm bài viết</span>
+                    <ChevronDown size={14} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* CHÂN TRANG TIN TỨC VÀ SẢN PHẨM VỪA XEM */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8 border-t border-gray-200">
             <div className="lg:col-span-8">
               <div className="mb-10">

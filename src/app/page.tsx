@@ -28,11 +28,11 @@ export default function HomePage() {
       {/* 3. Hero Banner tràn viền & 2 Banner phụ trượt đôi */}
       <HeroSection />
 
-      {/* 4. Dải ưu đãi tiện ích & Bảng icon danh mục */}
-      <CategoryGrid />
-
       {/* 5. Khối Sản phẩm Flash Sale */}
       <FeaturedProductsSection />
+
+      {/* 4. Dải ưu đãi tiện ích & Bảng icon danh mục */}
+      <CategoryGrid />
 
       {/* 6. Khối iPhone */}
       <IPhoneShowcaseSection />

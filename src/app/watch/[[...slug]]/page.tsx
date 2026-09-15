@@ -2,80 +2,79 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Star, CornerDownLeft } from 'lucide-react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { WATCH_HELPFUL_NEWS } from '@/data/watchCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 
-// 1. Dữ liệu 3 dòng lớn cấp 1
-const WATCH_SERIES_LIST = [
+interface SeriesTabItem {
+  name: string;
+  slug?: string;
+  imageUrl: string;
+  queryTag: string | null;
+}
+
+// 1. Danh sách Series Apple Watch mặc định kèm nút "Tất cả"
+const DEFAULT_WATCH_SERIES: SeriesTabItem[] = [
+  {
+    name: 'Tất cả',
+    imageUrl: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
+    queryTag: null,
+  },
   {
     name: 'Apple Watch Ultra',
     slug: 'watch-ultra',
-    img: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
+    queryTag: 'ultra',
   },
   {
     name: 'Apple Watch Series',
     slug: 'watch-series',
-    img: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=150&q=80',
+    queryTag: 'series',
   },
   {
     name: 'Apple Watch SE',
     slug: 'watch-se',
-    img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
+    queryTag: 'se',
   },
 ];
 
 // 2. Sub-models chi tiết từng dòng
-const WATCH_SUBMODELS_MAP: Record<
-  string,
-  { name: string; slug: string; img: string }[]
-> = {
-  'watch-ultra': [
-    {
-      name: 'Watch Ultra 2',
-      slug: 'watch-ultra-2',
-      img: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'Watch Ultra 1',
-      slug: 'watch-ultra-1',
-      img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
-    },
+const WATCH_SUBMODELS_MAP: Record<string, { name: string; tag: string }[]> = {
+  ultra: [
+    { name: 'Tất cả Ultra', tag: 'ultra' },
+    { name: 'Watch Ultra 2', tag: 'ultra-2' },
+    { name: 'Watch Ultra 1', tag: 'ultra-1' },
   ],
-  'watch-series': [
-    {
-      name: 'Watch Series 10',
-      slug: 'watch-series-10',
-      img: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'Watch Series 9',
-      slug: 'watch-series-9',
-      img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'Watch Series 8',
-      slug: 'watch-series-8',
-      img: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=150&q=80',
-    },
+  series: [
+    { name: 'Tất cả Series', tag: 'series' },
+    { name: 'Watch Series 10', tag: 'series-10' },
+    { name: 'Watch Series 9', tag: 'series-9' },
+    { name: 'Watch Series 8', tag: 'series-8' },
   ],
-  'watch-se': [
-    {
-      name: 'Watch SE 2 (2024)',
-      slug: 'watch-se-2',
-      img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      name: 'Watch SE 1',
-      slug: 'watch-se-1',
-      img: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=150&q=80',
-    },
+  se: [
+    { name: 'Tất cả SE', tag: 'se' },
+    { name: 'Watch SE 2 (2024)', tag: 'se-2' },
+    { name: 'Watch SE 1', tag: 'se-1' },
   ],
 };
+
+const DEFAULT_WATCH_SEO_TEXT = `Apple Watch là dòng đồng hồ thông minh bán chạy nhất thế giới do Apple Inc. phát triển, đóng vai trò như một người bạn đồng hành sức khỏe tối thượng, huấn luyện viên thể thao chuyên nghiệp và công cụ kết nối thông minh tức thì ngay trên cổ tay của bạn.
+
+Các dòng sản phẩm Apple Watch chính hãng nổi bật:
+- Apple Watch Ultra: Thiết kế vỏ Titanium siêu bền chuẩn quân đội, màn hình sapphire độ sáng lên đến 3000 nits, định vị GPS tần số kép chính xác cao và thời lượng pin vượt trội dành cho vận động viên sức bền và nhà thám hiểm.
+- Apple Watch Series (Series 10, 9, 8): Viền màn hình siêu mỏng, cảm biến điện tâm đồ ECG, đo nồng độ oxy trong máu SpO2, đo nhiệt độ cổ tay và tính năng phát hiện té ngã, va chạm an toàn.
+- Apple Watch SE: Tối ưu chi phí với đầy đủ các tính năng theo dõi sức khỏe cốt lõi, gọi khẩn cấp SOS và thông báo thông minh, phù hợp cho học sinh, sinh viên và người dùng cơ bản.
+
+Lợi ích khi chọn mua Apple Watch tại FoGo Store:
+- Hàng Apple chính hãng VN/A nguyên seal bảo hành 12 tháng tại các trung tâm uỷ quyền Apple.
+- Đầy đủ phiên bản GPS và LTE (eSIM) kết nối gọi điện, nghe nhạc độc lập không cần mang theo điện thoại.
+- Trả góp 0% lãi suất, hỗ trợ thu cũ đổi mới lên đời trợ giá tốt nhất thị trường.`;
 
 const parsePrice = (priceStr: string | number) => {
   if (typeof priceStr === 'number') return priceStr;
@@ -84,30 +83,95 @@ const parsePrice = (priceStr: string | number) => {
 
 export default function DynamicWatchPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-
-  // State lưu danh sách sản phẩm lấy trực tiếp từ Database
   const [dbProducts, setDbItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
-  const slugArray = (params?.slug as string[]) || [];
-  const currentFilter = slugArray[0] || '';
+  // State Banner & Submodel nạp từ Admin
+  const [adminBanners, setAdminBanners] = useState<any[]>([]);
+  const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_WATCH_SERIES);
 
-  // Đọc danh sách sản phẩm đã xem thực tế từ localStorage
+  // State bài viết SEO
+  const [seoContent, setSeoContent] = useState<string>(DEFAULT_WATCH_SEO_TEXT);
+  const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
+
+  const slugParam = params?.slug;
+  const rawParam =
+    (Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)) ||
+    searchParams?.get('series') ||
+    '';
+  const currentFilter = (rawParam || '').toLowerCase().trim();
+
+  // 1. Nạp Banner đôi & Danh mục Submodel từ Admin qua LocalStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('fogo_banners_config');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          // Lọc 2 Banner đôi Watch
+          const watchBanners = parsed.filter((it: any) => it.group === 'watch_banners');
+          if (watchBanners.length > 0) {
+            setAdminBanners(watchBanners);
+          }
+
+          // Lọc Icon tròn dòng Watch (sub_watch)
+          const adminSubs = parsed.filter(
+            (it: any) => it.group === 'sub_watch' && it.name.toLowerCase() !== 'tất cả'
+          );
+          if (adminSubs.length > 0) {
+            const mapped: SeriesTabItem[] = [
+              DEFAULT_WATCH_SERIES[0],
+              ...adminSubs.map((it: any) => {
+                const lower = it.name.toLowerCase();
+                let queryTag = 'series';
+                if (lower.includes('ultra')) queryTag = 'ultra';
+                else if (lower.includes('se')) queryTag = 'se';
+
+                return {
+                  name: it.name,
+                  slug: `watch-${queryTag}`,
+                  imageUrl: it.imageUrl,
+                  queryTag,
+                };
+              }),
+            ];
+            setSeriesTabs(mapped);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi nạp cấu hình banner Watch:', e);
+    }
+  }, []);
+
+  // 2. Nạp nội dung SEO Apple Watch đã lưu từ Admin
+  useEffect(() => {
+    try {
+      const savedSeo = localStorage.getItem('fogo_seo_watch_seo_desc');
+      if (savedSeo && savedSeo.trim()) {
+        setSeoContent(savedSeo);
+      }
+    } catch (e) {
+      console.warn('Lỗi nạp bài viết SEO Watch:', e);
+    }
+  }, []);
+
+  // 3. Đọc danh sách sản phẩm đã xem thực tế từ localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
-      if (saved) {
-        setRecentViewed(JSON.parse(saved));
-      }
+      if (saved) setRecentViewed(JSON.parse(saved));
     } catch (err) {
       console.error('Lỗi đọc recent viewed:', err);
     }
   }, []);
 
-  // 1. Fetch dữ liệu thực tế từ Database thông qua API
+  // 4. Fetch dữ liệu Apple Watch từ Database qua API
   useEffect(() => {
     const fetchWatchFromDB = async () => {
       try {
@@ -169,7 +233,7 @@ export default function DynamicWatchPage() {
                 v.images?.[0] ||
                 item.imageUrl ||
                 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
+              downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
               statusTag: 'Sẵn hàng',
               rating: 5,
               searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
@@ -188,40 +252,44 @@ export default function DynamicWatchPage() {
     fetchWatchFromDB();
   }, []);
 
-  // 2. Xác định dòng cha đang chọn
+  // 5. Xác định dòng cha đang chọn (ultra, series, se)
   const currentSeriesKey = useMemo(() => {
     if (!currentFilter) return null;
-    if (currentFilter.startsWith('watch-ultra')) return 'watch-ultra';
-    if (currentFilter.startsWith('watch-series')) return 'watch-series';
-    if (currentFilter.startsWith('watch-se')) return 'watch-se';
+    if (currentFilter.includes('ultra')) return 'ultra';
+    if (currentFilter.includes('series')) return 'series';
+    if (currentFilter.includes('se')) return 'se';
     return null;
   }, [currentFilter]);
 
-  const activeSubmodels = currentSeriesKey ? WATCH_SUBMODELS_MAP[currentSeriesKey] : null;
+  const activeSubmodels = currentSeriesKey ? WATCH_SUBMODELS_MAP[currentSeriesKey] || [] : [];
 
-  // Logic lọc tự động kết hợp danh mục Apple Watch và bộ lọc nâng cao từ Modal
+  // Lọc sản phẩm
   const filteredProducts = useMemo(() => {
     let items = [...dbProducts];
 
-    // 1. Chỉ lọc các sản phẩm thuộc danh mục Apple Watch
     items = items.filter((i) => {
       const lowerName = (i.name || '').toLowerCase();
       return lowerName.includes('watch') || lowerName.includes('đồng hồ');
     });
 
-    // 2. Lọc theo Series hoặc Dòng (Ultra, Series, SE)
     if (currentFilter) {
       const lowerFilter = currentFilter.toLowerCase();
       if (lowerFilter.includes('ultra')) {
         items = items.filter((i) => i.searchIndex.includes('ultra'));
-      } else if (lowerFilter.includes('series')) {
-        items = items.filter((i) => i.searchIndex.includes('series'));
+        if (lowerFilter.includes('2')) items = items.filter((i) => i.searchIndex.includes('2'));
+        else if (lowerFilter.includes('1')) items = items.filter((i) => !i.searchIndex.includes('2'));
       } else if (lowerFilter.includes('se')) {
         items = items.filter((i) => i.searchIndex.includes('se'));
+        if (lowerFilter.includes('2')) items = items.filter((i) => i.searchIndex.includes('2'));
+        else if (lowerFilter.includes('1')) items = items.filter((i) => !i.searchIndex.includes('2'));
+      } else if (lowerFilter.includes('series')) {
+        items = items.filter((i) => !i.searchIndex.includes('ultra') && !i.searchIndex.includes('se'));
+        if (lowerFilter.includes('10')) items = items.filter((i) => i.searchIndex.includes('10'));
+        else if (lowerFilter.includes('9')) items = items.filter((i) => i.searchIndex.includes('9'));
+        else if (lowerFilter.includes('8')) items = items.filter((i) => i.searchIndex.includes('8'));
       }
     }
 
-    // 3. Lọc nâng cao từ Modal Bộ Lọc (activeFilters)
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -246,7 +314,6 @@ export default function DynamicWatchPage() {
       );
     }
 
-    // Sắp xếp sản phẩm theo tiêu chí hiện tại
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -260,28 +327,38 @@ export default function DynamicWatchPage() {
     return items;
   }, [dbProducts, currentFilter, currentSort, activeFilters]);
 
-  // 4. Tên hiển thị tiêu đề và breadcrumb
+  // Tiêu đề hiển thị
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
       case 'watch-ultra':
+      case 'ultra':
         return 'Apple Watch Ultra';
       case 'watch-series':
+      case 'series':
         return 'Apple Watch Series';
       case 'watch-se':
+      case 'se':
         return 'Apple Watch SE';
       case 'watch-ultra-2':
+      case 'ultra-2':
         return 'Apple Watch Ultra 2';
       case 'watch-ultra-1':
+      case 'ultra-1':
         return 'Apple Watch Ultra 1';
       case 'watch-series-10':
+      case 'series-10':
         return 'Apple Watch Series 10';
       case 'watch-series-9':
+      case 'series-9':
         return 'Apple Watch Series 9';
       case 'watch-series-8':
+      case 'series-8':
         return 'Apple Watch Series 8';
       case 'watch-se-2':
+      case 'se-2':
         return 'Apple Watch SE 2 (2024)';
       case 'watch-se-1':
+      case 'se-1':
         return 'Apple Watch SE 1';
       default:
         return currentFilter
@@ -294,6 +371,21 @@ export default function DynamicWatchPage() {
     }
   }, [currentFilter]);
 
+  // Cấu hình 2 Banner đôi (ưu tiên dữ liệu Admin)
+  const banner1 = adminBanners[0] || {
+    name: 'Apple Watch Ultra 2',
+    subtitle: 'Titanium Đen ấn tượng. Thách thức mọi giới hạn.',
+    tag: 'Sẵn hàng Ưu đãi hôm nay',
+    imageUrl: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80',
+  };
+
+  const banner2 = adminBanners[1] || {
+    name: displayTitle,
+    subtitle: 'Chính hãng Apple VN/A - Bảo hành 1 đổi 1',
+    tag: 'Trả trước 0đ - Lãi suất 0%',
+    imageUrl: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=400&q=80',
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
       <div>
@@ -302,7 +394,7 @@ export default function DynamicWatchPage() {
           <Navbar />
         </div>
 
-        {/* Breadcrumb */}
+        {/* BREADCRUMB */}
         <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-2.5 px-4 text-xs">
           <div className="max-w-7xl mx-auto flex items-center gap-1.5 text-gray-600">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
@@ -318,24 +410,24 @@ export default function DynamicWatchPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* Banner */}
+          {/* BANNER ĐÔI TRANG WATCH (CẬP NHẬT ĐỘNG TỪ ADMIN) */}
           <div className="relative mb-6 group">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative rounded-sm bg-gradient-to-r from-[#1c1d21] to-[#2e313d] border border-gray-800 p-5 md:p-6 flex items-center justify-between min-h-[190px] shadow-sm text-white">
                 <div className="flex-1 pr-3">
                   <div className="flex items-center gap-1 font-bold text-lg md:text-xl text-white">
                     <span></span>
-                    <span>Apple Watch Ultra 2</span>
+                    <span>{banner1.name}</span>
                   </div>
-                  <p className="text-xs text-gray-300 font-medium mb-3">Titanium Đen ấn tượng. Thách thức mọi giới hạn.</p>
+                  <p className="text-xs text-gray-300 font-medium mb-3">{banner1.subtitle}</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Sẵn hàng <span className="text-sm">Ưu đãi hôm nay</span>
+                    {banner1.tag}
                   </div>
                 </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
+                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
                   <img
-                    src="https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80"
-                    alt="Apple Watch Ultra 2"
+                    src={banner1.imageUrl}
+                    alt={banner1.name}
                     className="w-full h-full object-contain drop-shadow"
                   />
                 </div>
@@ -345,119 +437,92 @@ export default function DynamicWatchPage() {
                 <div className="flex-1 pr-3">
                   <div className="flex items-center gap-1 text-gray-900 font-bold text-lg md:text-xl">
                     <span></span>
-                    <span>{displayTitle}</span>
+                    <span>{banner2.name}</span>
                   </div>
-                  <p className="text-xs text-gray-600 font-medium mb-3">Chính hãng Apple VN/A - Bảo hành 1 đổi 1</p>
+                  <p className="text-xs text-gray-600 font-medium mb-3">{banner2.subtitle}</p>
                   <div className="inline-block bg-[#fff1f2] border border-[#ffccd2] px-2.5 py-1 rounded-sm text-xs font-black text-[#d70018]">
-                    Trả trước <span className="text-sm">0đ - Lãi suất 0%</span>
+                    {banner2.tag}
                   </div>
                 </div>
-                <div className="w-40 sm:w-48 h-32 shrink-0">
+                <div className="w-40 sm:w-48 h-32 shrink-0 flex items-center justify-center">
                   <img
-                    src="https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=400&q=80"
-                    alt={displayTitle}
+                    src={banner2.imageUrl}
+                    alt={banner2.name}
                     className="w-full h-full object-contain drop-shadow"
                   />
                 </div>
               </div>
             </div>
-
-            <button className="absolute -left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 cursor-pointer">
-              <ChevronLeft size={18} />
-            </button>
-            <button className="absolute -right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 cursor-pointer">
-              <ChevronRight size={18} />
-            </button>
           </div>
 
-          {/* Thanh icon chọn Model */}
-          <div className="my-8 py-2">
-            {activeSubmodels ? (
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
-                  {activeSubmodels.map((model) => {
-                    const isSelected = currentFilter === model.slug;
-                    return (
-                      <Link
-                        key={model.slug}
-                        href={`/watch/${model.slug}`}
-                        className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
-                      >
-                        <div
-                          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full p-2 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
-                            isSelected
-                              ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                              : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
-                          }`}
-                        >
-                          <img
-                            src={model.img}
-                            alt={model.name}
-                            className="w-full h-full object-contain drop-shadow-xs group-hover:scale-110 transition-transform"
-                          />
-                        </div>
-                        <span
-                          className={`text-xs sm:text-sm font-semibold text-center transition-colors max-w-[120px] leading-tight ${
-                            isSelected
-                              ? 'text-[#d70018] font-bold'
-                              : 'text-gray-800 group-hover:text-[#d70018]'
-                          }`}
-                        >
-                          {model.name}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
+          {/* HÀNG ICON TRÒN 80PX (CHUẨN VIỀN ĐỎ BO TRÒN KHI CHỌN) */}
+          <div className="my-8 py-2 overflow-x-auto scrollbar-none">
+            <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
+              {seriesTabs.map((series, idx) => {
+                const isAllButton = series.queryTag === null;
+                const isSelected = isAllButton
+                  ? !currentFilter
+                  : currentFilter === series.queryTag ||
+                    (series.slug && currentFilter.includes(series.slug)) ||
+                    (series.queryTag && currentFilter.includes(series.queryTag));
 
-                <Link
-                  href="/watch"
-                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#d70018] transition-colors bg-gray-100 hover:bg-red-50 px-3.5 py-1.5 rounded-full border border-gray-200"
-                >
-                  <CornerDownLeft size={13} />
-                  <span>Xem tất cả các dòng Apple Watch khác</span>
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-14 flex-wrap">
-                {WATCH_SERIES_LIST.map((series) => {
-                  const isSelected = currentFilter === series.slug;
-                  return (
-                    <Link
-                      key={series.slug}
-                      href={`/watch/${series.slug}`}
-                      className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
+                return (
+                  <Link
+                    key={series.slug || idx}
+                    href={isAllButton ? '/watch' : `/watch?series=${series.queryTag}`}
+                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px]"
+                  >
+                    <div
+                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                        isSelected
+                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
+                          : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
+                      }`}
                     >
-                      <div
-                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full p-2 bg-[#f0f2f5] flex items-center justify-center transition-all duration-200 ${
-                          isSelected
-                            ? 'border-2 border-[#d70018] shadow-md bg-white scale-105'
-                            : 'border border-gray-200 group-hover:border-[#d70018] group-hover:bg-white'
-                        }`}
-                      >
-                        <img
-                          src={series.img}
-                          alt={series.name}
-                          className="w-full h-full object-contain drop-shadow-xs group-hover:scale-110 transition-transform"
-                        />
-                      </div>
-                      <span
-                        className={`text-xs sm:text-sm font-semibold text-center transition-colors whitespace-nowrap ${
-                          isSelected
-                            ? 'text-[#d70018] font-bold'
-                            : 'text-gray-800 group-hover:text-[#d70018]'
-                        }`}
-                      >
-                        {series.name}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+                      <img
+                        src={series.imageUrl}
+                        alt={series.name}
+                        className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-xs"
+                      />
+                    </div>
+                    <span
+                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
+                        isSelected
+                          ? 'text-[#d70018] font-bold'
+                          : 'text-gray-800 group-hover:text-[#d70018]'
+                      }`}
+                    >
+                      {series.name}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Tiêu đề & Cụm Bộ Lọc */}
+          {/* HÀNG NHẢY MODEL CON (NẾU ĐANG CHỌN ULTRA, SERIES HOẶC SE) */}
+          {activeSubmodels.length > 0 && (
+            <div className="mb-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+              {activeSubmodels.map((m) => {
+                const isSubSelected = currentFilter === m.tag;
+                return (
+                  <Link
+                    key={m.tag}
+                    href={`/watch?series=${m.tag}`}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                      isSubSelected
+                        ? 'bg-[#d70018] text-white border-[#d70018] shadow-sm scale-105'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#d70018] hover:text-[#d70018]'
+                    }`}
+                  >
+                    {m.name}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TIÊU ĐỀ & BỘ LỌC */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
@@ -469,14 +534,12 @@ export default function DynamicWatchPage() {
             <FilterAndSortBar
               currentSort={currentSort}
               onSortChange={(sort) => setCurrentSort(sort)}
-              onApplyFilters={(filters) => {
-                setActiveFilters(filters);
-              }}
+              onApplyFilters={(filters) => setActiveFilters(filters)}
               isTabletOrMac={false}
             />
           </div>
 
-          {/* Lưới sản phẩm & Skeleton Loader */}
+          {/* LƯỚI SẢN PHẨM */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -562,13 +625,9 @@ export default function DynamicWatchPage() {
                   </div>
 
                   <div className="flex items-center gap-0.5 mt-2 text-amber-400 h-3">
-                    {product.rating ? (
-                      [...Array(product.rating)].map((_, i) => (
-                        <Star key={i} size={11} className="fill-amber-400" />
-                      ))
-                    ) : (
-                      <div className="h-3" />
-                    )}
+                    {[...Array(product.rating || 5)].map((_, i) => (
+                      <Star key={i} size={11} className="fill-amber-400" />
+                    ))}
                   </div>
                 </div>
               ))}
@@ -582,7 +641,44 @@ export default function DynamicWatchPage() {
             </div>
           )}
 
-          {/* Chân trang danh mục */}
+          {/* ========================================================= */}
+          {/* BÀI VIẾT SEO CHÂN TRANG WATCH (LẤY ĐỘNG TỪ TRANG ADMIN)   */}
+          {/* ========================================================= */}
+          <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
+            <div
+              className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line ${
+                isSeoExpanded ? 'max-h-full pb-2' : 'max-h-[170px]'
+              }`}
+            >
+              {seoContent}
+
+              {!isSeoExpanded && (
+                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+              )}
+            </div>
+
+            <div className="flex justify-center mt-4 border-t border-gray-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setIsSeoExpanded(!isSeoExpanded)}
+                className="px-6 py-2 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-xs"
+              >
+                {isSeoExpanded ? (
+                  <>
+                    <span>Rút gọn</span>
+                    <ChevronUp size={14} />
+                  </>
+                ) : (
+                  <>
+                    <span>Xem thêm bài viết</span>
+                    <ChevronDown size={14} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* CHÂN TRANG TIN TỨC VÀ BẠN VỪA XEM */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8 border-t border-gray-200">
             <div className="lg:col-span-8">
               <div className="mb-10">
@@ -616,7 +712,6 @@ export default function DynamicWatchPage() {
               </div>
             </div>
 
-            {/* Khối bạn vừa xem đọc động từ localStorage */}
             {recentViewed.length > 0 && (
               <div className="lg:col-span-4">
                 <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
