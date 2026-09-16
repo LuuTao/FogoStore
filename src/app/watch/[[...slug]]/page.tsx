@@ -129,6 +129,12 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
+// Hàm định dạng giá: Trả về "Liên hệ" nếu giá <= 0
+const formatVndPrice = (price: number) => {
+  if (!price || price <= 0) return 'Liên hệ';
+  return price.toLocaleString('vi-VN') + 'đ';
+};
+
 const formatProductImageUrl = (url?: string | null): string => {
   if (!url || typeof url !== 'string' || url.trim() === '') {
     return 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=600&q=80';
@@ -271,7 +277,7 @@ export default function DynamicWatchPage() {
       const storageMap = new Map<string, any[]>();
       variants.forEach((v) => {
         const rawSt = (v.storage && String(v.storage).trim()) || '';
-        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase().replace(/\//g, '-');
         if (!storageMap.has(stKey)) {
           storageMap.set(stKey, []);
         }
@@ -286,18 +292,21 @@ export default function DynamicWatchPage() {
         const nameSuffix = stKey ? ` ${stKey}` : '';
         const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
 
+        // QUY TẮC: CÓ GIÁ (> 0) LÀ SẴN HÀNG, GIÁ <= 0 LÀ LIÊN HỆ & TẠM HẾT HÀNG
+        const hasPrice = curPrice > 0;
+
         result.push({
           id: prod.id,
           name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
           slug: `${prod.slug}${slugSuffix}`,
           href: `/san-pham/${prod.slug}${slugSuffix}`,
-          currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-          originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+          currentPrice: formatVndPrice(curPrice),
+          originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
-          discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-          downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-          statusTag: 'Sẵn hàng',
+          downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+          statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
           rating: 5,
           searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
         });
@@ -309,18 +318,21 @@ export default function DynamicWatchPage() {
           const nameSuffix = stKey ? ` ${stKey}` : '';
           const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
 
+          // QUY TẮC: CÓ GIÁ (> 0) LÀ SẴN HÀNG, GIÁ <= 0 LÀ LIÊN HỆ & TẠM HẾT HÀNG
+          const hasPrice = curPrice > 0;
+
           result.push({
             id: `${prod.id}-${stKey || 'base'}`,
             name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
             slug: `${prod.slug}${slugSuffix}`,
             href: `/san-pham/${prod.slug}${slugSuffix}`,
-            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+            currentPrice: formatVndPrice(curPrice),
+            originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
             rawPrice: curPrice,
-            discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-            downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-            statusTag: 'Sẵn hàng',
+            downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+            statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
             rating: 5,
             searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
           });
@@ -556,7 +568,7 @@ export default function DynamicWatchPage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE */}
+          {/* 3. HÀNG SUBMODEL CON */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
@@ -647,9 +659,15 @@ export default function DynamicWatchPage() {
                   className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-200 min-h-[430px]"
                 >
                   <div className="flex items-center justify-between h-6">
-                    <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-none">
-                      -{product.discountPercent}%
-                    </span>
+                    {product.rawPrice > 0 ? (
+                      <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-none">
+                        -{product.discountPercent}%
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5">
+                        Hot
+                      </span>
+                    )}
                     <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
                       <span></span>
                       <span className="scale-90 origin-right">Authorized Reseller</span>
@@ -675,34 +693,57 @@ export default function DynamicWatchPage() {
                     {product.name}
                   </Link>
 
-                  <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
-                    <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
-                      <span>Trả Góp</span>
-                      <span>•</span>
-                      <span>Trả Trước</span>
-                      <span>•</span>
-                      <span>Phí</span>
+                  {/* KHỐI TRẢ GÓP: CÓ GIÁ MỚI HIỆN BẢNG 0% 0Đ 0Đ */}
+                  {product.rawPrice > 0 ? (
+                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
+                      <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
+                        <span>Trả Góp</span>
+                        <span>•</span>
+                        <span>Trả Trước</span>
+                        <span>•</span>
+                        <span>Phí</span>
+                      </div>
+                      <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
+                        <span>0%</span>
+                        <span>0đ</span>
+                        <span>0đ</span>
+                      </div>
                     </div>
-                    <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
-                      <span>0%</span>
-                      <span>0đ</span>
-                      <span>0đ</span>
+                  ) : (
+                    <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
+                      <span className="text-[10px] font-bold text-gray-500">
+                        Liên hệ nhận báo giá tốt nhất
+                      </span>
                     </div>
-                  </div>
-
-                  {product.statusTag && (
-                    <span className="mt-1 bg-[#ffe8e8] text-[#d70018] text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit">
-                      {product.statusTag}
-                    </span>
                   )}
 
+                  {/* NHÃN TRẠNG THÁI: CÓ GIÁ LÀ SẴN HÀNG, KHÔNG CÓ GIÁ LÀ TẠM HẾT HÀNG */}
+                  <span
+                    className={`mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit ${
+                      product.statusTag === 'Sẵn hàng'
+                        ? 'bg-[#ffe8e8] text-[#d70018]'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {product.statusTag}
+                  </span>
+
+                  {/* MỨC GIÁ: CÓ GIÁ THÌ HIỆN SỐ TIỀN, GIÁ <= 0 THÌ HIỆN CHỮ "LIÊN HỆ" */}
                   <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-sm md:text-base font-black text-[#d70018]">{product.currentPrice}</span>
-                    <span className="text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
+                    <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base sm:text-lg'}`}>
+                      {product.currentPrice}
+                    </span>
+                    {product.rawPrice > 0 && product.originalPrice && (
+                      <span className="text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
+                    )}
                   </div>
 
                   <div className="text-[11px] text-gray-600 font-medium mt-0.5">
-                    Hoặc trả trước <strong className="text-gray-900">{product.downPayment}</strong>
+                    {product.rawPrice > 0 ? (
+                      <>Hoặc trả trước <strong className="text-gray-900">{product.downPayment}</strong></>
+                    ) : (
+                      <span className="text-[#d70018] font-bold">Hotline: 056.600.3333</span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-0.5 mt-2 text-amber-400 h-3">

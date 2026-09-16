@@ -332,7 +332,7 @@ export const MacBookShowcaseSection: React.FC = () => {
           >
             <span>
               {selectedSeries
-                ? `Xem toàn bộ sản phẩm MacBook ${selectedSeries.toUpperCase()}`
+                ? `Xem toàn bộ ${selectedSeries.toUpperCase()}`
                 : 'Xem toàn bộ sản phẩm MacBook'}
             </span>
             <ArrowRight size={15} />

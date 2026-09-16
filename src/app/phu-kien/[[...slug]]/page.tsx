@@ -55,11 +55,6 @@ const DEFAULT_ACCESSORY_CATEGORIES: SeriesTabItem[] = [
 const ACCESSORY_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   'sac-cap': [
     {
-      name: 'Tất cả Sạc Cáp',
-      tag: 'sac-cap',
-      img: 'https://cdn.hstatic.net/products/200000768357/mw2l3_geo_vn_de11bc805a154184b143c3eb18f4da05_master.jpeg?auto=format&fit=crop&w=150&q=80',
-    },
-    {
       name: 'Củ Sạc Nhanh 20W',
       tag: 'sac-20w',
       img: 'https://cdn.hstatic.net/products/200000768357/mw2l3_geo_vn_de11bc805a154184b143c3eb18f4da05_master.jpeg?auto=format&fit=crop&w=150&q=80',
@@ -76,11 +71,7 @@ const ACCESSORY_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
     },
   ],
   'tai-nghe': [
-    {
-      name: 'Tất cả Âm Thanh',
-      tag: 'tai-nghe',
-      img: 'https://product.hstatic.net/200000768357/product/a3_1_42b1bd6f73de43ea8152bb40d71e610d_997dc83fdca54d0fb00c189095d50e21_master.png?auto=format&fit=crop&w=150&q=80',
-    },
+
     {
       name: 'AirPods 4',
       tag: 'airpods-4',
@@ -98,11 +89,7 @@ const ACCESSORY_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
     },
   ],
   'phu-kien-mac': [
-    {
-      name: 'Tất cả Phụ Kiện Mac',
-      tag: 'phu-kien-mac',
-      img: 'https://product.hstatic.net/200000768357/product/magic-keyboard-for-ipad-pro-11-inch-m4-white-4-square_medium_344b97d0559244a485169928d75bb5a7_master.jpg?auto=format&fit=crop&w=150&q=80',
-    },
+
     {
       name: 'Apple Pencil Pro',
       tag: 'pencil-pro',
@@ -137,6 +124,12 @@ Chính sách bán hàng tại FoGo Store:
 const parsePrice = (priceStr: string | number) => {
   if (typeof priceStr === 'number') return priceStr;
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
+};
+
+// Hàm định dạng giá tiền: Trả về "Liên hệ" nếu giá <= 0
+const formatVndPrice = (price: number) => {
+  if (!price || price <= 0) return 'Liên hệ';
+  return price.toLocaleString('vi-VN') + 'đ';
 };
 
 const formatProductImageUrl = (url?: string | null): string => {
@@ -256,12 +249,11 @@ export default function DynamicAccessoryPage() {
 
         const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
 
-        // Lọc nghiêm ngặt: Chỉ lấy phụ kiện thật, không lấy iPhone, iPad, MacBook
+        // Lọc nghiêm ngặt: Chỉ lấy phụ kiện thật, loại bỏ máy iPhone, iPad, MacBook
         const onlyAccessories = itemsList.filter((item: any) => {
           const lower = (item.name || '').toLowerCase();
           const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
 
-          // Chặn các thiết bị máy
           if (
             (lower.startsWith('iphone') && !lower.includes('ốp') && !lower.includes('kính')) ||
             (lower.startsWith('ipad') && !lower.includes('bút') && !lower.includes('bàn phím') && !lower.includes('bao da') && !lower.includes('dán')) ||
@@ -306,7 +298,6 @@ export default function DynamicAccessoryPage() {
     rawDbProducts.forEach((prod) => {
       const variants: any[] = Array.isArray(prod.variants) ? prod.variants : [];
 
-      // Nhận diện phân loại phụ kiện chính xác cho searchIndex
       const lower = (prod.name || '').toLowerCase();
       let accGroup = 'sac-cap';
       if (lower.includes('airpods') || lower.includes('tai nghe') || lower.includes('âm thanh')) {
@@ -323,7 +314,7 @@ export default function DynamicAccessoryPage() {
       const storageMap = new Map<string, any[]>();
       variants.forEach((v) => {
         const rawSt = (v.storage && String(v.storage).trim()) || '';
-        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase().replace(/\//g, '-');
         if (!storageMap.has(stKey)) {
           storageMap.set(stKey, []);
         }
@@ -338,17 +329,21 @@ export default function DynamicAccessoryPage() {
         const nameSuffix = stKey ? ` ${stKey}` : '';
         const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
 
+        // QUY TẮC: CÓ GIÁ (> 0) LÀ SẴN HÀNG, GIÁ <= 0 LÀ LIÊN HỆ & TẠM HẾT HÀNG
+        const hasPrice = curPrice > 0;
+
         result.push({
           id: prod.id,
           name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
           slug: `${prod.slug}${slugSuffix}`,
           href: `/san-pham/${prod.slug}${slugSuffix}`,
           accGroup,
-          currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-          originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+          currentPrice: formatVndPrice(curPrice),
+          originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
-          discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 10,
+          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 10,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+          statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
           rating: 5,
           searchIndex: `${prod.name} ${stKey} ${accGroup} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
         });
@@ -360,17 +355,21 @@ export default function DynamicAccessoryPage() {
           const nameSuffix = stKey ? ` ${stKey}` : '';
           const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
 
+          // QUY TẮC: CÓ GIÁ (> 0) LÀ SẴN HÀNG, GIÁ <= 0 LÀ LIÊN HỆ & TẠM HẾT HÀNG
+          const hasPrice = curPrice > 0;
+
           result.push({
             id: `${prod.id}-${stKey || 'base'}`,
             name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
             slug: `${prod.slug}${slugSuffix}`,
             href: `/san-pham/${prod.slug}${slugSuffix}`,
             accGroup,
-            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+            currentPrice: formatVndPrice(curPrice),
+            originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
             rawPrice: curPrice,
-            discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 10,
+            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 10,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+            statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
             rating: 5,
             searchIndex: `${prod.name} ${stKey} ${accGroup} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
           });
@@ -675,9 +674,15 @@ export default function DynamicAccessoryPage() {
                   className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-200 min-h-[410px]"
                 >
                   <div className="flex items-center justify-between h-6">
-                    <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-none">
-                      -{product.discountPercent}%
-                    </span>
+                    {product.rawPrice > 0 ? (
+                      <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-none">
+                        -{product.discountPercent}%
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5">
+                        Hot
+                      </span>
+                    )}
                     <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
                       <span></span>
                       <span className="scale-90 origin-right">Chính hãng</span>
@@ -703,24 +708,57 @@ export default function DynamicAccessoryPage() {
                     {product.name}
                   </Link>
 
-                  <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
-                    <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
-                      <span>Bảo Hành</span>
-                      <span>•</span>
-                      <span>Cam Kết</span>
-                      <span>•</span>
-                      <span>Đổi Mới</span>
+                  {/* KHỐI CAM KẾT HOẶC LIÊN HỆ */}
+                  {product.rawPrice > 0 ? (
+                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
+                      <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
+                        <span>Bảo Hành</span>
+                        <span>•</span>
+                        <span>Cam Kết</span>
+                        <span>•</span>
+                        <span>Đổi Mới</span>
+                      </div>
+                      <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
+                        <span>12 Tháng</span>
+                        <span>100% Zin</span>
+                        <span>30 Ngày</span>
+                      </div>
                     </div>
-                    <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
-                      <span>12 Tháng</span>
-                      <span>100% Zin</span>
-                      <span>30 Ngày</span>
+                  ) : (
+                    <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
+                      <span className="text-[10px] font-bold text-gray-500">
+                        Liên hệ nhận báo giá tốt nhất
+                      </span>
                     </div>
+                  )}
+
+                  {/* NHÃN TRẠNG THÁI: CÓ GIÁ LÀ SẴN HÀNG, KHÔNG CÓ GIÁ LÀ TẠM HẾT HÀNG */}
+                  <span
+                    className={`mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit ${
+                      product.statusTag === 'Sẵn hàng'
+                        ? 'bg-[#ffe8e8] text-[#d70018]'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {product.statusTag}
+                  </span>
+
+                  {/* MỨC GIÁ: CÓ GIÁ THÌ HIỆN SỐ TIỀN, GIÁ <= 0 THÌ HIỆN CHỮ "LIÊN HỆ" */}
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base sm:text-lg'}`}>
+                      {product.currentPrice}
+                    </span>
+                    {product.rawPrice > 0 && product.originalPrice && (
+                      <span className="text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
+                    )}
                   </div>
 
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-sm md:text-base font-black text-[#d70018]">{product.currentPrice}</span>
-                    <span className="text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
+                  <div className="text-[11px] text-gray-600 font-medium mt-0.5">
+                    {product.rawPrice > 0 ? (
+                      <span className="text-emerald-600 font-semibold">Chính hãng Apple VN</span>
+                    ) : (
+                      <span className="text-[#d70018] font-bold">Hotline: 056.600.3333</span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-0.5 mt-2 text-amber-400 h-3">

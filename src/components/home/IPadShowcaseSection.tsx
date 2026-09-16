@@ -338,7 +338,7 @@ export const IPadShowcaseSection: React.FC = () => {
           >
             <span>
               {activeSeries
-                ? `Xem toàn bộ iPad ${activeSeries.toUpperCase()}`
+                ? `Xem toàn bộ ${activeSeries.toUpperCase()}`
                 : 'Xem toàn bộ iPad'}
             </span>
             <ArrowRight size={15} />

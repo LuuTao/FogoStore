@@ -60,11 +60,6 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
 const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '18': [
     {
-      name: 'Tất cả 18',
-      tag: '18',
-      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
-    },
-    {
       name: '18 Pro Max',
       tag: '18-pro-max',
       img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
@@ -86,11 +81,6 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
     },
   ],
   '17': [
-    {
-      name: 'Tất cả 17',
-      tag: '17',
-      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
-    },
     {
       name: '17 Pro Max',
       tag: '17-pro-max',
@@ -119,11 +109,6 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   ],
   '16': [
     {
-      name: 'Tất cả 16',
-      tag: '16',
-      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
-    },
-    {
       name: '16 Pro Max',
       tag: '16-pro-max',
       img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
@@ -146,18 +131,8 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   ],
   'duo': [
     {
-      name: 'Tất cả Duo',
+      name: 'iPhone Duo Series',
       tag: 'duo',
-      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
-    },
-    {
-      name: 'iPhone Duo Fold',
-      tag: 'duo-fold',
-      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
-    },
-    {
-      name: 'iPhone Duo Flip',
-      tag: 'duo-flip',
       img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
     },
   ],
@@ -327,7 +302,7 @@ export default function DynamicIPhonePage() {
       const storageMap = new Map<string, any[]>();
       variants.forEach((v) => {
         const rawSt = (v.storage && String(v.storage).trim()) || '';
-        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase().replace(/\//g, '-');
         if (!storageMap.has(stKey)) {
           storageMap.set(stKey, []);
         }
@@ -342,8 +317,8 @@ export default function DynamicIPhonePage() {
         const nameSuffix = stKey ? ` ${stKey}` : '';
         const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
 
-        // Kiểm tra xem sản phẩm có thực sự sẵn hàng hay không (Phải có giá > 0 và stock > 0)
-        const isReady = curPrice > 0 && Number(v.stock ?? 10) > 0;
+        // QUY TẮC CHUẨN: CÓ GIÁ (> 0) THÌ SẴN HÀNG, KHÔNG CÓ GIÁ (<= 0) THÌ TẠM HẾT HÀNG & LIÊN HỆ
+        const hasPrice = curPrice > 0;
 
         result.push({
           id: prod.id,
@@ -351,12 +326,12 @@ export default function DynamicIPhonePage() {
           slug: `${prod.slug}${slugSuffix}`,
           href: `/san-pham/${prod.slug}${slugSuffix}`,
           currentPrice: formatVndPrice(curPrice),
-          originalPrice: curPrice > 0 ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+          originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
-          discountPercent: origPrice > curPrice && curPrice > 0 ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-          downPayment: curPrice > 0 ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
-          statusTag: isReady ? 'Sẵn hàng' : 'Tạm hết hàng',
+          downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+          statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
           rating: 5,
           searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
         });
@@ -368,7 +343,8 @@ export default function DynamicIPhonePage() {
           const nameSuffix = stKey ? ` ${stKey}` : '';
           const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
 
-          const isReady = curPrice > 0 && Number(v.stock ?? 10) > 0;
+          // QUY TẮC CHUẨN: CÓ GIÁ (> 0) THÌ SẴN HÀNG, KHÔNG CÓ GIÁ (<= 0) THÌ TẠM HẾT HÀNG & LIÊN HỆ
+          const hasPrice = curPrice > 0;
 
           result.push({
             id: `${prod.id}-${stKey || 'base'}`,
@@ -376,12 +352,12 @@ export default function DynamicIPhonePage() {
             slug: `${prod.slug}${slugSuffix}`,
             href: `/san-pham/${prod.slug}${slugSuffix}`,
             currentPrice: formatVndPrice(curPrice),
-            originalPrice: curPrice > 0 ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+            originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
             rawPrice: curPrice,
-            discountPercent: origPrice > curPrice && curPrice > 0 ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-            downPayment: curPrice > 0 ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
-            statusTag: isReady ? 'Sẵn hàng' : 'Tạm hết hàng',
+            downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+            statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
             rating: 5,
             searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
           });
@@ -694,8 +670,8 @@ export default function DynamicIPhonePage() {
                         -{product.discountPercent}%
                       </span>
                     ) : (
-                      <span className="bg-gray-200 text-gray-700 text-[10px] font-bold px-1.5 py-0.5">
-                        Liên hệ
+                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5">
+                        Hot
                       </span>
                     )}
                     <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
@@ -723,35 +699,47 @@ export default function DynamicIPhonePage() {
                     {product.name}
                   </Link>
 
-                  <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
-                    <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
-                      <span>Trả Góp</span>
-                      <span>•</span>
-                      <span>Trả Trước</span>
-                      <span>•</span>
-                      <span>Phí</span>
+                  {/* KHỐI TRẢ GÓP: CÓ GIÁ MỚI HIỆN BẢNG 0% 0Đ 0Đ */}
+                  {product.rawPrice > 0 ? (
+                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
+                      <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
+                        <span>Trả Góp</span>
+                        <span>•</span>
+                        <span>Trả Trước</span>
+                        <span>•</span>
+                        <span>Phí</span>
+                      </div>
+                      <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
+                        <span>0%</span>
+                        <span>0đ</span>
+                        <span>0đ</span>
+                      </div>
                     </div>
-                    <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
-                      <span>0%</span>
-                      <span>0đ</span>
-                      <span>0đ</span>
+                  ) : (
+                    <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
+                      <span className="text-[10px] font-bold text-gray-500">
+                        Liên hệ nhận báo giá tốt nhất
+                      </span>
                     </div>
-                  </div>
+                  )}
 
-                  {/* NHÃN TRẠNG THÁI HIỂN THỊ CHUẨN XÁC DỰA TRÊN GIÁ VÀ TỒN KHO */}
+                  {/* NHÃN TRẠNG THÁI: CÓ GIÁ LÀ SẴN HÀNG, KHÔNG CÓ GIÁ LÀ TẠM HẾT HÀNG */}
                   <span
                     className={`mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit ${
                       product.statusTag === 'Sẵn hàng'
                         ? 'bg-[#ffe8e8] text-[#d70018]'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-gray-100 text-gray-500'
                     }`}
                   >
                     {product.statusTag}
                   </span>
 
+                  {/* MỨC GIÁ: CÓ GIÁ THÌ HIỆN SỐ TIỀN, GIÁ <= 0 THÌ HIỆN CHỮ "LIÊN HỆ" */}
                   <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-sm md:text-base font-black text-[#d70018]">{product.currentPrice}</span>
-                    {product.rawPrice > 0 && (
+                    <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base sm:text-lg'}`}>
+                      {product.currentPrice}
+                    </span>
+                    {product.rawPrice > 0 && product.originalPrice && (
                       <span className="text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
                     )}
                   </div>
@@ -760,7 +748,7 @@ export default function DynamicIPhonePage() {
                     {product.rawPrice > 0 ? (
                       <>Hoặc trả trước <strong className="text-gray-900">{product.downPayment}</strong></>
                     ) : (
-                      <span className="text-[#d70018] font-bold">Giá tốt nhất thị trường</span>
+                      <span className="text-[#d70018] font-bold">Hotline: 056.600.3333</span>
                     )}
                   </div>
 

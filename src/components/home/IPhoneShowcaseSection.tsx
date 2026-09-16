@@ -393,7 +393,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
           >
             <span>
               {selectedTab?.queryValue
-                ? `Xem toàn bộ iPhone ${selectedTab.name}`
+                ? `Xem toàn bộ ${selectedTab.name}`
                 : 'Xem toàn bộ iPhone'}
             </span>
             <ArrowRight size={15} />
