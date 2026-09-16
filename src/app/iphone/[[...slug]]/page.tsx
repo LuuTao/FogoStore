@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ShoppingCart, CreditCard } from 'lucide-react';
+import { ShoppingCart, CreditCard, Wallet, Percent } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -296,7 +296,8 @@ export default function DynamicIPhonePage() {
           discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
           statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-          searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
+          // CHỈ TÌM KIẾM TRÊN TÊN SẢN PHẨM ĐỂ TRÁNH TRÙNG LẶP SỐ SERIES TRONG DESCRIPTION
+          searchIndex: `${prod.name} ${stKey}`.toLowerCase(),
         });
       } else {
         storageMap.forEach((varList, stKey) => {
@@ -322,7 +323,7 @@ export default function DynamicIPhonePage() {
             discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
             statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-            searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
+            searchIndex: `${prod.name} ${stKey}`.toLowerCase(),
           });
         });
       }
@@ -331,7 +332,7 @@ export default function DynamicIPhonePage() {
     return result;
   }, [rawDbProducts]);
 
-  // Bộ lọc chuẩn khớp đúng số Series
+  // Bộ lọc chuẩn: Khớp chính xác số Series theo ranh giới từ, loại bỏ hoàn toàn các máy không liên quan
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -341,28 +342,30 @@ export default function DynamicIPhonePage() {
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
-        items = items.filter((i) => {
-          const regex = new RegExp(`\\biphone\\s*${targetNumber}\\b|\\b${targetNumber}\\s*(pro|plus|promax|air)?\\b`, 'i');
-          return regex.test(i.searchIndex);
-        });
+        // KHÓA CHẶT: Tên sản phẩm bắt buộc phải có đúng số series (VD: \b18\b, không dính 14, 16, 17)
+        const seriesRegex = new RegExp(`\\b${targetNumber}\\b`, 'i');
+        items = items.filter((i) => seriesRegex.test(i.name));
 
         if (lowerFilter.includes('pro-max') || lowerFilter.includes('promax')) {
-          items = items.filter((i) => i.searchIndex.includes('pro max') || i.searchIndex.includes('promax'));
+          items = items.filter((i) => i.name.toLowerCase().includes('pro max') || i.name.toLowerCase().includes('promax'));
         } else if (lowerFilter.includes('pro') && !lowerFilter.includes('max')) {
-          items = items.filter((i) => i.searchIndex.includes('pro') && !i.searchIndex.includes('max'));
+          items = items.filter((i) => i.name.toLowerCase().includes('pro') && !i.name.toLowerCase().includes('max'));
         } else if (lowerFilter.includes('plus')) {
-          items = items.filter((i) => i.searchIndex.includes('plus'));
+          items = items.filter((i) => i.name.toLowerCase().includes('plus'));
         } else if (lowerFilter.includes('air')) {
-          items = items.filter((i) => i.searchIndex.includes('air'));
+          items = items.filter((i) => i.name.toLowerCase().includes('air'));
         } else if (lowerFilter.includes('standard') || lowerFilter.includes('thuong')) {
-          items = items.filter((i) => !i.searchIndex.includes('pro') && !i.searchIndex.includes('plus') && !i.searchIndex.includes('air'));
+          items = items.filter((i) => {
+            const n = i.name.toLowerCase();
+            return !n.includes('pro') && !n.includes('plus') && !n.includes('air');
+          });
         }
       } else if (lowerFilter.includes('duo')) {
-        items = items.filter((i) => i.searchIndex.includes('duo'));
+        items = items.filter((i) => i.name.toLowerCase().includes('duo'));
       } else {
         const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
-          items = items.filter((i) => i.searchIndex.includes(cleanTag));
+          items = items.filter((i) => i.name.toLowerCase().includes(cleanTag));
         }
       }
     }
@@ -644,7 +647,7 @@ export default function DynamicIPhonePage() {
                   key={product.id}
                   className="bg-white p-2.5 sm:p-3 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group min-h-[420px]"
                 >
-                  {/* TAG GIẢM GIÁ (ĐÃ BỎ AUTHORIZED RESELLER) */}
+                  {/* TAG GIẢM GIÁ */}
                   <div className="flex items-center justify-between h-5">
                     {product.rawPrice > 0 ? (
                       <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-sm">
@@ -671,7 +674,7 @@ export default function DynamicIPhonePage() {
                     />
                   </Link>
 
-                  {/* TÊN SẢN PHẨM: ĐÃ DỜI DUNG LƯỢNG LÊN TRƯỚC HẬU TỐ */}
+                  {/* TÊN SẢN PHẨM: ĐÃ DỜI DUNG LƯỢNG LÊN TRƯỚC */}
                   <Link
                     href={product.href}
                     className="font-bold text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[38px] leading-snug"
@@ -679,13 +682,30 @@ export default function DynamicIPhonePage() {
                     {product.name}
                   </Link>
 
-                  {/* KHỐI TRẢ GÓP MỚI: BỎ 0% 0Đ 0Đ, THAY BẰNG ICON + TRẢ GÓP | TRẢ TRƯỚC | PHÍ */}
+                  {/* KHỐI TRẢ GÓP MỚI: TỪNG MỤC ĐỀU CÓ ICON VÀ CĂN ĐỀU GIỮA */}
                   {product.rawPrice > 0 ? (
-                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-center gap-1.5 text-[#d70018]">
-                      <CreditCard size={13} className="shrink-0" />
-                      <span className="text-[10px] sm:text-[11px] font-black tracking-tight truncate">
-                        Trả góp<span className="text-gray-300 font-normal">|</span> Trả trước <span className="text-gray-300 font-normal">|</span> Phí
-                      </span>
+                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-around text-[#d70018]">
+                      {/* Mục 1: Trả góp */}
+                      <div className="flex items-center gap-1">
+                        <CreditCard size={12} className="shrink-0" />
+                        <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả góp</span>
+                      </div>
+                      
+                      <span className="text-gray-300 font-normal">|</span>
+
+                      {/* Mục 2: Trả trước */}
+                      <div className="flex items-center gap-1">
+                        <Wallet size={12} className="shrink-0" />
+                        <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả trước</span>
+                      </div>
+
+                      <span className="text-gray-300 font-normal">|</span>
+
+                      {/* Mục 3: Phí */}
+                      <div className="flex items-center gap-1">
+                        <Percent size={11} className="shrink-0" />
+                        <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Phí</span>
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
