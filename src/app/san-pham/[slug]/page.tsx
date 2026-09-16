@@ -18,7 +18,6 @@ export default async function ProductDetailPage(props: PageProps) {
   // ============================================================================
   // 1. GIẢI MÃ PARAMS AN TOÀN TUYỆT ĐỐI (DỨT ĐIỂM 404 & RELOAD LOOP TRÊN NEXT 14/15)
   // ============================================================================
-  // Trong JS, `await` xử lý an toàn cho cả Promise (Next.js 15) và Plain Object (Next.js 14)
   const resolvedParams = await props.params;
   const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
 
@@ -31,22 +30,21 @@ export default async function ProductDetailPage(props: PageProps) {
   }
 
   // ============================================================================
-  // 2. CHUẨN HÓA SLUG & BÓC TÁCH DUNG LƯỢNG
+  // 2. CHUẨN HÓA SLUG & BÓC TÁCH MỌI THÔNG SỐ (HỖ TRỢ MACBOOK, IPAD, IPHONE)
   // ============================================================================
   const cleanSlugForMatch = currentSlug.replace(/\//g, '-').toLowerCase();
 
-  // Bóc tách dung lượng ở đuôi hoặc ở giữa slug
-  const storageMatchEnd = cleanSlugForMatch.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
-  const storageMatchMid = cleanSlugForMatch.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)-/i);
+  // Tập hợp các định dạng thông số cấu hình phần cứng (Dung lượng, Kích thước, RAM, CPU, GPU)
+  const specPattern = '(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|18cpu|32gpu|14cpu|20gpu)';
+  
+  const regEnd = new RegExp(`-(${specPattern})+$`, 'i');
+  const storageMatchEnd = cleanSlugForMatch.match(regEnd);
 
-  const urlStorage = storageMatchEnd
-    ? storageMatchEnd[1].toUpperCase()
-    : storageMatchMid
-    ? storageMatchMid[1].toUpperCase()
-    : '';
+  const urlStorage = storageMatchEnd ? storageMatchEnd[1].toUpperCase() : '';
 
-  // Lọc sạch dung lượng ở đuôi URL để tạo baseSlug dự phòng
-  const storageRegex = /-(?:24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)+$/gi;
+  // Lọc sạch mọi thông số cấu hình ở đuôi URL để quy hoạch về baseSlug chuẩn của model gốc
+  const storageRegex = new RegExp(`-(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|18cpu|32gpu|14cpu|20gpu)+$`, 'gi');
+  
   let baseSlug = cleanSlugForMatch.replace(storageRegex, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
   if (!baseSlug) {
     baseSlug = cleanSlugForMatch;
@@ -61,7 +59,7 @@ export default async function ProductDetailPage(props: PageProps) {
   try {
     const query = proid ? `?proid=${encodeURIComponent(proid)}` : '';
 
-    // Thử 1: Gọi với baseSlug (chuẩn tên model gốc)
+    // Thử 1: Gọi với baseSlug (Tên model gốc đã được lọc sạch thông số)
     let res = await fetch(`${apiUrl}/api/products/${baseSlug}${query}`, {
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -74,7 +72,7 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
 
-    // Thử 2: Nếu không thấy, gọi bằng full slug chưa cắt
+    // Thử 2: Nếu không thấy, gọi dự phòng với toàn bộ chuỗi slug chưa cắt
     if (!product && cleanSlugForMatch !== baseSlug) {
       res = await fetch(`${apiUrl}/api/products/${cleanSlugForMatch}${query}`, {
         cache: 'no-store',
@@ -92,9 +90,8 @@ export default async function ProductDetailPage(props: PageProps) {
   }
 
   // ============================================================================
-  // 4. NEO CHẶT baseSlug THEO SLUG GỐC TRONG DATABASE
+  // 4. NEO CHẶT baseSlug THEO SLUG GỐC CHUẨN XÁC TRONG DATABASE
   // ============================================================================
-  // Đảm bảo mọi thao tác chuyển biến thể phía Client luôn dùng slug chuẩn của DB
   if (product && product.slug) {
     baseSlug = product.slug;
   }
@@ -184,7 +181,7 @@ export default async function ProductDetailPage(props: PageProps) {
     };
   }
 
-  // Đảm bảo luôn có ít nhất 1 biến thể hợp lệ để render
+  // Đảm bảo luôn có ít nhất 1 biến thể hợp lệ để render giao diện
   if (!product.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
     product.variants = [
       {
