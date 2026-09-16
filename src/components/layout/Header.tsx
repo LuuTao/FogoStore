@@ -21,7 +21,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { MENU_DATA } from '@/data/navigation';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 interface SearchItem {
   id: string;
@@ -39,6 +39,9 @@ export const Header: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [expandedMenuId, setExpandedMenuId] = useState<string | null>(null);
 
+  // Đồng bộ Menu động cho Mobile (khắc phục menu tĩnh lỗi thời)
+  const [menuList, setMenuList] = useState(MENU_DATA);
+
   // States tìm kiếm gợi ý tức thì
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
@@ -55,7 +58,43 @@ export const Header: React.FC = () => {
     setExpandedMenuId(expandedMenuId === id ? null : id);
   };
 
-  // 1. Tải trước danh mục sản phẩm từ DB một lần duy nhất để tìm kiếm tức thì
+  // 1. Đồng bộ menu từ cache LocalStorage và API
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('fogo_menu_config');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMenuList(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi đọc cache menu:', e);
+    }
+
+    const fetchMenuData = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`, { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          const data = json.data || json;
+          if (Array.isArray(data) && data.length > 0) {
+            setMenuList(data);
+            localStorage.setItem('fogo_menu_config', JSON.stringify(data));
+          }
+        }
+      } catch (err) {
+        // Giữ menu dự phòng nếu mất kết nối
+      }
+    };
+
+    fetchMenuData();
+    const handleSync = () => fetchMenuData();
+    window.addEventListener('fogo_menu_updated', handleSync);
+    return () => window.removeEventListener('fogo_menu_updated', handleSync);
+  }, []);
+
+  // 2. Tải trước danh mục sản phẩm phục vụ tìm kiếm nhanh
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -71,7 +110,7 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
-  // 2. Lọc sản phẩm theo ký tự (Debounce 200ms tránh lag)
+  // 3. Lọc sản phẩm theo từ khóa (Debounce 200ms)
   useEffect(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) {
@@ -89,7 +128,7 @@ export const Header: React.FC = () => {
             const cat = (item.category?.name || item.category?.slug || '').toLowerCase();
             return name.includes(query) || cat.includes(query);
           })
-          .slice(0, 6) // Lấy tối đa 6 sản phẩm liên quan nhất
+          .slice(0, 6)
           .map((item: any) => {
             const variant = item.variants?.[0] || {};
             return {
@@ -111,7 +150,7 @@ export const Header: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, productsCache]);
 
-  // 3. Đóng dropdown khi click ra vùng ngoài
+  // 4. Đóng dropdown khi nhấn ra ngoài
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
@@ -134,21 +173,20 @@ export const Header: React.FC = () => {
   return (
     <>
       <header className="w-full bg-white select-none relative z-40 border-b border-gray-100 shadow-xs">
-        {/* 1. DÒNG SLOGAN */}
+        {/* SLOGAN */}
         <div className="w-full pt-2 sm:pt-3 pb-1 bg-white flex items-center justify-center px-3">
           <h1 className="text-xs sm:text-base md:text-2xl lg:text-[32px] font-black uppercase tracking-wider text-[#d70018] leading-tight text-center drop-shadow-xs truncate">
             THE BEST APPLE RETAIL STORE IN HCM
           </h1>
         </div>
 
-        {/* 2. HÀNG HEADER CHÍNH */}
+        {/* HÀNG HEADER CHÍNH */}
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
-          {/* Cụm Nút 3 Gạch (Mobile/Tablet) + Logo FoGo */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden w-9 h-9 rounded-md bg-gray-100 flex items-center justify-center text-gray-800 hover:text-[#d70018] hover:bg-red-50 transition-colors"
+              className="lg:hidden w-9 h-9 rounded-md bg-gray-100 flex items-center justify-center text-gray-800 hover:text-[#d70018] hover:bg-red-50 transition-colors cursor-pointer"
               aria-label="Mở menu danh mục"
             >
               <MenuIcon size={22} />
@@ -163,7 +201,7 @@ export const Header: React.FC = () => {
             </Link>
           </div>
 
-          {/* Thanh tìm kiếm PC / Tablet tích hợp Live Search */}
+          {/* Thanh tìm kiếm PC */}
           <div ref={searchContainerRef} className="flex-1 max-w-lg relative hidden sm:block">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
@@ -200,7 +238,7 @@ export const Header: React.FC = () => {
               </button>
             </form>
 
-            {/* POPUP XỔ XUỐNG GỢI Ý KẾT QUẢ TRÊN PC */}
+            {/* Dropdown gợi ý PC */}
             {showDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
@@ -410,7 +448,7 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Thanh tìm kiếm phụ trên Mobile (< 640px) */}
+        {/* Tìm kiếm Mobile */}
         <div className="block sm:hidden px-3 pb-2.5 pt-0.5 relative">
           <form onSubmit={handleSearchSubmit} className="relative w-full">
             <input
@@ -431,7 +469,7 @@ export const Header: React.FC = () => {
                   setSearchResults([]);
                   setShowDropdown(false);
                 }}
-                className="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 p-1"
+                className="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 p-1 cursor-pointer"
               >
                 <X size={13} />
               </button>
@@ -439,13 +477,12 @@ export const Header: React.FC = () => {
             <button
               type="submit"
               aria-label="Tìm kiếm"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#d70018]"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#d70018] cursor-pointer"
             >
               {isSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={15} strokeWidth={2.5} />}
             </button>
           </form>
 
-          {/* POPUP XỔ XUỐNG GỢI Ý KẾT QUẢ TRÊN MOBILE */}
           {showDropdown && (
             <div className="absolute top-full left-3 right-3 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
               <div className="max-h-[280px] overflow-y-auto divide-y divide-gray-100">
@@ -475,7 +512,7 @@ export const Header: React.FC = () => {
         </div>
       </header>
 
-      {/* 3. MENU SIDEBAR 3 GẠCH (DRAWER SLIDE-OVER TỪ BÊN TRÁI CHO MOBILE/TABLET) */}
+      {/* DRAWER MENU MOBILE (ĐÃ ĐỒNG BỘ DỮ LIỆU & LỌC TRÙNG SERIES) */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
@@ -496,9 +533,16 @@ export const Header: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
-              {MENU_DATA.map((item) => {
+              {menuList.map((item) => {
                 const isExpanded = expandedMenuId === item.id;
-                const hasSub = item.groups && item.groups.length > 0;
+                
+                // Lọc loại bỏ các nhóm/series trùng tên (ví dụ ngăn iPhone 15 Series lặp 2 lần)
+                const rawGroups = item.groups || [];
+                const uniqueGroups = rawGroups.filter(
+                  (group, gIdx, self) =>
+                    gIdx === self.findIndex((t) => t.groupTitle?.trim().toLowerCase() === group.groupTitle?.trim().toLowerCase())
+                );
+                const hasSub = uniqueGroups.length > 0;
 
                 return (
                   <div key={item.id} className="py-1">
@@ -520,7 +564,7 @@ export const Header: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => toggleSubMenu(item.id)}
-                          className="p-1 text-gray-400 hover:text-[#d70018]"
+                          className="p-1 text-gray-400 hover:text-[#d70018] cursor-pointer"
                         >
                           <ChevronDown
                             size={18}
@@ -532,32 +576,41 @@ export const Header: React.FC = () => {
 
                     {hasSub && isExpanded && (
                       <div className="bg-gray-50 px-6 py-2 space-y-2 border-t border-gray-100">
-                        {item.groups?.map((group, gIdx) => (
-                          <div key={gIdx} className="py-1">
-                            <Link
-                              href={group.href}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                              className="text-xs font-bold text-gray-700 hover:text-[#d70018] block"
-                            >
-                              {group.groupTitle}
-                            </Link>
+                        {uniqueGroups.map((group, gIdx) => {
+                          // Lọc bỏ sản phẩm trùng lặp trong từng group
+                          const rawItems = group.items || [];
+                          const uniqueItems = rawItems.filter(
+                            (sub, sIdx, self) =>
+                              sIdx === self.findIndex((t) => t.name?.trim().toLowerCase() === sub.name?.trim().toLowerCase())
+                          );
 
-                            {group.items && (
-                              <div className="pl-3 mt-1 space-y-1.5 border-l-2 border-red-200">
-                                {group.items.map((sub, sIdx) => (
-                                  <Link
-                                    key={sIdx}
-                                    href={sub.href}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="text-xs text-gray-500 hover:text-[#d70018] block py-0.5"
-                                  >
-                                    {sub.name}
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          return (
+                            <div key={gIdx} className="py-1">
+                              <Link
+                                href={group.href}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="text-xs font-bold text-gray-700 hover:text-[#d70018] block"
+                              >
+                                {group.groupTitle}
+                              </Link>
+
+                              {uniqueItems.length > 0 && (
+                                <div className="pl-3 mt-1 space-y-1.5 border-l-2 border-red-200">
+                                  {uniqueItems.map((sub, sIdx) => (
+                                    <Link
+                                      key={sIdx}
+                                      href={sub.href}
+                                      onClick={() => setIsMobileMenuOpen(false)}
+                                      className="text-xs text-gray-500 hover:text-[#d70018] block py-0.5"
+                                    >
+                                      {sub.name}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -580,3 +633,5 @@ export const Header: React.FC = () => {
     </>
   );
 };
+
+export default Header;
