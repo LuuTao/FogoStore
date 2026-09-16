@@ -16,6 +16,8 @@ import {
   MessageCircle,
   ChevronDown,
   ChevronUp,
+  Share2,
+  Link2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -94,7 +96,6 @@ export default function IPhoneDetail({
 
     setSelectedColor(firstValidVar?.color || 'Titan Tự Nhiên');
 
-    // Lấy danh sách sản phẩm liên quan
     fetch(`${API_URL}/api/products/filter?category=iphone`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
@@ -104,7 +105,6 @@ export default function IPhoneDetail({
       })
       .catch(() => setRelatedProducts([]));
 
-    // Đọc & Ghi nhận sản phẩm đã xem vào localStorage
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
       let viewedList: any[] = saved ? JSON.parse(saved) : [];
@@ -199,7 +199,6 @@ export default function IPhoneDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
-  // Gom toàn bộ ảnh từ các biến thể
   const imagesList: string[] = useMemo(() => {
     const list: string[] = [];
 
@@ -329,6 +328,13 @@ export default function IPhoneDetail({
     }
   };
 
+  const handleCopyUrl = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href);
+      setToast({ show: true, message: 'Đã sao chép liên kết sản phẩm!' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
       <ToastNotification
@@ -354,11 +360,11 @@ export default function IPhoneDetail({
           </div>
         </div>
 
-        {/* MAIN CONTAINER CĂN GIỮA & CÂN XỨNG */}
+        {/* MAIN CONTAINER */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (CÂN XỨNG ĐẸP NHƯ ẢNH) */}
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM */}
             <div className="lg:col-span-4 flex flex-col items-center w-full">
               <div className="relative w-full aspect-square max-w-[480px] border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
                 <img
@@ -410,7 +416,7 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG (CÂN BẰNG NỘI DUNG) */}
+            {/* CỘT 2: THÔNG TIN MUA HÀNG VÀ BỘ BUTTON KREDIVO */}
             <div className="lg:col-span-5 space-y-3.5 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
@@ -571,6 +577,89 @@ export default function IPhoneDetail({
                   </button>
                 </div>
               )}
+
+              {/* BỘ NÚT KREDIVO TRẢ SAU & ƯU ĐÃI BAOKIM */}
+              <div className="pt-2 space-y-2.5">
+                {/* 1. NÚT VÀNG MUA NGAY - TRẢ SAU KREDIVO */}
+                <button
+                  type="button"
+                  onClick={() => setIsInstallmentOpen(true)}
+                  className="w-full py-3 bg-[#fcee21] hover:bg-[#ebd800] rounded-xl flex flex-col items-center justify-center text-[#1e3a8a] shadow-xs cursor-pointer transition-all active:scale-98 border border-yellow-300"
+                >
+                  <span className="font-black text-xs sm:text-sm tracking-wide uppercase">
+                    MUA NGAY - TRẢ SAU
+                  </span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="font-bold text-[11px] text-gray-800">qua</span>
+                    <span className="font-black text-xs text-[#ea580c] tracking-tight">Kredivo</span>
+                  </div>
+                </button>
+
+                {/* 2. KHUNG ƯU ĐÃI KHI THANH TOÁN KREDIVO (POWERED BY BAOKIM) */}
+                <div className="w-full border border-gray-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+                  <div className="bg-[#e5e7eb] py-2 px-3 text-center border-b border-gray-200">
+                    <h4 className="text-xs font-black text-gray-800 flex items-center justify-center gap-1.5 flex-wrap">
+                      <span>ƯU ĐÃI KHI THANH TOÁN</span>
+                      <span className="text-[#ea580c]">Kredivo</span>
+                    </h4>
+                    <p className="text-[10px] text-gray-600 font-medium mt-0.5">
+                      (SỬ DỤNG KHI XÁC NHẬN KHOẢN VAY TRÊN TRANG CỦA TỔ CHỨC TÀI CHÍNH)
+                    </p>
+                  </div>
+                  <div className="p-3.5 flex items-center justify-between text-[11px] text-gray-500">
+                    <span>Hỗ trợ trả góp linh hoạt 3 - 6 - 12 tháng</span>
+                    <div className="flex items-center gap-1 text-[10px] font-bold">
+                      <span className="text-gray-400">Powered by</span>
+                      <span className="text-emerald-600 font-black">baokim</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. NÚT CHIA SẺ MẠNG XÃ HỘI */}
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs font-bold text-gray-700">Chia sẻ:</span>
+                  <a
+                    href="https://facebook.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#1877f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    f
+                  </a>
+                  <a
+                    href="https://messenger.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#0084ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+                  >
+                    <MessageCircle size={13} />
+                  </a>
+                  <a
+                    href="https://twitter.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#1da1f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    t
+                  </a>
+                  <a
+                    href="https://pinterest.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#bd081c] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    p
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className="w-7 h-7 rounded-full bg-[#0099ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                    title="Sao chép liên kết"
+                  >
+                    <Link2 size={13} />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (3/12) */}
@@ -623,7 +712,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* BANNER KREDIVO */}
+              {/* BANNER KREDIVO BẰNG LINK ẢNH HSTATIC */}
               <div
                 onClick={() => setIsInstallmentOpen(true)}
                 className="w-full rounded-2xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-all cursor-pointer group"
@@ -638,12 +727,12 @@ export default function IPhoneDetail({
 
           </div>
 
-          {/* KHỐI 3 TAB LỚN: TO LÊN 2 SIZE (text-lg font-black) */}
+          {/* KHỐI 3 TAB LỚN ĐƯỢC TĂNG 2 SIZE: text-xl sm:text-2xl font-black */}
           <div className="mt-14 pt-8 border-t border-gray-200">
-            <div className="flex items-center gap-8 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-8 sm:gap-12 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
               <button
                 onClick={() => setActiveTab('policy')}
-                className={`pb-3 text-base sm:text-lg font-black transition-all cursor-pointer whitespace-nowrap relative ${
+                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
                   activeTab === 'policy'
                     ? 'text-[#d70018] border-b-2 border-[#d70018]'
                     : 'text-gray-500 hover:text-gray-900'
@@ -653,7 +742,7 @@ export default function IPhoneDetail({
               </button>
               <button
                 onClick={() => setActiveTab('desc')}
-                className={`pb-3 text-base sm:text-lg font-black transition-all cursor-pointer whitespace-nowrap relative ${
+                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
                   activeTab === 'desc'
                     ? 'text-[#d70018] border-b-2 border-[#d70018]'
                     : 'text-gray-500 hover:text-gray-900'
@@ -663,7 +752,7 @@ export default function IPhoneDetail({
               </button>
               <button
                 onClick={() => setActiveTab('specs')}
-                className={`pb-3 text-base sm:text-lg font-black transition-all cursor-pointer whitespace-nowrap relative ${
+                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
                   activeTab === 'specs'
                     ? 'text-[#d70018] border-b-2 border-[#d70018]'
                     : 'text-gray-500 hover:text-gray-900'
@@ -688,7 +777,7 @@ export default function IPhoneDetail({
               </div>
             )}
 
-            {/* TAB MÔ TẢ CÓ NÚT RÚT GỌN / XEM THÊM NỘI DUNG */}
+            {/* TAB MÔ TẢ CĂN ĐỀU HAI BÊN & GIÃN ĐOẠN 1CM */}
             {activeTab === 'desc' && (
               <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8 shadow-xs relative">
                 <div
@@ -698,7 +787,7 @@ export default function IPhoneDetail({
                 >
                   {formattedDescription ? (
                     <div
-                      className="prose prose-sm sm:prose-base max-w-none text-gray-800 leading-relaxed break-words prose-img:rounded-xl prose-img:mx-auto prose-img:my-4 prose-img:max-h-[550px] prose-img:object-contain"
+                      className="prose prose-sm sm:prose-base max-w-none text-gray-800 text-justify break-words [&_p]:mb-[1cm] [&_p]:leading-relaxed prose-img:rounded-xl prose-img:mx-auto prose-img:my-4 prose-img:max-h-[550px] prose-img:object-contain"
                       dangerouslySetInnerHTML={{ __html: formattedDescription }}
                     />
                   ) : (
