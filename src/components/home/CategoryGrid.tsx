@@ -93,7 +93,7 @@ export const CategoryGrid: React.FC = () => {
       console.warn('Lỗi nạp cache localStorage:', e);
     }
 
-    // 2. Fetch mới nhất từ API Neon Backend
+    // 2. Fetch mới nhất từ API Backend
     try {
       const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
@@ -145,50 +145,60 @@ export const CategoryGrid: React.FC = () => {
   }, [loadData]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-3 select-none space-y-4">
-
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 mt-2 sm:mt-3 select-none space-y-3 sm:space-y-4">
 
       {/* ========================================================================= */}
-      {/* PHẦN 2: THANH 3 CAM KẾT - SÁT LÊN TRÊN, CĂN GIỮA, TO RÕ                   */}
+      {/* PHẦN 2: THANH 3 CAM KẾT - ĐÃ GIẢM 3 SIZE CHỮ VÀ ICON TRÊN MOBILE         */}
       {/* ========================================================================= */}
-      <div className="w-full pt-1 pb-2 flex items-center justify-center">
-        <div className="flex items-center justify-center gap-8 sm:gap-14 md:gap-20 flex-wrap text-gray-950 text-base sm:text-lg md:text-xl lg:text-2xl font-black tracking-tight">
-          <div className="flex items-center gap-3">
-            <Award size={34} strokeWidth={2.4} className="text-gray-900 shrink-0" />
-            <span>Đảm bảo chất lượng</span>
+      <div className="w-full pt-1 pb-1.5 px-1 sm:px-3">
+        <div className="grid grid-cols-3 items-center justify-items-center gap-1 sm:gap-4 md:gap-8 max-w-4xl mx-auto text-gray-950">
+          
+          {/* Cam kết 1 */}
+          <div className="flex items-center gap-1 sm:gap-2 text-center sm:text-left">
+            <Award className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-gray-900 shrink-0" strokeWidth={2.2} />
+            <span className="text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-tight">
+              Đảm bảo chất lượng
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <CheckCircle2 size={34} strokeWidth={2.4} className="text-gray-900 shrink-0" />
-            <span>Thu cũ đổi mới</span>
+          {/* Cam kết 2 */}
+          <div className="flex items-center gap-1 sm:gap-2 text-center sm:text-left">
+            <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-gray-900 shrink-0" strokeWidth={2.2} />
+            <span className="text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-tight">
+              Thu cũ đổi mới
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Truck size={36} strokeWidth={2.4} className="text-gray-900 shrink-0" />
-            <span>Miễn phí vận chuyển</span>
+          {/* Cam kết 3 */}
+          <div className="flex items-center gap-1 sm:gap-2 text-center sm:text-left">
+            <Truck className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-gray-900 shrink-0" strokeWidth={2.2} />
+            <span className="text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-tight">
+              Miễn phí vận chuyển
+            </span>
           </div>
+
         </div>
       </div>
 
       {/* ========================================================================= */}
       {/* PHẦN 3: LƯỚI CATEGORIES ITEM NHỎ BO TRÒN GÓC TUYỆT ĐỐI                     */}
       {/* ========================================================================= */}
-      <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-100">
-        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5 md:gap-3">
+      <div className="bg-white rounded-xl p-3 sm:p-4 md:p-6 shadow-xs border border-gray-100">
+        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 sm:gap-2.5 md:gap-3">
           {categories.map((item) => (
             <Link
               key={item.id}
               href={item.href || '/'}
-              className="flex flex-col items-center justify-between p-2 md:p-2.5 rounded-lg border border-gray-100/90 hover:border-[#d70018]/50 hover:shadow-md transition-all group bg-white text-center min-h-[110px]"
+              className="flex flex-col items-center justify-between p-1.5 sm:p-2 md:p-2.5 rounded-lg border border-gray-100 hover:border-[#d70018]/50 hover:shadow-md transition-all group bg-white text-center min-h-[95px] sm:min-h-[110px]"
             >
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#f8f9fa] border border-gray-200 p-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-[#f8f9fa] border border-gray-200 p-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300">
                 <img
                   src={resolveImageUrl(item.imageUrl)}
                   alt={item.name}
                   className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
                 />
               </div>
-              <span className="text-[11px] md:text-xs font-semibold text-gray-700 group-hover:text-[#d70018] transition-colors leading-tight mt-1.5 line-clamp-2">
+              <span className="text-[10px] sm:text-[11px] md:text-xs font-semibold text-gray-700 group-hover:text-[#d70018] transition-colors leading-tight mt-1.5 line-clamp-2">
                 {item.name}
               </span>
             </Link>
@@ -196,11 +206,10 @@ export const CategoryGrid: React.FC = () => {
         </div>
       </div>
 
-      
       {/* ========================================================================= */}
       {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / 350x250px)                */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
         {categoryBanners.map((item) => (
           <Link
             key={item.id}
@@ -218,6 +227,7 @@ export const CategoryGrid: React.FC = () => {
           </Link>
         ))}
       </div>
+      
     </div>
   );
 };
