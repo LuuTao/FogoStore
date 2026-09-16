@@ -105,7 +105,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
     }
   }, []);
 
-  // 2. Fetch dữ liệu từ API và lọc chỉ lấy sản phẩm có giá > 0
+  // 2. Fetch dữ liệu từ API và tự động bóc tách từng dung lượng thành card riêng
   useEffect(() => {
     const fetchIPhones = async () => {
       try {
@@ -114,35 +114,81 @@ export const IPhoneShowcaseSection: React.FC = () => {
         });
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          const formatted = json.data
-            .map((item: any) => {
-              const v = item.variants?.[0] || {};
+          const formatted: any[] = [];
+
+          json.data.forEach((item: any) => {
+            const variants: any[] = Array.isArray(item.variants) ? item.variants : [];
+
+            // Gom nhóm các biến thể theo dung lượng
+            const storageMap = new Map<string, any[]>();
+            variants.forEach((v) => {
+              const rawSt = (v.storage && String(v.storage).trim()) || '';
+              const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+              if (!storageMap.has(stKey)) {
+                storageMap.set(stKey, []);
+              }
+              storageMap.get(stKey)!.push(v);
+            });
+
+            if (storageMap.size <= 1) {
+              const v = variants[0] || {};
               const curPrice = Number(v.price || item.price || 0);
+
+              // Bỏ qua sản phẩm không có giá
+              if (curPrice <= 0) return;
+
               const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
-              
-              return {
+              const stKey = Array.from(storageMap.keys())[0] || '';
+              const nameSuffix = stKey ? ` ${stKey}` : '';
+              const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+              formatted.push({
                 id: item.id,
-                name: item.name,
-                slug: item.slug,
-                searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
-                href: `/san-pham/${item.slug}`,
+                name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                slug: `${item.slug}${slugSuffix}`,
+                searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
+                href: `/san-pham/${item.slug}${slugSuffix}`,
                 currentPrice: formatVndPrice(curPrice),
-                originalPrice: curPrice > 0 ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
                 rawPrice: curPrice,
-                discountPercent: origPrice > curPrice && curPrice > 0 ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
                 imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
-                downPayment: curPrice > 0 ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+                downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
                 rating: 5,
                 isFeatured: item.isFeatured,
-              };
-            })
-            // CHỈ LẤY CÁC SẢN PHẨM CÓ GIÁ TIỀN > 0
-            .filter((p: any) => p.rawPrice > 0);
+              });
+            } else {
+              storageMap.forEach((varList, stKey) => {
+                const v = varList[0];
+                const curPrice = Number(v.price || item.price || 0);
 
-          const sorted = formatted.sort(
-            (a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0)
-          );
-          setProducts(sorted);
+                // Bỏ qua cấu hình không có giá
+                if (curPrice <= 0) return;
+
+                const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+                const nameSuffix = stKey ? ` ${stKey}` : '';
+                const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+                formatted.push({
+                  id: `${item.id}-${stKey || 'base'}`,
+                  name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                  slug: `${item.slug}${slugSuffix}`,
+                  searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
+                  href: `/san-pham/${item.slug}${slugSuffix}`,
+                  currentPrice: formatVndPrice(curPrice),
+                  originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                  rawPrice: curPrice,
+                  discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                  imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
+                  downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+                  rating: 5,
+                  isFeatured: item.isFeatured,
+                });
+              });
+            }
+          });
+
+          setProducts(formatted);
         }
       } catch (err) {
         console.error('Lỗi nạp sản phẩm iPhone:', err);
@@ -162,50 +208,50 @@ export const IPhoneShowcaseSection: React.FC = () => {
     }
   };
 
-  // 3. Lọc theo tab Series/Submodel đang chọn và giới hạn TỐI ĐA 20 SẢN PHẨM
+  // 3. Lọc theo tab Series và sắp xếp theo thứ tự đời mới nhất (18 -> Duo -> 17 -> 16)
   const displayedItems = useMemo(() => {
     let items = [...products];
 
-    // 1. Lọc theo tab Series nếu có chọn
+    // Lọc theo từ khóa của Tab được chọn
     if (selectedTab && selectedTab.queryValue) {
       const val = selectedTab.queryValue.toLowerCase();
       items = items.filter((p) => p.searchKeywords.includes(val));
     }
 
-    // 2. Sắp xếp chuẩn theo đời mới nhất (18 -> Duo -> 17 -> 16) và từ giá cao xuống thấp
+    // Sắp xếp đời máy mới nhất và giá giảm dần
     items.sort((a, b) => {
       const nameA = a.name.toLowerCase();
       const nameB = b.name.toLowerCase();
 
-      // Ưu tiên dòng 18
+      // Ưu tiên iPhone 18
       const is18A = nameA.includes('18');
       const is18B = nameB.includes('18');
       if (is18A && !is18B) return -1;
       if (!is18A && is18B) return 1;
 
-      // Ưu tiên dòng Duo
+      // Ưu tiên iPhone Duo
       const isDuoA = nameA.includes('duo');
       const isDuoB = nameB.includes('duo');
       if (isDuoA && !isDuoB) return -1;
       if (!isDuoA && isDuoB) return 1;
 
-      // Ưu tiên dòng 17
+      // Ưu tiên iPhone 17
       const is17A = nameA.includes('17');
       const is17B = nameB.includes('17');
       if (is17A && !is17B) return -1;
       if (!is17A && is17B) return 1;
 
-      // Ưu tiên dòng 16
+      // Ưu tiên iPhone 16
       const is16A = nameA.includes('16');
       const is16B = nameB.includes('16');
       if (is16A && !is16B) return -1;
       if (!is16A && is16B) return 1;
 
-      // Nếu cùng series, sắp xếp từ giá tiền cao xuống thấp
+      // Cùng series thì ưu tiên giá cao xuống thấp
       return b.rawPrice - a.rawPrice;
     });
 
-    // Giới hạn chính xác tối đa 20 sản phẩm
+    // Giới hạn chính xác tối đa 20 sản phẩm ra trang chủ
     return items.slice(0, 20);
   }, [products, selectedTab]);
 

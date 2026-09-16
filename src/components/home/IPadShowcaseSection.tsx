@@ -44,10 +44,28 @@ const IPAD_SERIES_TABS: TabItem[] = [
   },
 ];
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
 // Hàm định dạng giá tiền chuẩn: Trả về "Liên hệ" nếu giá <= 0
 const formatVndPrice = (price: number) => {
   if (!price || price <= 0) return 'Liên hệ';
   return price.toLocaleString('vi-VN') + 'đ';
+};
+
+const formatProductImageUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500';
+  }
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  }
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
 };
 
 export const IPadShowcaseSection: React.FC = () => {
@@ -55,49 +73,90 @@ export const IPadShowcaseSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeSeries, setActiveSeries] = useState<string | null>(null);
 
-  // Fetch dữ liệu từ API và chỉ lấy các sản phẩm có giá > 0
+  // Fetch dữ liệu từ API và tự động bóc tách từng dung lượng thành card riêng
   useEffect(() => {
     const fetchIPads = async () => {
       try {
-        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=ipad', {
+        const res = await fetch(`${API_URL}/api/products/filter?category=ipad`, {
           cache: 'no-store',
         });
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          const formatted = json.data
-            .map((item: any) => {
-              const v = item.variants?.[0] || {};
-              const curPrice = Number(v.price || item.price || 0);
-              const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
-              const discountPercent =
-                origPrice > curPrice && curPrice > 0 ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+          const formatted: any[] = [];
 
-              return {
+          json.data.forEach((item: any) => {
+            const variants: any[] = Array.isArray(item.variants) ? item.variants : [];
+
+            // Gom nhóm các biến thể theo dung lượng
+            const storageMap = new Map<string, any[]>();
+            variants.forEach((v) => {
+              const rawSt = (v.storage && String(v.storage).trim()) || '';
+              const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase().replace(/\//g, '-');
+              if (!storageMap.has(stKey)) {
+                storageMap.set(stKey, []);
+              }
+              storageMap.get(stKey)!.push(v);
+            });
+
+            if (storageMap.size <= 1) {
+              const v = variants[0] || {};
+              const curPrice = Number(v.price || item.price || 0);
+
+              // Bỏ qua sản phẩm không có giá
+              if (curPrice <= 0) return;
+
+              const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+              const stKey = Array.from(storageMap.keys())[0] || '';
+              const nameSuffix = stKey ? ` ${stKey}` : '';
+              const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+              formatted.push({
                 id: item.id,
-                name: item.name,
-                slug: item.slug,
-                searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
-                href: `/san-pham/${item.slug}`,
+                name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                slug: `${item.slug}${slugSuffix}`,
+                searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
+                href: `/san-pham/${item.slug}${slugSuffix}`,
                 currentPrice: formatVndPrice(curPrice),
-                originalPrice: curPrice > 0 ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
                 rawPrice: curPrice,
-                discountPercent,
-                imageUrl:
-                  v.images?.[0] ||
-                  item.imageUrl ||
-                  'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500',
-                downPayment: curPrice > 0 ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+                discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
+                downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
                 rating: 5,
                 isFeatured: item.isFeatured,
-              };
-            })
-            // CHỈ LẤY CÁC SẢN PHẨM CÓ GIÁ TIỀN > 0
-            .filter((p: any) => p.rawPrice > 0);
+              });
+            } else {
+              storageMap.forEach((varList, stKey) => {
+                const v = varList[0];
+                const curPrice = Number(v.price || item.price || 0);
 
-          const sorted = formatted.sort(
-            (a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0)
-          );
-          setProducts(sorted);
+                // Bỏ qua cấu hình không có giá
+                if (curPrice <= 0) return;
+
+                const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+                const nameSuffix = stKey ? ` ${stKey}` : '';
+                const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+                formatted.push({
+                  id: `${item.id}-${stKey || 'base'}`,
+                  name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                  slug: `${item.slug}${slugSuffix}`,
+                  searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
+                  href: `/san-pham/${item.slug}${slugSuffix}`,
+                  currentPrice: formatVndPrice(curPrice),
+                  originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                  rawPrice: curPrice,
+                  discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                  imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
+                  downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+                  rating: 5,
+                  isFeatured: item.isFeatured,
+                });
+              });
+            }
+          });
+
+          setProducts(formatted);
         }
       } catch (err) {
         console.error('Lỗi nạp sản phẩm iPad:', err);
@@ -113,15 +172,15 @@ export const IPadShowcaseSection: React.FC = () => {
     setActiveSeries((prev) => (prev === series ? null : series));
   };
 
+  // Lọc theo tab Series và sắp xếp theo thứ tự ưu tiên (Pro -> Air -> Gen -> Mini) và giá giảm dần
   const displayedItems = useMemo(() => {
     let list = [...products];
 
     if (activeSeries) {
       const val = activeSeries.toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(val));
+      list = list.filter((p) => p.searchKeywords.includes(val));
     }
 
-    // Sắp xếp theo đời mới iPad (Pro -> Air -> Gen -> Mini) và giá từ cao xuống thấp
     list.sort((a, b) => {
       const nameA = a.name.toLowerCase();
       const nameB = b.name.toLowerCase();
@@ -139,10 +198,11 @@ export const IPadShowcaseSection: React.FC = () => {
 
       if (pA !== pB) return pA - pB;
 
-      // Cùng loại thì giá cao xuống thấp
+      // Cùng dòng thì ưu tiên giá cao xuống thấp
       return b.rawPrice - a.rawPrice;
     });
 
+    // Giới hạn chính xác tối đa 20 sản phẩm
     return list.slice(0, 20);
   }, [products, activeSeries]);
 
@@ -209,6 +269,7 @@ export const IPadShowcaseSection: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Khung ảnh sản phẩm */}
                 <Link
                   href={product.href}
                   className="w-full aspect-square my-2 flex items-center justify-center overflow-hidden"
@@ -229,6 +290,7 @@ export const IPadShowcaseSection: React.FC = () => {
               </div>
 
               <div>
+                {/* Box Trả góp 0% */}
                 <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-1.5 text-center">
                   <div className="text-[8px] sm:text-[9px] font-bold text-gray-500 flex items-center justify-around">
                     <span>Trả Góp</span>
@@ -244,6 +306,7 @@ export const IPadShowcaseSection: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Giá tiền */}
                 <div className="mt-2 sm:mt-2.5 flex flex-wrap items-baseline gap-1">
                   <span className="text-xs sm:text-sm md:text-base font-black text-[#d70018]">
                     {product.currentPrice}

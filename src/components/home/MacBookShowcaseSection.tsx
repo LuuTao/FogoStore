@@ -38,10 +38,28 @@ const MACBOOK_SERIES_TABS: TabItem[] = [
   },
 ];
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
 // Hàm định dạng giá tiền chuẩn: Trả về "Liên hệ" nếu giá <= 0
 const formatVndPrice = (price: number) => {
   if (!price || price <= 0) return 'Liên hệ';
   return price.toLocaleString('vi-VN') + 'đ';
+};
+
+const formatProductImageUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500';
+  }
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  }
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
 };
 
 export const MacBookShowcaseSection: React.FC = () => {
@@ -49,49 +67,90 @@ export const MacBookShowcaseSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSeries, setSelectedSeries] = useState<string | null>(null);
 
-  // 1. Fetch dữ liệu từ API và lọc chỉ lấy sản phẩm có giá > 0
+  // 1. Fetch dữ liệu từ API và tự động bóc tách từng cấu hình/dung lượng thành card riêng
   useEffect(() => {
     const fetchMacBooks = async () => {
       try {
-        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=macbook', {
+        const res = await fetch(`${API_URL}/api/products/filter?category=macbook`, {
           cache: 'no-store',
         });
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          const formatted = json.data
-            .map((item: any) => {
-              const v = item.variants?.[0] || {};
-              const curPrice = Number(v.price || item.price || 0);
-              const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
-              const discountPercent =
-                origPrice > curPrice && curPrice > 0 ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+          const formatted: any[] = [];
 
-              return {
+          json.data.forEach((item: any) => {
+            const variants: any[] = Array.isArray(item.variants) ? item.variants : [];
+
+            // Gom nhóm các biến thể theo dung lượng / cấu hình
+            const storageMap = new Map<string, any[]>();
+            variants.forEach((v) => {
+              const rawSt = (v.storage && String(v.storage).trim()) || '';
+              const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase().replace(/\//g, '-');
+              if (!storageMap.has(stKey)) {
+                storageMap.set(stKey, []);
+              }
+              storageMap.get(stKey)!.push(v);
+            });
+
+            if (storageMap.size <= 1) {
+              const v = variants[0] || {};
+              const curPrice = Number(v.price || item.price || 0);
+
+              // Bỏ qua cấu hình không có giá
+              if (curPrice <= 0) return;
+
+              const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+              const stKey = Array.from(storageMap.keys())[0] || '';
+              const nameSuffix = stKey ? ` ${stKey}` : '';
+              const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+              formatted.push({
                 id: item.id,
-                name: item.name,
-                slug: item.slug,
-                searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
-                href: `/san-pham/${item.slug}`,
+                name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                slug: `${item.slug}${slugSuffix}`,
+                searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
+                href: `/san-pham/${item.slug}${slugSuffix}`,
                 currentPrice: formatVndPrice(curPrice),
-                originalPrice: curPrice > 0 ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
                 rawPrice: curPrice,
-                discountPercent,
-                imageUrl:
-                  v.images?.[0] ||
-                  item.imageUrl ||
-                  'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500',
-                downPayment: curPrice > 0 ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+                discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
+                downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
                 rating: 5,
                 isFeatured: item.isFeatured,
-              };
-            })
-            // CHỈ LẤY CÁC SẢN PHẨM CÓ GIÁ TIỀN > 0
-            .filter((p: any) => p.rawPrice > 0);
+              });
+            } else {
+              storageMap.forEach((varList, stKey) => {
+                const v = varList[0];
+                const curPrice = Number(v.price || item.price || 0);
 
-          const sorted = formatted.sort(
-            (a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0)
-          );
-          setProducts(sorted);
+                // Bỏ qua cấu hình không có giá
+                if (curPrice <= 0) return;
+
+                const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+                const nameSuffix = stKey ? ` ${stKey}` : '';
+                const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+                formatted.push({
+                  id: `${item.id}-${stKey || 'base'}`,
+                  name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                  slug: `${item.slug}${slugSuffix}`,
+                  searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
+                  href: `/san-pham/${item.slug}${slugSuffix}`,
+                  currentPrice: formatVndPrice(curPrice),
+                  originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                  rawPrice: curPrice,
+                  discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                  imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
+                  downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+                  rating: 5,
+                  isFeatured: item.isFeatured,
+                });
+              });
+            }
+          });
+
+          setProducts(formatted);
         }
       } catch (err) {
         console.error('Lỗi nạp sản phẩm MacBook trang chủ:', err);
@@ -107,13 +166,13 @@ export const MacBookShowcaseSection: React.FC = () => {
     setSelectedSeries((prev) => (prev === series ? null : series));
   };
 
-  // 2. Lọc sản phẩm theo Series đang chọn và giới hạn CHÍNH XÁC TỐI ĐA 20 SẢN PHẨM
+  // 2. Lọc sản phẩm theo Series đang chọn và sắp xếp chuẩn Pro -> Air -> Neo và giá giảm dần
   const displayedItems = useMemo(() => {
     let list = [...products];
 
     if (selectedSeries) {
       const val = selectedSeries.toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(val));
+      list = list.filter((p) => p.searchKeywords.includes(val));
     }
 
     // Sắp xếp MacBook (Pro -> Air -> Neo) và giá từ cao xuống thấp
@@ -137,6 +196,7 @@ export const MacBookShowcaseSection: React.FC = () => {
       return b.rawPrice - a.rawPrice;
     });
 
+    // Giới hạn chính xác tối đa 20 sản phẩm
     return list.slice(0, 20);
   }, [products, selectedSeries]);
 
