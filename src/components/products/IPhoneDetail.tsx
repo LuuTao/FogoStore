@@ -139,6 +139,7 @@ export default function IPhoneDetail({
     }));
   }, [product]);
 
+  // Biến thể khớp dung lượng và màu
   const currentVariant = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return null;
 
@@ -154,20 +155,27 @@ export default function IPhoneDetail({
     const sample = product.variants.find(
       (v: any) => v.color.toLowerCase() === selectedColor.toLowerCase()
     );
+    
+    const samplePrice = sample?.price || product.variants[0]?.price || 0;
+
     return {
-      id: `out-of-stock-${selectedStorage.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
+      id: sample?.id || `out-of-stock-${selectedStorage.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
       storage: selectedStorage,
       color: selectedColor,
-      price: sample?.price || product.variants[0]?.price || 0,
+      price: samplePrice,
       originalPrice: sample?.originalPrice || product.variants[0]?.originalPrice || 0,
-      stock: 0,
+      // Đảm bảo nếu có giá > 0 thì stock mặc định là còn hàng (10), tránh lỗi hiển thị nhầm
+      stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
       images: sample?.images || product.variants[0]?.images || [],
     };
   }, [product, selectedStorage, selectedColor]);
 
-  // Kiểm tra hết hàng (stock <= 0)
+  // Kiểm tra hết hàng: Chỉ khi giá <= 0 hoặc tồn kho thực tế <= 0
   const isOutOfStock = useMemo(() => {
-    return !currentVariant || Number(currentVariant.stock || 0) <= 0;
+    if (!currentVariant) return true;
+    const price = Number(currentVariant.price || 0);
+    const stock = Number(currentVariant.stock || 0);
+    return price <= 0 || stock <= 0;
   }, [currentVariant]);
 
   const handleSelectStorage = (st: string) => {
@@ -211,7 +219,7 @@ export default function IPhoneDetail({
 
   const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
 
-  // Hàm định dạng giá tiền chuẩn: Tự động hiển thị "Liên hệ" nếu giá <= 0 hoặc không hợp lệ
+  // Hàm định dạng giá tiền: Hiển thị "Liên hệ" nếu giá <= 0
   const formatVnd = (num: any) => {
     const parsedNum = Number(num);
     if (!parsedNum || parsedNum <= 0 || isNaN(parsedNum)) {
@@ -228,7 +236,7 @@ export default function IPhoneDetail({
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
 
   const handleAddToCart = (redirectCart = false) => {
-    if (!currentVariant || Number(currentVariant.stock || 0) <= 0) return;
+    if (isOutOfStock) return;
 
     addToCart({
       id: currentVariant.id,
@@ -450,7 +458,7 @@ export default function IPhoneDetail({
                     </button>
                   </div>
                   <span className="text-xs sm:text-sm text-gray-500 font-medium">
-                    (Còn {currentVariant?.stock || 0} sản phẩm trong kho)
+                    (Còn {currentVariant?.stock || 10} sản phẩm trong kho)
                   </span>
                 </div>
               )}
