@@ -21,7 +21,21 @@ import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Hàm chuẩn hóa URL ảnh tuyệt đối an toàn
+// Hàm trích xuất tên gốc của máy (loại bỏ dung lượng để tìm các phiên bản cùng dòng)
+const getBaseModelName = (name: string): string => {
+  return name
+    .replace(/\b(64gb|128gb|256gb|512gb|1tb|2tb)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+// Hàm trích xuất dung lượng từ tên sản phẩm hoặc slug
+const extractStorageFromName = (text: string): string => {
+  const match = text.match(/\b(64gb|128gb|256gb|512gb|1tb|2tb)\b/i);
+  return match ? match[0].toUpperCase() : '';
+};
+
+// Hàm xử lý URL ảnh tuyệt đối an toàn
 const formatProductImageUrl = (url?: string | null): string => {
   if (!url) return 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80';
   if (url.startsWith('data:') || url.startsWith('https://')) return url;
@@ -42,18 +56,18 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState<any>(null);
+  const [siblingProducts, setSiblingProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // State Modal Mua ngay - Trả sau đặt chuẩn bên trong component
+  // Modal trả góp
   const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState<boolean>(false);
 
-  // Lựa chọn biến thể hiện tại
-  const [selectedStorage, setSelectedStorage] = useState<string>('');
+  // Biến thể màu sắc & hình ảnh
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
 
-  // Tabs & tương tác
+  // Tabs
   const [activeTab, setActiveTab] = useState<'policy' | 'desc' | 'specs'>('policy');
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
@@ -64,31 +78,55 @@ export default function ProductDetailPage() {
     type: 'success',
   });
 
-  // 1. Fetch dữ liệu sản phẩm chi tiết
+  // 1. Fetch dữ liệu sản phẩm hiện tại và các sản phẩm cùng dòng họ trong Database
   useEffect(() => {
     let isMounted = true;
-    const fetchDetail = async () => {
+    const fetchDetailAndSiblings = async () => {
       try {
         setLoading(true);
+        // Lấy chi tiết sản phẩm
         const res = await fetch(`${API_URL}/api/products/${encodeURIComponent(slug)}`, {
           cache: 'no-store',
         });
         if (!res.ok) throw new Error('Không thể tải thông tin sản phẩm');
         const json = await res.json();
-        const data = json.data || json;
+        const curData = json.data || json;
 
         if (!isMounted) return;
-        setProduct(data);
+        setProduct(curData);
 
-        // Khởi tạo biến thể đầu tiên khớp từ DB
-        const firstVariant = Array.isArray(data.variants) && data.variants.length > 0 ? data.variants[0] : null;
-        const initialStorage = firstVariant?.storage || (data.storageOptions?.[0] || '128GB');
-        const initialColor = firstVariant?.color || (typeof data.colors?.[0] === 'object' ? data.colors[0].name : data.colors?.[0] || 'Mặc định');
-        const initialImg = firstVariant?.images?.[0] || data.imageUrl || data.image;
+        // Khởi tạo màu và ảnh
+        const firstVariant = Array.isArray(curData.variants) && curData.variants.length > 0 ? curData.variants[0] : null;
+        const initialColor = firstVariant?.color || (typeof curData.colors?.[0] === 'object' ? curData.colors[0].name : curData.colors?.[0] || 'Tiêu chuẩn');
+        const initialImg = formatProductImageUrl(firstVariant?.images?.[0] || curData.imageUrl || curData.image);
 
-        setSelectedStorage(initialStorage);
         setSelectedColor(initialColor);
-        setSelectedImage(formatProductImageUrl(initialImg));
+        setSelectedImage(initialImg);
+
+        // Fetch toàn bộ sản phẩm để tìm các bản dung lượng khác cùng dòng trong DB
+        try {
+          const listRes = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
+          if (listRes.ok) {
+            const listJson = await listRes.json();
+            const allProducts: any[] = Array.isArray(listJson.data) ? listJson.data : Array.isArray(listJson) ? listJson : [];
+            
+            const currentBase = getBaseModelName(curData.name).toLowerCase();
+            const categoryId = curData.categoryId || curData.category?.id;
+
+            // Lọc các sản phẩm cùng danh mục và cùng tên dòng máy
+            const siblings = allProducts.filter((item: any) => {
+              const itemBase = getBaseModelName(item.name).toLowerCase();
+              const isSameCat = !categoryId || item.categoryId === categoryId || item.category?.id === categoryId;
+              return isSameCat && (itemBase === currentBase || item.name.toLowerCase().includes(currentBase) || currentBase.includes(itemBase));
+            });
+
+            if (isMounted) {
+              setSiblingProducts(siblings.length > 0 ? siblings : [curData]);
+            }
+          }
+        } catch (e) {
+          console.warn('Lỗi tìm sản phẩm cùng dòng:', e);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -96,78 +134,78 @@ export default function ProductDetailPage() {
       }
     };
 
-    if (slug) fetchDetail();
+    if (slug) fetchDetailAndSiblings();
     return () => {
       isMounted = false;
     };
   }, [slug]);
 
-  // 2. Lấy danh sách các dung lượng duy nhất từ variants thực tế
-  const availableStorages = useMemo(() => {
-    if (!product?.variants || !Array.isArray(product.variants)) {
-      return ['128GB', '256GB', '512GB'];
+  // 2. Danh sách các lựa chọn Dung Lượng từ Database (Mỗi nút tương ứng 1 sản phẩm riêng có slug riêng)
+  const storageOptions = useMemo(() => {
+    if (!siblingProducts || siblingProducts.length === 0) {
+      const selfStorage = extractStorageFromName(product?.name || '') || '128GB';
+      return [{ storage: selfStorage, slug: product?.slug || slug, isCurrent: true }];
     }
-    const set = new Set<string>();
-    product.variants.forEach((v: any) => {
-      if (v.storage) set.add(v.storage);
+
+    const map = new Map<string, { storage: string; slug: string; isCurrent: boolean }>();
+
+    siblingProducts.forEach((item) => {
+      let st = extractStorageFromName(item.name);
+      if (!st && Array.isArray(item.variants) && item.variants[0]?.storage) {
+        st = item.variants[0].storage.toUpperCase();
+      }
+      if (!st) st = 'BẢN CHUẨN';
+
+      if (!map.has(st)) {
+        map.set(st, {
+          storage: st,
+          slug: item.slug || item.id,
+          isCurrent: String(item.slug || item.id) === String(slug),
+        });
+      }
     });
-    return set.size > 0 ? Array.from(set) : ['128GB', '256GB', '512GB'];
+
+    return Array.from(map.values());
+  }, [siblingProducts, product, slug]);
+
+  // Dung lượng hiện tại của sản phẩm đang xem
+  const currentProductStorage = useMemo(() => {
+    return extractStorageFromName(product?.name || '') || 'Tiêu chuẩn';
   }, [product]);
 
-  // 3. Lấy danh sách màu sắc tương ứng theo dung lượng đã chọn
+  // 3. Danh sách màu sắc khả dụng cho sản phẩm này
   const availableColors = useMemo(() => {
     if (!product?.variants || !Array.isArray(product.variants)) {
-      return ['Đen', 'Bạc', 'Trắng'];
+      return ['Đen Titan', 'Trắng Titan', 'Xám'];
     }
-    const filtered = product.variants.filter(
-      (v: any) => !selectedStorage || v.storage === selectedStorage
-    );
     const colorSet = new Set<string>();
-    filtered.forEach((v: any) => {
+    product.variants.forEach((v: any) => {
       if (v.color) colorSet.add(v.color);
     });
-    if (colorSet.size === 0) {
-      product.variants.forEach((v: any) => {
-        if (v.color) colorSet.add(v.color);
-      });
-    }
-    return Array.from(colorSet);
-  }, [product, selectedStorage]);
+    return colorSet.size > 0 ? Array.from(colorSet) : ['Mặc định'];
+  }, [product]);
 
-  // 4. Xác định biến thể hiện tại để lấy giá & hình ảnh
+  // 4. Biến thể hiện tại dựa trên màu đang chọn
   const currentVariant = useMemo(() => {
     if (!product?.variants || !Array.isArray(product.variants)) return null;
-    return (
-      product.variants.find(
-        (v: any) => v.storage === selectedStorage && v.color === selectedColor
-      ) ||
-      product.variants.find((v: any) => v.storage === selectedStorage) ||
-      product.variants[0]
-    );
-  }, [product, selectedStorage, selectedColor]);
+    return product.variants.find((v: any) => v.color === selectedColor) || product.variants[0];
+  }, [product, selectedColor]);
 
   const currentPrice = currentVariant?.price || product?.price || 21990000;
   const currentOriginalPrice = currentVariant?.originalPrice || product?.originalPrice || Math.round(currentPrice * 1.15);
 
-  // Xử lý đổi dung lượng không reload trang
-  const handleSelectStorage = (st: string) => {
-    setSelectedStorage(st);
-    if (product?.variants) {
-      const match = product.variants.find((v: any) => v.storage === st && v.color === selectedColor)
-        || product.variants.find((v: any) => v.storage === st);
-      if (match) {
-        if (match.color) setSelectedColor(match.color);
-        if (match.images?.[0]) setSelectedImage(formatProductImageUrl(match.images[0]));
-      }
+  // Khi chọn dung lượng khác -> Điều hướng sang URL trang của sản phẩm đó
+  const handleSelectStorageOption = (targetSlug: string) => {
+    if (targetSlug !== slug) {
+      router.push(`/san-pham/${targetSlug}`);
     }
   };
 
-  // Xử lý đổi màu không reload trang
+  // Khi đổi màu sắc -> Giữ nguyên URL, chỉ thay đổi hình ảnh và màu đang chọn
   const handleSelectColor = (col: string) => {
     setSelectedColor(col);
     if (product?.variants) {
-      const match = product.variants.find((v: any) => v.color === col && v.storage === selectedStorage)
-        || product.variants.find((v: any) => v.color === col);
+      const match = product.variants.find((v: any) => v.color === col);
       if (match?.images?.[0]) {
         setSelectedImage(formatProductImageUrl(match.images[0]));
       }
@@ -185,14 +223,14 @@ export default function ProductDetailPage() {
       originalPrice: currentOriginalPrice,
       imageUrl: selectedImage,
       quantity,
-      storage: selectedStorage,
+      storage: currentProductStorage,
       color: selectedColor,
       modelSlug: product.slug,
     });
     setToast({
       show: true,
       type: 'success',
-      message: `Đã thêm ${product.name} (${selectedStorage} - ${selectedColor}) vào giỏ hàng!`,
+      message: `Đã thêm ${product.name} (${selectedColor}) vào giỏ hàng!`,
     });
   };
 
@@ -214,9 +252,9 @@ export default function ProductDetailPage() {
       <div className="min-h-screen bg-white">
         <Header />
         <Navbar />
-        <div className="max-w-7xl mx-auto py-24 text-center">
+        <div className="max-w-7xl mx-auto py-28 text-center">
           <div className="w-12 h-12 border-4 border-[#d70018] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 font-bold text-base">Đang nạp dữ liệu chi tiết sản phẩm...</p>
+          <p className="text-gray-600 font-bold text-base">Đang tải dữ liệu sản phẩm...</p>
         </div>
         <Footer />
       </div>
@@ -237,7 +275,7 @@ export default function ProductDetailPage() {
         <Navbar />
       </div>
 
-      {/* BREADCRUMB - TĂNG CỠ CHỮ */}
+      {/* BREADCRUMB */}
       <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-3 px-4 text-sm text-gray-600">
         <div className="max-w-7xl mx-auto flex items-center gap-2">
           <Link href="/" className="hover:text-[#d70018] transition-colors">Trang chủ</Link>
@@ -252,7 +290,7 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* ========================================================================= */}
-          {/* CỘT 1: HÌNH ẢNH TO HƠN 2 SIZE, DỜI QUA PHẢI CÂN ĐỐI                       */}
+          {/* CỘT 1: HÌNH ẢNH TO HƠN 2 SIZE, DỜI QUA PHẢI (lg:col-span-5 + lg:pl-6)    */}
           {/* ========================================================================= */}
           <div className="lg:col-span-5 flex flex-col items-center lg:pl-6">
             <div className="w-full aspect-square max-w-[550px] border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
@@ -264,7 +302,7 @@ export default function ProductDetailPage() {
               />
             </div>
 
-            {/* Thumbnail selector */}
+            {/* Thumbnail danh sách hình ảnh theo màu */}
             <div className="flex items-center gap-3 mt-4 overflow-x-auto py-2 max-w-full">
               {[
                 selectedImage,
@@ -294,12 +332,12 @@ export default function ProductDetailPage() {
           <div className="lg:col-span-4 space-y-5">
             <div className="text-xs font-black tracking-widest text-gray-400 uppercase"> Authorized Reseller</div>
             
-            {/* Tên máy tăng 2 size (text-3xl -> text-4xl) */}
+            {/* Tên máy tăng 2 size */}
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-snug">
               {product?.name}
             </h1>
 
-            {/* Đánh giá sao tăng 2 size */}
+            {/* Đánh giá sao */}
             <div className="flex items-center gap-1.5 text-amber-400 text-base">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} size={18} className="fill-amber-400" />
@@ -307,7 +345,7 @@ export default function ProductDetailPage() {
               <span className="text-gray-500 text-sm ml-2 font-medium">(Đánh giá 5 sao chuẩn Apple VN/A)</span>
             </div>
 
-            {/* Mức giá tăng 2 size (text-4xl -> text-5xl) */}
+            {/* Mức giá tăng 2 size */}
             <div className="flex items-baseline gap-4 pt-1">
               <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#d70018]">
                 {formatVnd(currentPrice)}
@@ -319,28 +357,30 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Chọn dung lượng - Tăng size chữ & nút */}
+            {/* CHỌN DUNG LƯỢNG - MỖI NÚT LÀ MỘT SẢN PHẨM VỚI URL RIÊNG TRONG DATABASE */}
             <div className="pt-2">
-              <label className="block text-base font-black text-gray-900 mb-2.5">Chọn dung lượng:</label>
+              <label className="block text-base font-black text-gray-900 mb-2.5">
+                Chọn dung lượng (Chuyển phiên bản):
+              </label>
               <div className="flex flex-wrap gap-3">
-                {availableStorages.map((st) => (
+                {storageOptions.map((opt) => (
                   <button
-                    key={st}
+                    key={opt.storage}
                     type="button"
-                    onClick={() => handleSelectStorage(st)}
+                    onClick={() => handleSelectStorageOption(opt.slug)}
                     className={`px-5 py-2.5 text-base font-bold rounded-lg border cursor-pointer transition-all ${
-                      selectedStorage === st
+                      opt.isCurrent
                         ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/40 shadow-xs'
-                        : 'border-gray-300 text-gray-800 hover:border-gray-400 bg-white'
+                        : 'border-gray-300 text-gray-800 hover:border-[#d70018]/60 bg-white'
                     }`}
                   >
-                    {st}
+                    {opt.storage}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Chọn màu sắc - Tăng size chữ & nút */}
+            {/* CHỌN MÀU SẮC - ĐỔI MÀU & HÌNH ẢNH TẠI TRANG HIỆN TẠI (KHÔNG ĐỔI URL) */}
             <div className="pt-2">
               <label className="block text-base font-black text-gray-900 mb-2.5">Màu sắc:</label>
               <div className="flex flex-wrap gap-2.5">
@@ -390,7 +430,7 @@ export default function ProductDetailPage() {
               <span className="bg-[#d70018] text-white text-xs font-black px-2.5 py-1 rounded cursor-pointer shrink-0 ml-2">Ưu đãi</span>
             </div>
 
-            {/* Nút Thêm Vào Giỏ & Mua Ngay - Tăng kích thước & font */}
+            {/* Nút Thêm Vào Giỏ & Mua Ngay */}
             <div className="grid grid-cols-2 gap-3.5 pt-2">
               <button
                 type="button"
@@ -470,7 +510,7 @@ export default function ProductDetailPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (CHỮ TO HƠN 2 SIZE)           */}
+          {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO                               */}
           {/* ========================================================================= */}
           <div className="lg:col-span-3 space-y-5">
             <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-xs">
@@ -586,7 +626,7 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* BẢNG THÔNG SỐ KỸ THUẬT GRADIENT ĐỎ CHUẨN MẪU */}
+            {/* BẢNG THÔNG SỐ KỸ THUẬT GRADIENT ĐỎ */}
             {activeTab === 'specs' && (
               <div className="max-w-4xl overflow-hidden rounded-xl border border-red-500 bg-white shadow-xs">
                 <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-sm md:text-base uppercase py-4 px-6">
@@ -602,13 +642,12 @@ export default function ProductDetailPage() {
                   {(Array.isArray(product?.specifications) && product.specifications.length > 0
                     ? product.specifications
                     : [
-                        { key: 'Màn hình', value: 'OLED Super Retina XDR, ProMotion 1-120Hz, độ sáng đỉnh cao' },
-                        { key: 'Hệ điều hành', value: 'iPadOS / iOS tối ưu phiên bản mới nhất' },
-                        { key: 'Vi xử lý', value: 'Apple Silicon thế hệ mới' },
-                        { key: 'Camera sau', value: 'Hệ thống camera độ phân giải cao, quay phim chuẩn 4K' },
-                        { key: 'Camera trước', value: 'Ultra Wide Center Stage góc nhìn siêu rộng' },
-                        { key: 'Pin & Sạc', value: 'Thời lượng pin cả ngày dài | Hỗ trợ sạc nhanh Type-C' },
-                        { key: 'Thiết kế & Độ bền', value: 'Khung vỏ nguyên khối cao cấp, chuẩn kháng nước bụi IP68' },
+                        { key: 'Màn hình', value: 'Liquid Retina / Super Retina XDR với dải màu rộng P3 sắc nét' },
+                        { key: 'Hệ điều hành', value: 'macOS / iPadOS / iOS tối ưu mượt mà' },
+                        { key: 'Vi xử lý', value: 'Apple Silicon thế hệ mới hiệu năng vượt trội' },
+                        { key: 'Camera', value: 'Camera độ phân giải cao hỗ trợ gọi video và chụp ảnh sắc nét' },
+                        { key: 'Pin & Sạc', value: 'Thời lượng pin ấn tượng suốt cả ngày | Cổng sạc nhanh USB-C / MagSafe' },
+                        { key: 'Thiết kế & Độ bền', value: 'Vỏ nhôm nguyên khối tái chế 100% thân thiện môi trường' },
                         { key: 'Màu sắc', value: selectedColor || 'Tiêu chuẩn' },
                       ]
                   ).map((row: any, idx: number) => (
