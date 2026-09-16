@@ -18,22 +18,23 @@ export default async function ProductDetailPage(props: PageProps) {
   const rawParams = props.params instanceof Promise ? await props.params : props.params;
   const rawSearchParams = props.searchParams instanceof Promise ? await props.searchParams : props.searchParams;
 
-  const currentSlug = String(rawParams?.slug || '').trim();
+  const currentSlug = String(rawParams?.slug || '').trim().replace(/\/+$/, '');
   const proid = typeof rawSearchParams?.proid === 'string' ? rawSearchParams.proid : '';
 
   if (!currentSlug) {
     notFound();
   }
 
-  // 1. Tách dung lượng/RAM/kích thước mặt ra khỏi slug một cách linh hoạt (hỗ trợ 24gb, 512gb, 1tb, 45mm, v.v.)
+  // 1. Tách dung lượng / RAM / kích thước mặt ra khỏi slug một cách cực kỳ linh hoạt (hỗ trợ cả 24gb, 512gb, 1tb, 45mm và dấu /)
+  const cleanSlugForMatch = currentSlug.replace(/\//g, '-');
   const storageMatch =
-    currentSlug.match(/-(?:\d+gb|\d+tb|\d+mm)$/i) ||
-    currentSlug.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
+    cleanSlugForMatch.match(/-(?:\d+gb|\d+tb|\d+mm)$/i) ||
+    cleanSlugForMatch.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
   
   const urlStorage = storageMatch ? storageMatch[1].toUpperCase() : '';
   const baseSlug = storageMatch
-    ? currentSlug.substring(0, currentSlug.length - storageMatch[0].length)
-    : currentSlug;
+    ? cleanSlugForMatch.substring(0, cleanSlugForMatch.length - storageMatch[0].length)
+    : cleanSlugForMatch;
 
   let product: any = null;
   const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
@@ -41,6 +42,7 @@ export default async function ProductDetailPage(props: PageProps) {
   // 2. Fetch Backend Database Neon
   try {
     const query = proid ? `?proid=${proid}` : '';
+    // Thử gọi với baseSlug trước
     let res = await fetch(`${apiUrl}/api/products/${baseSlug}${query}`, {
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -53,8 +55,9 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
 
-    if (!product && baseSlug !== currentSlug) {
-      res = await fetch(`${apiUrl}/api/products/${currentSlug}${query}`, {
+    // Nếu không thấy, thử gọi với toàn bộ currentSlug sạch
+    if (!product) {
+      res = await fetch(`${apiUrl}/api/products/${cleanSlugForMatch}${query}`, {
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -99,29 +102,29 @@ export default async function ProductDetailPage(props: PageProps) {
 
   // 4. Fallback khẩn cấp toàn bộ sản phẩm nếu không tìm thấy trong DB
   if (!product) {
-    const cleanWords = currentSlug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const cleanWords = cleanSlugForMatch.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     
     let defaultCategorySlug = 'iphone';
     let defaultCategoryName = 'iPhone';
     let defaultPrice = 19990000;
     let defaultImg = 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600';
 
-    if (currentSlug.includes('macbook')) {
+    if (cleanSlugForMatch.includes('macbook')) {
       defaultCategorySlug = 'macbook';
       defaultCategoryName = 'MacBook';
       defaultPrice = 28990000;
       defaultImg = 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600';
-    } else if (currentSlug.includes('ipad')) {
+    } else if (cleanSlugForMatch.includes('ipad')) {
       defaultCategorySlug = 'ipad';
       defaultCategoryName = 'iPad';
       defaultPrice = 14990000;
       defaultImg = 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600';
-    } else if (currentSlug.includes('watch')) {
+    } else if (cleanSlugForMatch.includes('watch')) {
       defaultCategorySlug = 'watch';
       defaultCategoryName = 'Apple Watch';
       defaultPrice = 8990000;
       defaultImg = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
-    } else if (currentSlug.includes('airpods') || currentSlug.includes('sac') || currentSlug.includes('cap') || currentSlug.includes('phu-kien')) {
+    } else if (cleanSlugForMatch.includes('airpods') || cleanSlugForMatch.includes('sac') || cleanSlugForMatch.includes('cap') || cleanSlugForMatch.includes('phu-kien')) {
       defaultCategorySlug = 'phu-kien';
       defaultCategoryName = 'Phụ kiện';
       defaultPrice = 1000;
@@ -129,13 +132,13 @@ export default async function ProductDetailPage(props: PageProps) {
     }
 
     product = {
-      id: `mock-${currentSlug}`,
+      id: `mock-${cleanSlugForMatch}`,
       name: cleanWords,
-      slug: currentSlug,
+      slug: cleanSlugForMatch,
       category: { slug: defaultCategorySlug, name: defaultCategoryName },
       variants: [
         {
-          id: `var-${currentSlug}-1`,
+          id: `var-${cleanSlugForMatch}-1`,
           color: 'Mặc định',
           storage: urlStorage || '128GB',
           price: defaultPrice,
@@ -150,7 +153,7 @@ export default async function ProductDetailPage(props: PageProps) {
   const catSlug = (product.category?.slug || '').toLowerCase();
   const catName = (product.category?.name || '').toLowerCase();
   const prodName = (product.name || '').toLowerCase();
-  const slugLower = currentSlug.toLowerCase();
+  const slugLower = cleanSlugForMatch.toLowerCase();
 
   // ================= BỘ ĐIỀU PHỐI GIAO DIỆN (DISPATCHER) =================
 
@@ -175,7 +178,7 @@ export default async function ProductDetailPage(props: PageProps) {
         <TrackRecentViewed product={product} />
         <UsedProductDetail
           initialProduct={product}
-          currentSlug={currentSlug}
+          currentSlug={cleanSlugForMatch}
           baseSlug={baseSlug}
           urlStorage={urlStorage}
         />
@@ -210,7 +213,7 @@ export default async function ProductDetailPage(props: PageProps) {
         <TrackRecentViewed product={product} />
         <AccessoryDetail
           initialProduct={product}
-          currentSlug={currentSlug}
+          currentSlug={cleanSlugForMatch}
           baseSlug={baseSlug}
           urlStorage={urlStorage}
         />
@@ -232,7 +235,7 @@ export default async function ProductDetailPage(props: PageProps) {
         <TrackRecentViewed product={product} />
         <WatchDetail
           initialProduct={product}
-          currentSlug={currentSlug}
+          currentSlug={cleanSlugForMatch}
           baseSlug={baseSlug}
           urlStorage={urlStorage}
         />
@@ -253,7 +256,7 @@ export default async function ProductDetailPage(props: PageProps) {
         <TrackRecentViewed product={product} />
         <MacBookDetail
           initialProduct={product}
-          currentSlug={currentSlug}
+          currentSlug={cleanSlugForMatch}
           baseSlug={baseSlug}
           urlStorage={urlStorage}
         />
@@ -273,7 +276,7 @@ export default async function ProductDetailPage(props: PageProps) {
         <TrackRecentViewed product={product} />
         <IPadDetail
           initialProduct={product}
-          currentSlug={currentSlug}
+          currentSlug={cleanSlugForMatch}
           baseSlug={baseSlug}
           urlStorage={urlStorage}
         />
@@ -287,7 +290,7 @@ export default async function ProductDetailPage(props: PageProps) {
       <TrackRecentViewed product={product} />
       <IPhoneDetail
         initialProduct={product}
-        currentSlug={currentSlug}
+        currentSlug={cleanSlugForMatch}
         baseSlug={baseSlug}
         urlStorage={urlStorage}
       />
