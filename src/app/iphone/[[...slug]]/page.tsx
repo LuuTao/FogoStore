@@ -3,12 +3,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Star } from 'lucide-react';
+import { ShoppingCart, CreditCard } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 import { IPhoneSeoContent } from '@/components/category/IPhoneSeoContent';
+import { useCart } from '@/context/CartContext';
+import { ToastNotification } from '@/components/common/ToastNotification';
 
 interface SeriesTabItem {
   name: string;
@@ -59,82 +61,26 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
 
 const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '18': [
-    {
-      name: '18 Pro Max',
-      tag: '18-pro-max',
-      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
-    },
-    {
-      name: '18 Pro',
-      tag: '18-pro',
-      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
-    },
-    {
-      name: '18 Plus',
-      tag: '18-plus',
-      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
-    },
-    {
-      name: 'iPhone 18',
-      tag: '18-standard',
-      img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100',
-    },
+    { name: '18 Pro Max', tag: '18-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
+    { name: '18 Pro', tag: '18-pro', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
+    { name: '18 Plus', tag: '18-plus', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
+    { name: 'iPhone 18', tag: '18-standard', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
   ],
   '17': [
-    {
-      name: '17 Pro Max',
-      tag: '17-pro-max',
-      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
-    },
-    {
-      name: '17 Pro',
-      tag: '17-pro',
-      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
-    },
-    {
-      name: '17 Plus',
-      tag: '17-plus',
-      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
-    },
-    {
-      name: '17 Air',
-      tag: '17-air',
-      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
-    },
-    {
-      name: 'iPhone 17',
-      tag: '17-standard',
-      img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
-    },
+    { name: '17 Pro Max', tag: '17-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Pro', tag: '17-pro', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Plus', tag: '17-plus', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Air', tag: '17-air', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: 'iPhone 17', tag: '17-standard', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
   ],
   '16': [
-    {
-      name: '16 Pro Max',
-      tag: '16-pro-max',
-      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
-    },
-    {
-      name: '16 Pro',
-      tag: '16-pro',
-      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
-    },
-    {
-      name: '16 Plus',
-      tag: '16-plus',
-      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
-    },
-    {
-      name: 'iPhone 16',
-      tag: '16-standard',
-      img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
-    },
+    { name: '16 Pro Max', tag: '16-pro-max', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: '16 Pro', tag: '16-pro', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: '16 Plus', tag: '16-plus', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: 'iPhone 16', tag: '16-standard', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
   ],
   'duo': [
-    {
-      name: 'iPhone Duo Series',
-      tag: 'duo',
-      img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
-    },
+    { name: 'iPhone Duo Series', tag: 'duo', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
   ],
 };
 
@@ -164,7 +110,6 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
-// Hàm định dạng giá: Trả về "Liên hệ" nếu giá <= 0
 const formatVndPrice = (price: number) => {
   if (!price || price <= 0) return 'Liên hệ';
   return price.toLocaleString('vi-VN') + 'đ';
@@ -186,10 +131,28 @@ const formatProductImageUrl = (url?: string | null): string => {
   return `${API_URL}${path}`;
 };
 
+// Hàm định dạng tên sản phẩm: dời dung lượng lên trước hậu tố (Chính Hãng, New Seal, ...)
+const buildProductNameWithStorage = (originalName: string, storage: string): string => {
+  if (!storage) return originalName;
+  const upperStorage = storage.toUpperCase();
+  let clean = originalName.replace(new RegExp(`\\b${upperStorage}\\b`, 'gi'), '').trim();
+
+  const matchSuffix = clean.match(/(Chính Hãng.*|New Seal.*|CPO.*|Chưa Active.*|Đã Kích Hoạt.*)$/i);
+  if (matchSuffix) {
+    const mainTitle = clean.substring(0, matchSuffix.index).trim();
+    const suffix = matchSuffix[0].trim();
+    return `${mainTitle} ${upperStorage} ${suffix}`;
+  }
+
+  return `${clean} ${upperStorage}`;
+};
+
 export default function DynamicIPhonePage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const { addToCart } = useCart();
 
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   const [rawDbProducts, setRawDbProducts] = useState<any[]>([]);
@@ -255,7 +218,7 @@ export default function DynamicIPhonePage() {
         }
       }
     } catch (e) {
-      console.error('Lỗi nạp Submodel iPhone từ Admin:', e);
+      console.error('Lỗi nạp Submodel iPhone:', e);
     }
   }, []);
 
@@ -282,7 +245,7 @@ export default function DynamicIPhonePage() {
 
         setRawDbProducts(filtered);
       } catch (err) {
-        console.error('Lỗi khi fetch sản phẩm iPhone:', err);
+        console.error('Lỗi khi fetch iPhone:', err);
         setRawDbProducts([]);
       } finally {
         setLoadingDb(false);
@@ -292,7 +255,7 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
-  // TỰ ĐỘNG PHÂN TÁCH TỪNG BIẾN THỂ DUNG LƯỢNG THÀNH TỪNG THẺ CARD RIÊNG BIỆT
+  // Tách từng dung lượng và dời GB lên vị trí chuẩn
   const expandedProducts = useMemo(() => {
     const result: any[] = [];
 
@@ -314,25 +277,25 @@ export default function DynamicIPhonePage() {
         const curPrice = Number(v.price || prod.price || 0);
         const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
         const stKey = Array.from(storageMap.keys())[0] || '';
-        const nameSuffix = stKey ? ` ${stKey}` : '';
         const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
-
-        // QUY TẮC CHUẨN: CÓ GIÁ (> 0) THÌ SẴN HÀNG, KHÔNG CÓ GIÁ (<= 0) THÌ TẠM HẾT HÀNG & LIÊN HỆ
         const hasPrice = curPrice > 0;
+        const finalName = buildProductNameWithStorage(prod.name, stKey);
 
         result.push({
           id: prod.id,
-          name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+          variantId: v.id || prod.id,
+          name: finalName,
           slug: `${prod.slug}${slugSuffix}`,
+          modelSlug: prod.slug,
           href: `/san-pham/${prod.slug}${slugSuffix}`,
           currentPrice: formatVndPrice(curPrice),
           originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
+          storage: stKey,
+          color: v.color || '',
           discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-          downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
           statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-          rating: 5,
           searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
         });
       } else {
@@ -340,25 +303,25 @@ export default function DynamicIPhonePage() {
           const v = varList[0];
           const curPrice = Number(v.price || prod.price || 0);
           const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
-          const nameSuffix = stKey ? ` ${stKey}` : '';
           const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
-
-          // QUY TẮC CHUẨN: CÓ GIÁ (> 0) THÌ SẴN HÀNG, KHÔNG CÓ GIÁ (<= 0) THÌ TẠM HẾT HÀNG & LIÊN HỆ
           const hasPrice = curPrice > 0;
+          const finalName = buildProductNameWithStorage(prod.name, stKey);
 
           result.push({
             id: `${prod.id}-${stKey || 'base'}`,
-            name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+            variantId: v.id || `${prod.id}-${stKey}`,
+            name: finalName,
             slug: `${prod.slug}${slugSuffix}`,
+            modelSlug: prod.slug,
             href: `/san-pham/${prod.slug}${slugSuffix}`,
             currentPrice: formatVndPrice(curPrice),
             originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
             rawPrice: curPrice,
+            storage: stKey,
+            color: v.color || '',
             discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-            downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
             statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-            rating: 5,
             searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
           });
         });
@@ -368,6 +331,7 @@ export default function DynamicIPhonePage() {
     return result;
   }, [rawDbProducts]);
 
+  // Bộ lọc chuẩn khớp đúng số Series
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -377,7 +341,10 @@ export default function DynamicIPhonePage() {
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
-        items = items.filter((i) => i.searchIndex.includes(targetNumber));
+        items = items.filter((i) => {
+          const regex = new RegExp(`\\biphone\\s*${targetNumber}\\b|\\b${targetNumber}\\s*(pro|plus|promax|air)?\\b`, 'i');
+          return regex.test(i.searchIndex);
+        });
 
         if (lowerFilter.includes('pro-max') || lowerFilter.includes('promax')) {
           items = items.filter((i) => i.searchIndex.includes('pro max') || i.searchIndex.includes('promax'));
@@ -392,8 +359,6 @@ export default function DynamicIPhonePage() {
         }
       } else if (lowerFilter.includes('duo')) {
         items = items.filter((i) => i.searchIndex.includes('duo'));
-        if (lowerFilter.includes('fold')) items = items.filter((i) => i.searchIndex.includes('fold'));
-        if (lowerFilter.includes('flip')) items = items.filter((i) => i.searchIndex.includes('flip'));
       } else {
         const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
@@ -425,12 +390,6 @@ export default function DynamicIPhonePage() {
       items = items.filter((item) => item.searchIndex.includes(storeVal));
     }
 
-    if (activeFilters.chip && activeFilters.chip.length > 0) {
-      items = items.filter((item) =>
-        activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))
-      );
-    }
-
     items.sort((a, b) => {
       const priceA = parsePrice(a.rawPrice || a.currentPrice);
       const priceB = parsePrice(b.rawPrice || b.currentPrice);
@@ -458,9 +417,7 @@ export default function DynamicIPhonePage() {
       return `iPhone ${num} Series`;
     }
 
-    if (currentFilter.includes('duo')) {
-      return 'iPhone Duo Series';
-    }
+    if (currentFilter.includes('duo')) return 'iPhone Duo Series';
 
     return currentFilter
       .split('-')
@@ -468,6 +425,30 @@ export default function DynamicIPhonePage() {
       .join(' ')
       .replace('Iphone', 'iPhone');
   }, [currentFilter]);
+
+  const handleAddToCartQuick = (e: React.MouseEvent, product: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (product.rawPrice <= 0) return;
+
+    addToCart({
+      id: product.variantId,
+      name: product.name,
+      modelSlug: product.modelSlug,
+      price: product.rawPrice,
+      originalPrice: parsePrice(product.originalPrice) || product.rawPrice,
+      storage: product.storage,
+      color: product.color || 'Tiêu chuẩn',
+      imageUrl: product.imageUrl,
+      quantity: 1,
+    });
+
+    setToast({
+      show: true,
+      message: `Đã thêm ${product.name} vào giỏ hàng!`,
+    });
+  };
 
   const banner1 = adminBanners[0] || {
     name: 'Thế Hệ iPhone Mới Nhất',
@@ -483,6 +464,12 @@ export default function DynamicIPhonePage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
+      <ToastNotification
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
       <div>
         <div className="sticky top-0 z-50 shadow-md">
           <Header />
@@ -505,7 +492,7 @@ export default function DynamicIPhonePage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN 600x200px */}
+          {/* 1. BANNER */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link
@@ -532,7 +519,7 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX */}
+          {/* 2. ICON SERIES CHA */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {seriesTabs.map((series, idx) => {
@@ -540,7 +527,8 @@ export default function DynamicIPhonePage() {
                 const isSelected = isAllButton
                   ? !currentFilter
                   : currentFilter === series.slug ||
-                    (series.queryTag && currentFilter.includes(series.queryTag));
+                    (series.queryTag && currentFilter === series.queryTag) ||
+                    (series.queryTag && currentFilter.includes(`iphone-${series.queryTag}`));
 
                 return (
                   <Link
@@ -574,7 +562,7 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON */}
+          {/* 3. SUBMODELS CON */}
           {subModels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
@@ -634,53 +622,44 @@ export default function DynamicIPhonePage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM */}
+          {/* LƯỚI SẢN PHẨM: ẢNH TO, NỀN TRẮNG TINH, KHÔNG VIỀN */}
           {loadingDb ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={index}
-                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[430px] animate-pulse"
+                  className="bg-white p-3 flex flex-col justify-between min-h-[420px] animate-pulse"
                 >
-                  <div className="flex justify-between items-center h-6">
-                    <div className="w-10 h-4 bg-gray-200" />
-                    <div className="w-16 h-3 bg-gray-200" />
-                  </div>
-                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
-                  <div className="space-y-2">
-                    <div className="w-full h-4 bg-gray-200" />
-                    <div className="w-3/4 h-4 bg-gray-200" />
-                  </div>
-                  <div className="w-full h-8 bg-gray-100 my-2" />
-                  <div className="w-1/2 h-5 bg-gray-200" />
-                  <div className="w-1/3 h-3 bg-gray-100" />
+                  <div className="w-10 h-4 bg-gray-100 mb-2" />
+                  <div className="w-full h-48 bg-gray-50 my-2 rounded" />
+                  <div className="w-full h-4 bg-gray-100 mt-2" />
+                  <div className="w-3/4 h-4 bg-gray-100 mt-2" />
                 </div>
               ))}
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-14">
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-200 min-h-[430px]"
+                  className="bg-white p-2.5 sm:p-3 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group min-h-[420px]"
                 >
-                  <div className="flex items-center justify-between h-6">
+                  {/* TAG GIẢM GIÁ (ĐÃ BỎ AUTHORIZED RESELLER) */}
+                  <div className="flex items-center justify-between h-5">
                     {product.rawPrice > 0 ? (
-                      <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-none">
+                      <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-sm">
                         -{product.discountPercent}%
                       </span>
                     ) : (
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5">
+                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
                         Hot
                       </span>
                     )}
-                    <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
-                      <span></span>
-                      <span className="scale-90 origin-right">Authorized Reseller</span>
-                    </div>
+                    <span />
                   </div>
 
-                  <Link href={product.href} className="w-full h-40 my-2 flex items-center justify-center overflow-hidden">
+                  {/* KHUNG ẢNH: TO LÊN, NỀN TRẮNG TINH, KHÔNG VIỀN */}
+                  <Link href={product.href} className="w-full h-48 sm:h-52 my-2 flex items-center justify-center bg-white overflow-hidden">
                     <img
                       src={product.imageUrl}
                       alt={product.name}
@@ -688,32 +667,25 @@ export default function DynamicIPhonePage() {
                         (e.target as HTMLImageElement).src =
                           'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80';
                       }}
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
+                      className="max-h-full max-w-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm"
                     />
                   </Link>
 
+                  {/* TÊN SẢN PHẨM: ĐÃ DỜI DUNG LƯỢNG LÊN TRƯỚC HẬU TỐ */}
                   <Link
                     href={product.href}
-                    className="font-bold text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors h-[38px] leading-snug"
+                    className="font-bold text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[38px] leading-snug"
                   >
                     {product.name}
                   </Link>
 
-                  {/* KHỐI TRẢ GÓP: CÓ GIÁ MỚI HIỆN BẢNG 0% 0Đ 0Đ */}
+                  {/* KHỐI TRẢ GÓP MỚI: BỎ 0% 0Đ 0Đ, THAY BẰNG ICON + TRẢ GÓP | TRẢ TRƯỚC | PHÍ */}
                   {product.rawPrice > 0 ? (
-                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
-                      <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
-                        <span>Trả Góp</span>
-                        <span>•</span>
-                        <span>Trả Trước</span>
-                        <span>•</span>
-                        <span>Phí</span>
-                      </div>
-                      <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
-                        <span>0%</span>
-                        <span>0đ</span>
-                        <span>0đ</span>
-                      </div>
+                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-center gap-1.5 text-[#d70018]">
+                      <CreditCard size={13} className="shrink-0" />
+                      <span className="text-[10px] sm:text-[11px] font-black tracking-tight truncate">
+                        Trả góp<span className="text-gray-300 font-normal">|</span> Trả trước <span className="text-gray-300 font-normal">|</span> Phí
+                      </span>
                     </div>
                   ) : (
                     <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
@@ -723,9 +695,9 @@ export default function DynamicIPhonePage() {
                     </div>
                   )}
 
-                  {/* NHÃN TRẠNG THÁI: CÓ GIÁ LÀ SẴN HÀNG, KHÔNG CÓ GIÁ LÀ TẠM HẾT HÀNG */}
+                  {/* NHÃN TRẠNG THÁI */}
                   <span
-                    className={`mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit ${
+                    className={`mt-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit ${
                       product.statusTag === 'Sẵn hàng'
                         ? 'bg-[#ffe8e8] text-[#d70018]'
                         : 'bg-gray-100 text-gray-500'
@@ -734,9 +706,9 @@ export default function DynamicIPhonePage() {
                     {product.statusTag}
                   </span>
 
-                  {/* MỨC GIÁ: CÓ GIÁ THÌ HIỆN SỐ TIỀN, GIÁ <= 0 THÌ HIỆN CHỮ "LIÊN HỆ" */}
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base sm:text-lg'}`}>
+                  {/* MỨC GIÁ */}
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base'}`}>
                       {product.currentPrice}
                     </span>
                     {product.rawPrice > 0 && product.originalPrice && (
@@ -744,18 +716,25 @@ export default function DynamicIPhonePage() {
                     )}
                   </div>
 
-                  <div className="text-[11px] text-gray-600 font-medium mt-0.5">
+                  {/* NÚT THÊM GIỎ HÀNG */}
+                  <div className="mt-3">
                     {product.rawPrice > 0 ? (
-                      <>Hoặc trả trước <strong className="text-gray-900">{product.downPayment}</strong></>
+                      <button
+                        type="button"
+                        onClick={(e) => handleAddToCartQuick(e, product)}
+                        className="w-full py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98"
+                      >
+                        <ShoppingCart size={14} />
+                        <span>Thêm Giỏ Hàng</span>
+                      </button>
                     ) : (
-                      <span className="text-[#d70018] font-bold">Hotline: 056.600.3333</span>
+                      <a
+                        href="tel:0566003333"
+                        className="w-full py-2 border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] rounded-md text-xs font-bold uppercase flex items-center justify-center transition-colors"
+                      >
+                        Liên Hệ Báo Giá
+                      </a>
                     )}
-                  </div>
-
-                  <div className="flex items-center gap-0.5 mt-2 text-amber-400 h-3">
-                    {[...Array(product.rating || 5)].map((_, i) => (
-                      <Star key={i} size={11} className="fill-amber-400" />
-                    ))}
                   </div>
                 </div>
               ))}
