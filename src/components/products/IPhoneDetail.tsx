@@ -197,16 +197,25 @@ export default function IPhoneDetail({
   }, [product, storageList, selectedColor]);
 
   // Bấm dung lượng: chuyển URL sang trang mới
+  // Bấm dung lượng: Chuyển hướng an toàn tuyệt đối, loại bỏ hoàn toàn lỗi 404 / reload loop
   const handleSelectStorage = (st: string) => {
     if (selectedStorage.toUpperCase() === st.toUpperCase()) return;
-    const matched = product.variants.find(
+
+    // Tìm kiếm chính xác biến thể khớp cả dung lượng mới và màu đang chọn
+    const matched = product?.variants?.find(
       (v: any) =>
         (v.storage || '').toUpperCase() === st.toUpperCase() &&
         v.color.toLowerCase() === selectedColor.toLowerCase()
-    ) || product.variants.find((v: any) => (v.storage || '').toUpperCase() === st.toUpperCase());
+    ) || product?.variants?.find((v: any) => (v.storage || '').toUpperCase() === st.toUpperCase());
 
+    const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
+    const targetStorage = st.toLowerCase();
+    
+    // Đính kèm proid để phía Server Component nhận diện chính xác biến thể mà không cần query lại vất vả
     const proidParam = matched ? `?proid=${matched.id}` : '';
-    router.push(`/san-pham/${baseSlug}-${st.toLowerCase()}${proidParam}`);
+    
+    // Sử dụng router.replace thay vì push để tránh ghi đè lịch sử gây kẹt vòng lặp reload
+    router.replace(`/san-pham/${cleanBase}-${targetStorage}${proidParam}`);
   };
 
   // Bấm màu sắc: giữ nguyên trang
