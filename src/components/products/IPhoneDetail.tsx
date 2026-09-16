@@ -17,6 +17,9 @@ import {
   ChevronDown,
   ChevronUp,
   Link2,
+  Banknote,
+  RotateCcw,
+  Truck,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -69,7 +72,7 @@ export default function IPhoneDetail({
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isImageTransitioning, setIsImageTransitioning] = useState<boolean>(false);
 
-  const [activeTab, setActiveTab] = useState<'policy' | 'desc' | 'specs'>('policy');
+  const [activeTab, setActiveTab] = useState<'desc' | 'policy' | 'specs'>('desc');
   const [isDescExpanded, setIsDescExpanded] = useState<boolean>(false);
   const [isInstallmentOpen, setIsInstallmentOpen] = useState<boolean>(false);
 
@@ -359,14 +362,13 @@ export default function IPhoneDetail({
           </div>
         </div>
 
-        {/* CONTAINER CHÍNH */}
+        {/* MAIN CONTAINER */}
         <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* CÂN ĐỐI LẠI TỈ LỆ 3 CỘT: 4 - 5 - 3 ĐỂ NỘI DUNG DÀN NGANG KHÔNG BỊ RỚT DÒNG */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
             {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (Chiếm 4/12 cột) */}
             <div className="lg:col-span-4 flex flex-col items-center w-full">
-              <div className="relative w-full aspect-square border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
+              <div className="relative w-full aspect-square max-w-[480px] border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
                 <img
                   src={displayImage}
                   alt={product.name}
@@ -416,8 +418,8 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG (Chiếm 5/12 cột - RỘNG RÃI, DÀN HÀNG NGANG TRỌN VẸN) */}
-            <div className="lg:col-span-5 space-y-4 w-full lg:pl-2">
+            {/* CỘT 2: THÔNG TIN MUA HÀNG (Chiếm 5/12 cột - RỘNG RÃI, MÀU DÀN THẲNG 1 HÀNG) */}
+            <div className="lg:col-span-5 space-y-4 w-full lg:pl-1">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
                   {cleanProductName} {selectedStorage} - Chính hãng Apple VN
@@ -448,7 +450,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG: DÀN HÀNG NGANG KHÔNG XUỐNG DÒNG (flex-nowrap hoặc flex linh hoạt) */}
+              {/* CHỌN DUNG LƯỢNG (DÀN NGANG ĐẸP) */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
@@ -461,7 +463,7 @@ export default function IPhoneDetail({
                         <button
                           key={st}
                           onClick={() => handleSelectStorage(st)}
-                          className={`flex-1 min-w-[70px] py-2 sm:py-2.5 text-sm sm:text-base font-black rounded-xl border-2 text-center cursor-pointer transition-all ${
+                          className={`flex-1 min-w-[65px] py-2 sm:py-2.5 text-sm sm:text-base font-black rounded-xl border-2 text-center cursor-pointer transition-all ${
                             isSelected
                               ? 'border-[#d70018] text-[#d70018] bg-white shadow-xs'
                               : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
@@ -475,13 +477,13 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC: TO LÊN 2 SIZE, KHÔNG GÒ BÓ */}
+              {/* CHỌN MÀU SẮC: NẰM THẲNG 1 HÀNG NGANG KHÔNG XUỐNG DÒNG */}
               {currentColorOptions.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Màu sắc:
                   </label>
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-2.5">
                     {currentColorOptions.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
@@ -490,16 +492,16 @@ export default function IPhoneDetail({
                         <button
                           key={color}
                           onClick={() => handleSelectColor(color)}
-                          className={`px-3.5 sm:px-4 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer ${
+                          className={`flex-1 min-w-[80px] px-2.5 sm:px-3 py-2 rounded-xl border-2 flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
                             isSelected
                               ? 'border-[#d70018] text-[#d70018] font-black bg-white shadow-xs'
                               : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
                           }`}
                         >
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
+                          <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
                             <img src={formatImg(thumb)} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <span className="text-sm sm:text-base font-bold whitespace-nowrap">{color}</span>
+                          <span className="text-xs sm:text-sm font-bold whitespace-nowrap">{color}</span>
                         </button>
                       );
                     })}
@@ -659,51 +661,65 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (Chiếm 3/12 cột) */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (ICON & CHỮ TO HƠN 3PX, THẲNG HÀNG 100%) */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-4 sm:p-5 bg-white shadow-xs space-y-4">
                 <div>
-                  <h3 className="font-black text-sm text-gray-900 mb-3">
+                  <h3 className="font-black text-sm sm:text-base text-gray-900 mb-3.5">
                     Chính sách bán hàng
                   </h3>
-                  <div className="space-y-3 text-xs text-gray-700 font-medium">
-                    <div className="flex items-start gap-2.5">
-                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
-                        <Check size={12} strokeWidth={3} />
-                      </span>
-                      <span>Cam kết 100% chính hãng Apple</span>
+                  <div className="space-y-3.5 text-[15px] text-gray-800 font-semibold">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                      <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
                     </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="text-base shrink-0">💵</span>
-                      <span>Lên đời trợ giá lên đến 95%</span>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Banknote size={17} />
+                      </div>
+                      <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
                     </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="text-base shrink-0">🔄</span>
-                      <span>Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <RotateCcw size={16} />
+                      </div>
+                      <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-3.5">
-                  <h3 className="font-black text-sm text-gray-900 mb-3">
+                <div className="border-t border-gray-100 pt-4">
+                  <h3 className="font-black text-sm sm:text-base text-gray-900 mb-3.5">
                     Thông tin thêm
                   </h3>
-                  <div className="space-y-3 text-xs text-gray-700 font-medium">
-                    <div className="flex items-start gap-2.5">
-                      <span className="px-1.5 py-0.5 border border-blue-600 text-blue-600 font-black rounded text-[9px] shrink-0 mt-0.5">
-                        VISA
-                      </span>
-                      <span>Trả góp lãi suất 0%, đa dạng hình thức góp</span>
+                  <div className="space-y-3.5 text-[15px] text-gray-800 font-semibold">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                        <span className="px-1 py-0.5 border border-blue-600 text-blue-600 font-black rounded text-[10px] leading-none">
+                          VISA
+                        </span>
+                      </div>
+                      <span className="leading-snug">Trả góp lãi suất 0%, đa dạng hình thức góp</span>
                     </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="text-base shrink-0">🛵</span>
-                      <span>Miễn phí giao hàng nội thành TP.HCM</span>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                        <Truck size={17} />
+                      </div>
+                      <span className="leading-snug">Miễn phí giao hàng nội thành TP.HCM</span>
                     </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="px-1.5 py-0.5 bg-red-600 text-white font-black rounded text-[9px] shrink-0 mt-0.5">
-                        HOME
-                      </span>
-                      <span>Giảm đến 500K khi góp qua Home Pay Later</span>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                        <span className="px-1 py-0.5 bg-red-600 text-white font-black rounded text-[9px] leading-none">
+                          HOME
+                        </span>
+                      </div>
+                      <span className="leading-snug">Giảm đến 500K khi góp qua Home Pay Later</span>
                     </div>
                   </div>
                 </div>
@@ -728,16 +744,6 @@ export default function IPhoneDetail({
           <div className="mt-14 pt-8 border-t border-gray-200">
             <div className="flex items-center gap-8 sm:gap-12 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
               <button
-                onClick={() => setActiveTab('policy')}
-                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
-                  activeTab === 'policy'
-                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Chính sách bán hàng
-              </button>
-              <button
                 onClick={() => setActiveTab('desc')}
                 className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
                   activeTab === 'desc'
@@ -746,6 +752,16 @@ export default function IPhoneDetail({
                 }`}
               >
                 Mô tả sản phẩm
+              </button>
+              <button
+                onClick={() => setActiveTab('policy')}
+                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
+                  activeTab === 'policy'
+                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Chính sách bán hàng
               </button>
               <button
                 onClick={() => setActiveTab('specs')}
@@ -759,27 +775,13 @@ export default function IPhoneDetail({
               </button>
             </div>
 
-            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
-            {activeTab === 'policy' && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
-                <h3 className="text-base font-black text-[#1e3a8a]">
-                  Chính Sách Bảo Hành & Khuyến Mãi:
-                </h3>
-                <ul className="space-y-2 list-disc list-inside font-medium text-gray-700">
-                  <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                  <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
-                  <li>Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.</li>
-                  <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
-                </ul>
-              </div>
-            )}
-
-            {/* TAB MÔ TẢ: CĂN SÁT MÉP VÀ THẲNG HÀNG VỚI ẢNH CHUẨN XÁC */}
+            {/* TAB MÔ TẢ: THU GỌN VỪA VẶN, CĂN GIỮA VÀ SÁT MÉP VỚI ẢNH CHUẨN XÁC */}
             {activeTab === 'desc' && (
               <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8 shadow-xs relative">
+                {/* GIỚI HẠN max-w-4xl mx-auto ĐỂ CHỮ VÀ ẢNH KHÔNG BỊ BÈ, VỪA VẶN CĂN GIỮA NHƯ ẢNH 3 */}
                 <div
-                  className={`relative overflow-hidden transition-all duration-300 ${
-                    isDescExpanded ? 'max-h-full pb-6' : 'max-h-[420px]'
+                  className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
+                    isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
                   }`}
                 >
                   {formattedDescription ? (
@@ -790,7 +792,7 @@ export default function IPhoneDetail({
                       dangerouslySetInnerHTML={{ __html: formattedDescription }}
                     />
                   ) : (
-                    <p className="text-xs text-gray-500">Thông tin mô tả sản phẩm đang được cập nhật.</p>
+                    <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
                   )}
 
                   {!isDescExpanded && (
@@ -798,7 +800,7 @@ export default function IPhoneDetail({
                   )}
                 </div>
 
-                <div className="flex justify-center mt-3 border-t border-gray-100 pt-3">
+                <div className="flex justify-center mt-4 border-t border-gray-100 pt-4">
                   <button
                     type="button"
                     onClick={() => setIsDescExpanded(!isDescExpanded)}
@@ -820,9 +822,24 @@ export default function IPhoneDetail({
               </div>
             )}
 
+            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
+            {activeTab === 'policy' && (
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
+                <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
+                  Chính Sách Bảo Hành & Khuyến Mãi:
+                </h3>
+                <ul className="space-y-2 list-disc list-inside font-medium text-gray-700">
+                  <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                  <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
+                  <li>Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.</li>
+                  <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
+                </ul>
+              </div>
+            )}
+
             {/* TAB THÔNG SỐ KỸ THUẬT */}
             {activeTab === 'specs' && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-2xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
                 <p>Thông số kỹ thuật chi tiết chuẩn Apple VN/A.</p>
               </div>
             )}
