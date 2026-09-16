@@ -120,7 +120,6 @@ export default function IPhoneDetail({
     return list.sort((a, b) => parseSize(a) - parseSize(b));
   }, [product]);
 
-  // Nhặt danh sách màu sắc của cấu hình dung lượng đang chọn
   const currentColorOptions = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return [];
 
@@ -144,7 +143,6 @@ export default function IPhoneDetail({
     }));
   }, [product, selectedStorage]);
 
-  // Biến thể khớp dung lượng và màu
   const currentVariant = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return null;
 
@@ -174,7 +172,6 @@ export default function IPhoneDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
-  // Kiểm tra tình trạng hàng: Có giá (> 0) thì luôn sẵn hàng
   const isOutOfStock = useMemo(() => {
     if (!currentVariant) return true;
     const price = Number(currentVariant.price || 0);
@@ -244,6 +241,14 @@ export default function IPhoneDetail({
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
 
+  // Chuẩn hóa và làm sạch chuỗi HTML mô tả sản phẩm
+  const formattedDescription = useMemo(() => {
+    if (!product?.description) return '';
+    return String(product.description)
+      .replace(/src="\/\//g, 'src="https://')
+      .replace(/src='\/\//g, "src='https://");
+  }, [product?.description]);
+
   const handleAddToCart = (redirectCart = false) => {
     if (isOutOfStock) return;
 
@@ -294,7 +299,7 @@ export default function IPhoneDetail({
           </div>
         </div>
 
-        {/* CONTAINER MỞ RỘNG TỐI ĐA 1440PX */}
+        {/* CONTAINER CHÍNH */}
         <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
 
@@ -409,7 +414,7 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC CÓ ANIMATION MƯỢT */}
+              {/* CHỌN MÀU SẮC */}
               {currentColorOptions.length > 0 && (
                 <div className="pt-1">
                   <label className="block text-xs font-black text-gray-900 mb-2">
@@ -565,7 +570,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* BOX 2: BANNER KREDIVO BẰNG LINK ẢNH HSTATIC */}
+              {/* BOX 2: BANNER KREDIVO */}
               <div
                 onClick={() => setIsInstallmentOpen(true)}
                 className="w-full rounded-2xl overflow-hidden border border-gray-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group"
@@ -581,7 +586,7 @@ export default function IPhoneDetail({
 
           </div>
 
-          {/* KHỐI CHÍNH SÁCH BẢO HÀNH & KHUYẾN MÃI CHI TIẾT */}
+          {/* KHỐI CHÍNH SÁCH BẢO HÀNH & MÔ TẢ SẢN PHẨM CHI TIẾT */}
           <div className="mt-14 pt-8 border-t border-gray-200">
             <div className="flex items-center gap-6 border-b border-gray-200 mb-6">
               <button
@@ -630,9 +635,17 @@ export default function IPhoneDetail({
               </div>
             )}
 
+            {/* TAB MÔ TẢ: RENDER CHUẨN HTML BẰNG dangerouslySetInnerHTML */}
             {activeTab === 'desc' && (
-              <div className="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-xs text-xs text-gray-700 leading-relaxed">
-                <p>{product.description || 'Thông tin mô tả sản phẩm đang được cập nhật.'}</p>
+              <div className="bg-white border border-gray-200/90 rounded-2xl p-6 sm:p-8 shadow-xs text-gray-800 leading-relaxed overflow-hidden">
+                {formattedDescription ? (
+                  <div
+                    className="prose prose-sm sm:prose-base max-w-none prose-img:rounded-xl prose-img:mx-auto prose-img:my-4 prose-img:max-h-[500px] prose-img:object-contain"
+                    dangerouslySetInnerHTML={{ __html: formattedDescription }}
+                  />
+                ) : (
+                  <p className="text-xs text-gray-500">Thông tin mô tả sản phẩm đang được cập nhật.</p>
+                )}
               </div>
             )}
 
