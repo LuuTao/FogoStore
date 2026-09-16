@@ -113,13 +113,36 @@ export const IPadShowcaseSection: React.FC = () => {
     setActiveSeries((prev) => (prev === series ? null : series));
   };
 
-  // Lọc theo tab Series đang chọn và giới hạn CHÍNH XÁC TỐI ĐA 20 SẢN PHẨM
   const displayedItems = useMemo(() => {
-    let list = products;
+    let list = [...products];
+
     if (activeSeries) {
       const val = activeSeries.toLowerCase();
-      list = list.filter((p) => p.searchKeywords.includes(val));
+      list = list.filter((p) => p.name.toLowerCase().includes(val));
     }
+
+    // Sắp xếp theo đời mới iPad (Pro -> Air -> Gen -> Mini) và giá từ cao xuống thấp
+    list.sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+
+      const getPriority = (name: string) => {
+        if (name.includes('pro')) return 1;
+        if (name.includes('air')) return 2;
+        if (name.includes('gen') || name.includes('ipad')) return 3;
+        if (name.includes('mini')) return 4;
+        return 5;
+      };
+
+      const pA = getPriority(nameA);
+      const pB = getPriority(nameB);
+
+      if (pA !== pB) return pA - pB;
+
+      // Cùng loại thì giá cao xuống thấp
+      return b.rawPrice - a.rawPrice;
+    });
+
     return list.slice(0, 20);
   }, [products, activeSeries]);
 

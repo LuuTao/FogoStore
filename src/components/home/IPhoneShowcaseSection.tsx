@@ -20,7 +20,7 @@ const DEFAULT_TABS: TabItem[] = [
   },
   {
     id: 'sub-ip-2',
-    name: 'iPhone Duo',
+    name: 'iPhone Duo Series',
     imageUrl: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100',
     queryValue: 'duo',
   },
@@ -166,12 +166,46 @@ export const IPhoneShowcaseSection: React.FC = () => {
   const displayedItems = useMemo(() => {
     let items = [...products];
 
+    // 1. Lọc theo tab Series nếu có chọn
     if (selectedTab && selectedTab.queryValue) {
       const val = selectedTab.queryValue.toLowerCase();
       items = items.filter((p) => p.searchKeywords.includes(val));
     }
 
-    // Cắt giới hạn chính xác tối đa 20 sản phẩm hiển thị ra trang chủ
+    // 2. Sắp xếp chuẩn theo đời mới nhất (18 -> Duo -> 17 -> 16) và từ giá cao xuống thấp
+    items.sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+
+      // Ưu tiên dòng 18
+      const is18A = nameA.includes('18');
+      const is18B = nameB.includes('18');
+      if (is18A && !is18B) return -1;
+      if (!is18A && is18B) return 1;
+
+      // Ưu tiên dòng Duo
+      const isDuoA = nameA.includes('duo');
+      const isDuoB = nameB.includes('duo');
+      if (isDuoA && !isDuoB) return -1;
+      if (!isDuoA && isDuoB) return 1;
+
+      // Ưu tiên dòng 17
+      const is17A = nameA.includes('17');
+      const is17B = nameB.includes('17');
+      if (is17A && !is17B) return -1;
+      if (!is17A && is17B) return 1;
+
+      // Ưu tiên dòng 16
+      const is16A = nameA.includes('16');
+      const is16B = nameB.includes('16');
+      if (is16A && !is16B) return -1;
+      if (!is16A && is16B) return 1;
+
+      // Nếu cùng series, sắp xếp từ giá tiền cao xuống thấp
+      return b.rawPrice - a.rawPrice;
+    });
+
+    // Giới hạn chính xác tối đa 20 sản phẩm
     return items.slice(0, 20);
   }, [products, selectedTab]);
 

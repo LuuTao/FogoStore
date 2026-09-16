@@ -109,11 +109,34 @@ export const MacBookShowcaseSection: React.FC = () => {
 
   // 2. Lọc sản phẩm theo Series đang chọn và giới hạn CHÍNH XÁC TỐI ĐA 20 SẢN PHẨM
   const displayedItems = useMemo(() => {
-    let list = products;
+    let list = [...products];
+
     if (selectedSeries) {
       const val = selectedSeries.toLowerCase();
-      list = list.filter((p) => p.searchKeywords.includes(val));
+      list = list.filter((p) => p.name.toLowerCase().includes(val));
     }
+
+    // Sắp xếp MacBook (Pro -> Air -> Neo) và giá từ cao xuống thấp
+    list.sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+
+      const getPriority = (name: string) => {
+        if (name.includes('pro')) return 1;
+        if (name.includes('air')) return 2;
+        if (name.includes('neo')) return 3;
+        return 4;
+      };
+
+      const pA = getPriority(nameA);
+      const pB = getPriority(nameB);
+
+      if (pA !== pB) return pA - pB;
+
+      // Cùng loại thì giá cao xuống thấp
+      return b.rawPrice - a.rawPrice;
+    });
+
     return list.slice(0, 20);
   }, [products, selectedSeries]);
 
