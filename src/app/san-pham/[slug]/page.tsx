@@ -6,7 +6,7 @@ import MacBookDetail from '@/components/products/MacBookDetail';
 import UsedProductDetail from '@/components/products/UsedProductDetail';
 import WatchDetail from '@/components/products/WatchDetail';
 import AccessoryDetail from '@/components/products/AccessoryDetail';
-import TrackRecentViewed from '@/components/products/TrackRecentViewed'; // <-- Import component theo dõi
+import TrackRecentViewed from '@/components/products/TrackRecentViewed';
 import { ACCESSORY_CATALOG_ITEMS } from '@/data/accessoryCatalog';
 
 interface PageProps {
@@ -25,8 +25,11 @@ export default async function ProductDetailPage(props: PageProps) {
     notFound();
   }
 
-  // 1. Tách dung lượng/công suất ra khỏi slug nếu có
-  const storageMatch = currentSlug.match(/-(64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
+  // 1. Tách dung lượng/RAM/kích thước mặt ra khỏi slug một cách linh hoạt (hỗ trợ 24gb, 512gb, 1tb, 45mm, v.v.)
+  const storageMatch =
+    currentSlug.match(/-(?:\d+gb|\d+tb|\d+mm)$/i) ||
+    currentSlug.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
+  
   const urlStorage = storageMatch ? storageMatch[1].toUpperCase() : '';
   const baseSlug = storageMatch
     ? currentSlug.substring(0, currentSlug.length - storageMatch[0].length)
@@ -94,7 +97,7 @@ export default async function ProductDetailPage(props: PageProps) {
     }
   }
 
-  // 4. Fallback khẩn cấp toàn bộ sản phẩm
+  // 4. Fallback khẩn cấp toàn bộ sản phẩm nếu không tìm thấy trong DB
   if (!product) {
     const cleanWords = currentSlug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     
