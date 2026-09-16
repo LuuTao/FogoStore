@@ -10,24 +10,25 @@ import TrackRecentViewed from '@/components/products/TrackRecentViewed';
 import { ACCESSORY_CATALOG_ITEMS } from '@/data/accessoryCatalog';
 
 interface PageProps {
-  params: Promise<{ slug: string }> | { slug: string };
+  params: Promise<{ slug: string[] }> | { slug: string[] };
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
 }
 
 export default async function ProductDetailPage(props: PageProps) {
-  // ============================================================================
-  // 1. GIẢI MÃ PARAMS AN TOÀN TUYỆT ĐỐI (DỨT ĐIỂM 404 & RELOAD LOOP TRÊN NEXT 14/15)
-  // ============================================================================
   const resolvedParams = await props.params;
   const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
 
-  const rawSlug = resolvedParams?.slug ? String(resolvedParams.slug) : '';
-  const currentSlug = decodeURIComponent(rawSlug).trim().replace(/\/+$/, '');
+  // Nối các phần tử của mảng slug lại bằng dấu gạch ngang (-) để triệt tiêu hoàn toàn dấu / gây lỗi 404
+  const rawSlugArray = resolvedParams?.slug || [];
+  const rawSlug = Array.isArray(rawSlugArray) ? rawSlugArray.join('-') : String(rawSlugArray);
+  
+  const currentSlug = decodeURIComponent(rawSlug).trim().replace(/\/+$/, '').toLowerCase();
   const proid = typeof resolvedSearchParams?.proid === 'string' ? resolvedSearchParams.proid : '';
 
   if (!currentSlug) {
     notFound();
   }
+  // ... (giữ nguyên phần còn lại của logic bên dưới)
 
   // ============================================================================
   // 2. CHUẨN HÓA SLUG & BÓC TÁCH MỌI THÔNG SỐ (HỖ TRỢ MACBOOK, IPAD, IPHONE)
