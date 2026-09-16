@@ -69,7 +69,6 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '17': [
     { name: '17 Pro Max', tag: '17-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: '17 Pro', tag: '17-pro', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
-    { name: '17 Plus', tag: '17-plus', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: '17 Air', tag: '17-air', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: 'iPhone 17', tag: '17-standard', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
   ],
