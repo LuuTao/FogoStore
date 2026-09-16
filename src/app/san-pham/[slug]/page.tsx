@@ -15,44 +15,53 @@ interface PageProps {
 }
 
 export default async function ProductDetailPage(props: PageProps) {
-  const rawParams = props.params instanceof Promise ? await props.params : props.params;
-  const rawSearchParams = props.searchParams instanceof Promise ? await props.searchParams : props.searchParams;
+  // ============================================================================
+  // 1. GIẢI MÃ PARAMS AN TOÀN TUYỆT ĐỐI (DỨT ĐIỂM 404 & RELOAD LOOP TRÊN NEXT 14/15)
+  // ============================================================================
+  // Trong JS, `await` xử lý an toàn cho cả Promise (Next.js 15) và Plain Object (Next.js 14)
+  const resolvedParams = await props.params;
+  const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
 
-  const currentSlug = String(rawParams?.slug || '').trim().replace(/\/+$/, '');
-  const proid = typeof rawSearchParams?.proid === 'string' ? rawSearchParams.proid : '';
+  const rawSlug = resolvedParams?.slug ? String(resolvedParams.slug) : '';
+  const currentSlug = decodeURIComponent(rawSlug).trim().replace(/\/+$/, '');
+  const proid = typeof resolvedSearchParams?.proid === 'string' ? resolvedSearchParams.proid : '';
 
   if (!currentSlug) {
     notFound();
   }
 
   // ============================================================================
-  // 1. CHUẨN HÓA SLUG GỐC (LOẠI BỎ TRIỆT ĐỂ LỖI 404 KHI BẤM CHỌN DUNG LƯỢNG)
+  // 2. CHUẨN HÓA SLUG & BÓC TÁCH DUNG LƯỢNG
   // ============================================================================
   const cleanSlugForMatch = currentSlug.replace(/\//g, '-').toLowerCase();
-  
-  // Biểu thức chính quy quét và cắt sạch các đuôi thông số có thể bị lặp nhiều lần
-  const storageRegex = /-(?:\d+gb|\d+tb|\d+mm|24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)+$/gi;
-  
-  // Trích xuất dung lượng hiện tại nằm ở cuối URL
-  const storageMatch = cleanSlugForMatch.match(/(?:-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm))+$/i);
-  const urlStorage = storageMatch ? storageMatch[1].toUpperCase() : '';
 
-  // Tính toán ra baseSlug chuẩn xác nhất (Lọc sạch các thông số rác, chỉ giữ tên model gốc)
+  // Bóc tách dung lượng ở đuôi hoặc ở giữa slug
+  const storageMatchEnd = cleanSlugForMatch.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
+  const storageMatchMid = cleanSlugForMatch.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)-/i);
+
+  const urlStorage = storageMatchEnd
+    ? storageMatchEnd[1].toUpperCase()
+    : storageMatchMid
+    ? storageMatchMid[1].toUpperCase()
+    : '';
+
+  // Lọc sạch dung lượng ở đuôi URL để tạo baseSlug dự phòng
+  const storageRegex = /-(?:24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)+$/gi;
   let baseSlug = cleanSlugForMatch.replace(storageRegex, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
   if (!baseSlug) {
     baseSlug = cleanSlugForMatch;
   }
 
   let product: any = null;
-  const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+  const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/+$/, '');
 
   // ============================================================================
-  // 2. FETCH DỮ LIỆU TỪ BACKEND (AN TOÀN TUYỆT ĐỐI CHỐNG SẬP TRANG)
+  // 3. FETCH DỮ LIỆU TỪ BACKEND DATABASE
   // ============================================================================
   try {
-    const query = proid ? `?proid=${proid}` : '';
-    
-    // Thử gọi với baseSlug (Tên model gốc sạch)
+    const query = proid ? `?proid=${encodeURIComponent(proid)}` : '';
+
+    // Thử 1: Gọi với baseSlug (chuẩn tên model gốc)
     let res = await fetch(`${apiUrl}/api/products/${baseSlug}${query}`, {
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -65,8 +74,8 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
 
-    // Nếu không thấy, thử gọi với toàn bộ currentSlug chưa bị cắt
-    if (!product) {
+    // Thử 2: Nếu không thấy, gọi bằng full slug chưa cắt
+    if (!product && cleanSlugForMatch !== baseSlug) {
       res = await fetch(`${apiUrl}/api/products/${cleanSlugForMatch}${query}`, {
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
@@ -79,11 +88,19 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
   } catch (err) {
-    console.warn('Cảnh báo: Không thể kết nối tới API Backend, chuyển sang dữ liệu dự phòng:', err);
+    console.warn('Cảnh báo: Không thể kết nối tới API Backend:', err);
   }
 
   // ============================================================================
-  // 3. XỬ LÝ FALLBACK DANH MỤC PHỤ KIỆN
+  // 4. NEO CHẶT baseSlug THEO SLUG GỐC TRONG DATABASE
+  // ============================================================================
+  // Đảm bảo mọi thao tác chuyển biến thể phía Client luôn dùng slug chuẩn của DB
+  if (product && product.slug) {
+    baseSlug = product.slug;
+  }
+
+  // ============================================================================
+  // 5. XỬ LÝ FALLBACK PHỤ KIỆN
   // ============================================================================
   if (!product && typeof ACCESSORY_CATALOG_ITEMS !== 'undefined' && Array.isArray(ACCESSORY_CATALOG_ITEMS)) {
     const fallbackItem = ACCESSORY_CATALOG_ITEMS.find((item: any) => {
@@ -113,11 +130,14 @@ export default async function ProductDetailPage(props: PageProps) {
   }
 
   // ============================================================================
-  // 4. MOCK DATA BẢO VỆ CHỐNG SẬP TRANG HOÀN TOÀN (LỖI 500)
+  // 6. MOCK DATA DỰ PHÒNG CHỐNG CRASH KHI BACKEND SLEEP (RENDER COLD START)
   // ============================================================================
   if (!product) {
-    const cleanWords = cleanSlugForMatch.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    
+    const cleanWords = cleanSlugForMatch
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+
     let defaultCategorySlug = 'iphone';
     let defaultCategoryName = 'iPhone';
     let defaultPrice = 28990000;
@@ -164,7 +184,7 @@ export default async function ProductDetailPage(props: PageProps) {
     };
   }
 
-  // Đảm bảo object product luôn có mảng variants hợp lệ
+  // Đảm bảo luôn có ít nhất 1 biến thể hợp lệ để render
   if (!product.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
     product.variants = [
       {
@@ -185,9 +205,8 @@ export default async function ProductDetailPage(props: PageProps) {
   const slugLower = cleanSlugForMatch.toLowerCase();
 
   // ============================================================================
-  // 5. BỘ ĐIỀU PHỐI GIAO DIỆN (DISPATCHER)
+  // 7. BỘ ĐIỀU HƯỚNG GIAO DIỆN (DISPATCHER)
   // ============================================================================
-
   const isUsedProduct =
     catSlug === 'hang-cu' ||
     catSlug.includes('cu') ||
