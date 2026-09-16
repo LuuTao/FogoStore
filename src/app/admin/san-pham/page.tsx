@@ -20,8 +20,8 @@ import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
-const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState<boolean>(false);
-// Hàm xử lý URL ảnh tuyệt đối, tự động thay thế localhost sang Render
+
+// Hàm chuẩn hóa URL ảnh tuyệt đối an toàn
 const formatProductImageUrl = (url?: string | null): string => {
   if (!url) return 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80';
   if (url.startsWith('data:') || url.startsWith('https://')) return url;
@@ -44,6 +44,9 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // State Modal Mua ngay - Trả sau đặt chuẩn bên trong component
+  const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState<boolean>(false);
+
   // Lựa chọn biến thể hiện tại
   const [selectedStorage, setSelectedStorage] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
@@ -61,7 +64,7 @@ export default function ProductDetailPage() {
     type: 'success',
   });
 
-  // 1. Fetch dữ liệu sản phẩm từ API
+  // 1. Fetch dữ liệu sản phẩm chi tiết
   useEffect(() => {
     let isMounted = true;
     const fetchDetail = async () => {
@@ -77,7 +80,7 @@ export default function ProductDetailPage() {
         if (!isMounted) return;
         setProduct(data);
 
-        // Khởi tạo biến thể đầu tiên
+        // Khởi tạo biến thể đầu tiên khớp từ DB
         const firstVariant = Array.isArray(data.variants) && data.variants.length > 0 ? data.variants[0] : null;
         const initialStorage = firstVariant?.storage || (data.storageOptions?.[0] || '128GB');
         const initialColor = firstVariant?.color || (typeof data.colors?.[0] === 'object' ? data.colors[0].name : data.colors?.[0] || 'Mặc định');
@@ -99,7 +102,7 @@ export default function ProductDetailPage() {
     };
   }, [slug]);
 
-  // 2. Danh sách các dung lượng duy nhất từ variants thực tế
+  // 2. Lấy danh sách các dung lượng duy nhất từ variants thực tế
   const availableStorages = useMemo(() => {
     if (!product?.variants || !Array.isArray(product.variants)) {
       return ['128GB', '256GB', '512GB'];
@@ -111,10 +114,10 @@ export default function ProductDetailPage() {
     return set.size > 0 ? Array.from(set) : ['128GB', '256GB', '512GB'];
   }, [product]);
 
-  // 3. Danh sách các màu sắc tương ứng với dung lượng đang chọn
+  // 3. Lấy danh sách màu sắc tương ứng theo dung lượng đã chọn
   const availableColors = useMemo(() => {
     if (!product?.variants || !Array.isArray(product.variants)) {
-      return ['Đen', 'Bạc', 'Xám'];
+      return ['Đen', 'Bạc', 'Trắng'];
     }
     const filtered = product.variants.filter(
       (v: any) => !selectedStorage || v.storage === selectedStorage
@@ -131,7 +134,7 @@ export default function ProductDetailPage() {
     return Array.from(colorSet);
   }, [product, selectedStorage]);
 
-  // 4. Biến thể hiện tại dựa trên Storage + Color đã chọn
+  // 4. Xác định biến thể hiện tại để lấy giá & hình ảnh
   const currentVariant = useMemo(() => {
     if (!product?.variants || !Array.isArray(product.variants)) return null;
     return (
@@ -143,10 +146,10 @@ export default function ProductDetailPage() {
     );
   }, [product, selectedStorage, selectedColor]);
 
-  // 5. Cập nhật hình ảnh và giá khi đổi lựa chọn
   const currentPrice = currentVariant?.price || product?.price || 21990000;
   const currentOriginalPrice = currentVariant?.originalPrice || product?.originalPrice || Math.round(currentPrice * 1.15);
 
+  // Xử lý đổi dung lượng không reload trang
   const handleSelectStorage = (st: string) => {
     setSelectedStorage(st);
     if (product?.variants) {
@@ -159,6 +162,7 @@ export default function ProductDetailPage() {
     }
   };
 
+  // Xử lý đổi màu không reload trang
   const handleSelectColor = (col: string) => {
     setSelectedColor(col);
     if (product?.variants) {
@@ -211,8 +215,8 @@ export default function ProductDetailPage() {
         <Header />
         <Navbar />
         <div className="max-w-7xl mx-auto py-24 text-center">
-          <div className="w-10 h-10 border-4 border-[#d70018] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-500 font-bold text-sm">Đang nạp dữ liệu chi tiết sản phẩm...</p>
+          <div className="w-12 h-12 border-4 border-[#d70018] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 font-bold text-base">Đang nạp dữ liệu chi tiết sản phẩm...</p>
         </div>
         <Footer />
       </div>
@@ -233,12 +237,12 @@ export default function ProductDetailPage() {
         <Navbar />
       </div>
 
-      {/* BREADCRUMB */}
-      <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-2.5 px-4 text-xs text-gray-500">
-        <div className="max-w-7xl mx-auto flex items-center gap-1.5">
-          <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
+      {/* BREADCRUMB - TĂNG CỠ CHỮ */}
+      <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-3 px-4 text-sm text-gray-600">
+        <div className="max-w-7xl mx-auto flex items-center gap-2">
+          <Link href="/" className="hover:text-[#d70018] transition-colors">Trang chủ</Link>
           <span>/</span>
-          <Link href="/iphone" className="hover:text-[#d70018]">Sản phẩm</Link>
+          <Link href="/iphone" className="hover:text-[#d70018] transition-colors">Sản phẩm</Link>
           <span>/</span>
           <span className="text-gray-900 font-bold">{product?.name}</span>
         </div>
@@ -248,10 +252,10 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* ========================================================================= */}
-          {/* CỘT 1: HÌNH ẢNH TO HƠN 2 SIZE, DỜI QUA PHẢI (lg:col-span-5 + lg:pl-6)    */}
+          {/* CỘT 1: HÌNH ẢNH TO HƠN 2 SIZE, DỜI QUA PHẢI CÂN ĐỐI                       */}
           {/* ========================================================================= */}
           <div className="lg:col-span-5 flex flex-col items-center lg:pl-6">
-            <div className="w-full aspect-square max-w-[540px] border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
+            <div className="w-full aspect-square max-w-[550px] border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
               <img
                 src={selectedImage}
                 alt={product?.name || 'Sản phẩm'}
@@ -260,8 +264,8 @@ export default function ProductDetailPage() {
               />
             </div>
 
-            {/* Thumbnail danh sách hình ảnh theo biến thể */}
-            <div className="flex items-center gap-2.5 mt-4 overflow-x-auto py-2 max-w-full">
+            {/* Thumbnail selector */}
+            <div className="flex items-center gap-3 mt-4 overflow-x-auto py-2 max-w-full">
               {[
                 selectedImage,
                 ...(currentVariant?.images?.map((img: string) => formatProductImageUrl(img)) || []),
@@ -274,7 +278,7 @@ export default function ProductDetailPage() {
                     key={i}
                     type="button"
                     onClick={() => setSelectedImage(imgUrl)}
-                    className={`w-16 h-16 rounded-lg border-2 p-1 bg-white cursor-pointer transition-all ${
+                    className={`w-18 h-18 rounded-xl border-2 p-1.5 bg-white cursor-pointer transition-all ${
                       selectedImage === imgUrl ? 'border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -285,48 +289,49 @@ export default function ProductDetailPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* CỘT 2: THÔNG TIN SẢN PHẨM & CÁC NÚT MUA HÀNG (CHỮ TO LÊN 2 SIZE)           */}
+          {/* CỘT 2: THÔNG TIN SẢN PHẨM & MUA HÀNG - TO TOÀN DIỆN THÊM 2 SIZE           */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-4 space-y-4">
-            <div className="text-xs font-bold tracking-widest text-gray-400 uppercase"> Authorized Reseller</div>
+          <div className="lg:col-span-4 space-y-5">
+            <div className="text-xs font-black tracking-widest text-gray-400 uppercase"> Authorized Reseller</div>
             
-            {/* Tên máy tăng 2 size */}
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-snug">
+            {/* Tên máy tăng 2 size (text-3xl -> text-4xl) */}
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-snug">
               {product?.name}
             </h1>
 
-            <div className="flex items-center gap-1 text-amber-400 text-sm">
+            {/* Đánh giá sao tăng 2 size */}
+            <div className="flex items-center gap-1.5 text-amber-400 text-base">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} size={15} className="fill-amber-400" />
+                <Star key={i} size={18} className="fill-amber-400" />
               ))}
-              <span className="text-gray-500 text-xs ml-2 font-medium">(Đánh giá 5 sao chuẩn Apple VN/A)</span>
+              <span className="text-gray-500 text-sm ml-2 font-medium">(Đánh giá 5 sao chuẩn Apple VN/A)</span>
             </div>
 
-            {/* Mức giá tăng 2 size */}
-            <div className="flex items-baseline gap-3 pt-2">
-              <span className="text-3xl md:text-4xl font-black text-[#d70018]">
+            {/* Mức giá tăng 2 size (text-4xl -> text-5xl) */}
+            <div className="flex items-baseline gap-4 pt-1">
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#d70018]">
                 {formatVnd(currentPrice)}
               </span>
               {currentOriginalPrice > currentPrice && (
-                <span className="text-base text-gray-400 line-through">
+                <span className="text-lg text-gray-400 line-through font-semibold">
                   {formatVnd(currentOriginalPrice)}
                 </span>
               )}
             </div>
 
-            {/* Chọn dung lượng */}
+            {/* Chọn dung lượng - Tăng size chữ & nút */}
             <div className="pt-2">
-              <label className="block text-sm font-bold text-gray-800 mb-2">Chọn dung lượng:</label>
-              <div className="flex flex-wrap gap-2.5">
+              <label className="block text-base font-black text-gray-900 mb-2.5">Chọn dung lượng:</label>
+              <div className="flex flex-wrap gap-3">
                 {availableStorages.map((st) => (
                   <button
                     key={st}
                     type="button"
                     onClick={() => handleSelectStorage(st)}
-                    className={`px-4 py-2 text-sm font-bold rounded-md border cursor-pointer transition-all ${
+                    className={`px-5 py-2.5 text-base font-bold rounded-lg border cursor-pointer transition-all ${
                       selectedStorage === st
                         ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/40 shadow-xs'
-                        : 'border-gray-200 text-gray-700 hover:border-gray-300 bg-white'
+                        : 'border-gray-300 text-gray-800 hover:border-gray-400 bg-white'
                     }`}
                   >
                     {st}
@@ -335,19 +340,19 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Chọn màu sắc */}
+            {/* Chọn màu sắc - Tăng size chữ & nút */}
             <div className="pt-2">
-              <label className="block text-sm font-bold text-gray-800 mb-2">Màu sắc:</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="block text-base font-black text-gray-900 mb-2.5">Màu sắc:</label>
+              <div className="flex flex-wrap gap-2.5">
                 {availableColors.map((col) => (
                   <button
                     key={col}
                     type="button"
                     onClick={() => handleSelectColor(col)}
-                    className={`px-3.5 py-2 text-xs font-semibold rounded-md border cursor-pointer transition-all ${
+                    className={`px-4 py-2 text-sm font-bold rounded-lg border cursor-pointer transition-all ${
                       selectedColor === col
-                        ? 'border-2 border-[#d70018] text-[#d70018] font-bold bg-red-50/40'
-                        : 'border-gray-200 text-gray-700 hover:border-gray-300 bg-white'
+                        ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/40 shadow-xs'
+                        : 'border-gray-300 text-gray-800 hover:border-gray-400 bg-white'
                     }`}
                   >
                     {col}
@@ -357,71 +362,72 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Số lượng */}
-            <div className="pt-2 flex items-center gap-3">
-              <span className="text-sm font-bold text-gray-800">Số lượng:</span>
-              <div className="flex items-center border border-gray-300 rounded-md">
+            <div className="pt-2 flex items-center gap-4">
+              <span className="text-base font-black text-gray-900">Số lượng:</span>
+              <div className="flex items-center border border-gray-300 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  className="w-9 h-9 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
                 >
                   -
                 </button>
-                <span className="w-10 text-center text-sm font-bold text-gray-900">{quantity}</span>
+                <span className="w-12 text-center text-base font-black text-gray-900">{quantity}</span>
                 <button
                   type="button"
                   onClick={() => setQuantity((prev) => prev + 1)}
-                  className="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  className="w-9 h-9 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
                 >
                   +
                 </button>
               </div>
-              <span className="text-xs text-gray-400">(Còn sẵn hàng trong kho)</span>
+              <span className="text-xs sm:text-sm text-gray-500 font-medium">(Còn sẵn hàng trong kho)</span>
             </div>
 
             {/* Banner ưu đãi phụ kiện */}
-            <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-md p-3 flex items-center justify-between text-xs font-semibold text-[#d70018]">
+            <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-lg p-3.5 flex items-center justify-between text-xs sm:text-sm font-semibold text-[#d70018]">
               <span>Giảm thêm 200.000đ khi mua kèm Củ sạc nhanh 20W & Ốp lưng MagSafe</span>
-              <span className="bg-[#d70018] text-white text-[11px] font-bold px-2 py-0.5 rounded cursor-pointer">Ưu đãi</span>
+              <span className="bg-[#d70018] text-white text-xs font-black px-2.5 py-1 rounded cursor-pointer shrink-0 ml-2">Ưu đãi</span>
             </div>
 
-            {/* Nút Thêm Vào Giỏ & Mua Ngay */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            {/* Nút Thêm Vào Giỏ & Mua Ngay - Tăng kích thước & font */}
+            <div className="grid grid-cols-2 gap-3.5 pt-2">
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="py-3 px-2 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 rounded-md font-black text-xs uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className="py-3.5 px-3 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 rounded-lg font-black text-sm uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                <ShoppingCart size={16} />
+                <ShoppingCart size={18} />
                 <span>THÊM VÀO GIỎ</span>
               </button>
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="py-3 px-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md font-black text-xs uppercase tracking-wide transition-colors cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                className="py-3.5 px-3 bg-[#d70018] hover:bg-[#b50014] text-white rounded-lg font-black text-sm uppercase tracking-wide transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
               >
-                <Zap size={16} />
+                <Zap size={18} />
                 <span>MUA NGAY</span>
               </button>
             </div>
 
-            {/* Nút MUA NGAY - TRẢ SAU */}
-            <button
-              type="button"
-              onClick={() => setIsInstallmentModalOpen(true)}
-              className="w-full py-3 bg-[#fde047] hover:bg-[#facc15] text-[#1e3a8a] rounded-md font-black text-xs uppercase tracking-wider shadow-xs flex items-center justify-center transition-all cursor-pointer"
-            >
-              MUA NGAY - TRẢ SAU
-            </button>
+            {/* Nút MUA NGAY - TRẢ SAU & Nút chia sẻ */}
+            <div className="pt-2 space-y-4">
+              <button
+                type="button"
+                onClick={() => setIsInstallmentModalOpen(true)}
+                className="w-full py-3.5 bg-[#fde047] hover:bg-[#facc15] text-[#1e3a8a] rounded-lg font-black text-sm uppercase tracking-wider shadow-xs flex items-center justify-center transition-all cursor-pointer"
+              >
+                MUA NGAY - TRẢ SAU
+              </button>
 
-              <div className="flex items-center gap-2 pt-1 text-xs text-gray-700 font-bold">
+              <div className="flex items-center gap-3 pt-1 text-sm text-gray-800 font-bold">
                 <span>Chia sẻ:</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <a
                     href="https://facebook.com"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-7 h-7 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-xs font-black hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-sm font-black hover:opacity-90 transition-opacity"
                   >
                     f
                   </a>
@@ -429,7 +435,7 @@ export default function ProductDetailPage() {
                     href="https://m.me"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-7 h-7 rounded-full bg-[#0084FF] text-white flex items-center justify-center text-xs hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-[#0084FF] text-white flex items-center justify-center text-sm hover:opacity-90 transition-opacity"
                   >
                     💬
                   </a>
@@ -437,7 +443,7 @@ export default function ProductDetailPage() {
                     href="https://twitter.com"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-7 h-7 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center text-xs hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center text-sm hover:opacity-90 transition-opacity"
                   >
                     🐦
                   </a>
@@ -445,17 +451,17 @@ export default function ProductDetailPage() {
                     href="https://pinterest.com"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-7 h-7 rounded-full bg-[#E60023] text-white flex items-center justify-center text-xs font-serif hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-[#E60023] text-white flex items-center justify-center text-sm font-serif hover:opacity-90 transition-opacity"
                   >
                     P
                   </a>
                   <button
                     type="button"
                     onClick={handleCopyLink}
-                    className="w-7 h-7 rounded-full bg-[#0ea5e9] text-white flex items-center justify-center hover:opacity-90 cursor-pointer"
+                    className="w-8 h-8 rounded-full bg-[#0ea5e9] text-white flex items-center justify-center hover:opacity-90 cursor-pointer transition-opacity"
                     title="Sao chép liên kết"
                   >
-                    {copied ? <Check size={13} /> : <Copy size={13} />}
+                    {copied ? <Check size={15} /> : <Copy size={15} />}
                   </button>
                 </div>
               </div>
@@ -464,46 +470,46 @@ export default function ProductDetailPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO QUA TRANG LIÊN HỆ             */}
+          {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (CHỮ TO HƠN 2 SIZE)           */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-xs">
-              <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2.5 mb-3">
+          <div className="lg:col-span-3 space-y-5">
+            <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-xs">
+              <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3 mb-4">
                 Chính sách bán hàng
               </h3>
-              <div className="space-y-3.5 text-xs text-gray-700">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                    <Check size={13} strokeWidth={3} />
+              <div className="space-y-4 text-sm text-gray-800 font-medium">
+                <div className="flex items-center gap-3">
+                  <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                    <Check size={14} strokeWidth={3} />
                   </span>
-                  <span>Cam kết 100% chính hãng</span>
+                  <span>Cam kết 100% chính hãng Apple</span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base shrink-0">💵</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl shrink-0">💵</span>
                   <span>Lên đời trợ giá lên đến 95%</span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base shrink-0">🔄</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl shrink-0">🔄</span>
                   <span>Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
                 </div>
               </div>
 
-              <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2.5 mt-5 mb-3">
+              <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3 mt-6 mb-4">
                 Thông tin thêm
               </h3>
-              <div className="space-y-3.5 text-xs text-gray-700">
-                <div className="flex items-center gap-2.5">
-                  <span className="px-1 py-0.5 border border-blue-600 text-blue-700 font-bold text-[9px] rounded">
+              <div className="space-y-4 text-sm text-gray-800 font-medium">
+                <div className="flex items-center gap-3">
+                  <span className="px-1.5 py-0.5 border border-blue-600 text-blue-700 font-black text-[10px] rounded">
                     VISA
                   </span>
                   <span>Trả góp lãi suất 0%, đa dạng hình thức góp</span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base shrink-0">🛵</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl shrink-0">🛵</span>
                   <span>Miễn phí giao hàng nội thành TP.HCM</span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="px-1 py-0.5 bg-red-600 text-white font-bold text-[8px] rounded">
+                <div className="flex items-center gap-3">
+                  <span className="px-1.5 py-0.5 bg-red-600 text-white font-black text-[9px] rounded">
                     HOME
                   </span>
                   <span>Giảm đến 500K khi góp qua Home Pay Later</span>
@@ -511,30 +517,30 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Banner Kredivo x Home PayLater click chuyển sang /lien-he */}
-            <Link
-              href="/lien-he"
-              className="block rounded-xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-shadow group"
+            {/* Banner Kredivo x Home PayLater click mở Modal trả góp */}
+            <div
+              onClick={() => setIsInstallmentModalOpen(true)}
+              className="block rounded-xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-shadow group cursor-pointer"
             >
-              <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-4 border-b border-orange-100 flex flex-col items-center text-center">
-                <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Kredivo × Home PayLater</div>
-                <div className="text-sm font-black text-gray-900 mt-1">MUA TRƯỚC TRẢ SAU</div>
-                <div className="flex items-center gap-3 my-2">
-                  <span className="text-xs font-black text-[#d70018] bg-red-100 px-2 py-0.5 rounded">0% Lãi Suất</span>
-                  <span className="text-xs font-black text-blue-600 bg-blue-100 px-2 py-0.5 rounded">5 Phút Duyệt</span>
+              <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-5 border-b border-orange-100 flex flex-col items-center text-center">
+                <div className="text-xs font-black text-orange-600 uppercase tracking-widest">Kredivo × Home PayLater</div>
+                <div className="text-base font-black text-gray-900 mt-1">MUA TRƯỚC TRẢ SAU</div>
+                <div className="flex items-center gap-3 my-2.5">
+                  <span className="text-xs font-black text-[#d70018] bg-red-100 px-2.5 py-0.5 rounded">0% Lãi Suất</span>
+                  <span className="text-xs font-black text-blue-600 bg-blue-100 px-2.5 py-0.5 rounded">5 Phút Duyệt</span>
                 </div>
-                <p className="text-[10px] text-gray-500">Đăng ký Online - Không Chứng Minh Thu Nhập</p>
+                <p className="text-xs text-gray-500 font-medium">Đăng ký Online - Không Chứng Minh Thu Nhập</p>
               </div>
-            </Link>
+            </div>
           </div>
 
         </div>
 
         {/* ========================================================================= */}
-        {/* TABS CHÍNH SÁCH BÁN HÀNG - MÔ TẢ - BẢNG THÔNG SỐ KỸ THUẬT                  */}
+        {/* TABS CHÍNH SÁCH BÁN HÀNG - MÔ TẢ - BẢNG THÔNG SỐ GRADIENT ĐỎ               */}
         {/* ========================================================================= */}
         <div className="mt-14 border-t border-gray-200 pt-6">
-          <div className="flex items-center gap-8 border-b border-gray-200 text-xs md:text-sm font-bold uppercase tracking-wide">
+          <div className="flex items-center gap-8 border-b border-gray-200 text-sm md:text-base font-black uppercase tracking-wide">
             <button
               type="button"
               onClick={() => setActiveTab('policy')}
@@ -564,27 +570,27 @@ export default function ProductDetailPage() {
             </button>
           </div>
 
-          <div className="py-6 text-xs md:text-sm text-gray-700 leading-relaxed">
+          <div className="py-6 text-sm md:text-base text-gray-800 leading-relaxed">
             {activeTab === 'policy' && (
               <div className="space-y-4">
-                <h4 className="font-bold text-[#1e3a8a] text-sm">Chính Sách Bảo Hành & Khuyến Mãi:</h4>
-                <div className="whitespace-pre-line text-xs md:text-sm leading-relaxed text-gray-800 bg-gray-50/50 p-4 rounded-lg border border-gray-200">
-                  {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 150.000đ khi mua kèm Dock sạc nhanh Apple chính hãng.\n• Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.`}
+                <h4 className="font-bold text-[#1e3a8a] text-base">Chính Sách Bảo Hành & Khuyến Mãi:</h4>
+                <div className="whitespace-pre-line text-sm md:text-base leading-relaxed text-gray-800 bg-gray-50/60 p-5 rounded-xl border border-gray-200 font-medium">
+                  {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.\n• Thu cũ lên đời trợ giá đến 90% - giá tốt nhất thị trường.`}
                 </div>
               </div>
             )}
 
             {activeTab === 'desc' && (
-              <div className="space-y-3 whitespace-pre-line text-xs md:text-sm leading-relaxed text-gray-800">
-                {product?.description || `${product?.name} mang đến bước nhảy vọt về hiệu năng, thiết kế mỏng nhẹ tinh tế và thời lượng pin bền bỉ cả ngày dài.`}
+              <div className="space-y-3.5 whitespace-pre-line text-sm md:text-base leading-relaxed text-gray-800 font-medium">
+                {product?.description || `${product?.name} mang đến bước nhảy vọt về hiệu năng, thiết kế nguyên khối tinh tế và thời lượng pin bền bỉ cả ngày dài.`}
               </div>
             )}
 
-            {/* BẢNG THÔNG SỐ GRADIENT ĐỎ CHUẨN MẪU */}
+            {/* BẢNG THÔNG SỐ KỸ THUẬT GRADIENT ĐỎ CHUẨN MẪU */}
             {activeTab === 'specs' && (
               <div className="max-w-4xl overflow-hidden rounded-xl border border-red-500 bg-white shadow-xs">
-                <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-xs md:text-sm uppercase py-3.5 px-5">
-                  <div className="col-span-4 flex items-center gap-1.5">
+                <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-sm md:text-base uppercase py-4 px-6">
+                  <div className="col-span-4 flex items-center gap-2">
                     <span>🔥 ĐẶC ĐIỂM NỔI BẬT</span>
                   </div>
                   <div className="col-span-8">
@@ -592,21 +598,21 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
 
-                <div className="divide-y divide-gray-200 text-xs md:text-sm">
+                <div className="divide-y divide-gray-200 text-sm md:text-base">
                   {(Array.isArray(product?.specifications) && product.specifications.length > 0
                     ? product.specifications
                     : [
                         { key: 'Màn hình', value: 'OLED Super Retina XDR, ProMotion 1-120Hz, độ sáng đỉnh cao' },
-                        { key: 'Hệ điều hành', value: 'iPadOS / iOS tối ưu' },
+                        { key: 'Hệ điều hành', value: 'iPadOS / iOS tối ưu phiên bản mới nhất' },
                         { key: 'Vi xử lý', value: 'Apple Silicon thế hệ mới' },
                         { key: 'Camera sau', value: 'Hệ thống camera độ phân giải cao, quay phim chuẩn 4K' },
-                        { key: 'Camera trước', value: 'Ultra Wide Center Stage góc nhìn rộng' },
-                        { key: 'Pin & Sạc', value: 'Thời lượng pin cả ngày dài | Cổng USB-C sạc nhanh' },
-                        { key: 'Thiết kế & Độ bền', value: 'Khung vỏ nguyên khối sang trọng, gia công chính xác' },
+                        { key: 'Camera trước', value: 'Ultra Wide Center Stage góc nhìn siêu rộng' },
+                        { key: 'Pin & Sạc', value: 'Thời lượng pin cả ngày dài | Hỗ trợ sạc nhanh Type-C' },
+                        { key: 'Thiết kế & Độ bền', value: 'Khung vỏ nguyên khối cao cấp, chuẩn kháng nước bụi IP68' },
                         { key: 'Màu sắc', value: selectedColor || 'Tiêu chuẩn' },
                       ]
                   ).map((row: any, idx: number) => (
-                    <div key={idx} className="grid grid-cols-12 p-3.5 md:p-4 hover:bg-gray-50/70 transition-colors">
+                    <div key={idx} className="grid grid-cols-12 p-4 md:p-5 hover:bg-gray-50/80 transition-colors">
                       <div className="col-span-4 font-bold text-gray-900 pr-3">
                         {row.key}
                       </div>
@@ -623,7 +629,7 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="text-xs font-bold text-gray-500 hover:text-[#d70018] flex items-center gap-1 cursor-pointer transition-colors"
+                className="text-sm font-bold text-gray-500 hover:text-[#d70018] flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <span>{isExpanded ? '— Rút gọn nội dung' : '+ Xem thêm nội dung'}</span>
               </button>
@@ -635,12 +641,12 @@ export default function ProductDetailPage() {
         <div className="mt-14 space-y-12">
           <div>
             <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-6">
-              <h3 className="text-base md:text-lg font-black text-gray-900 uppercase tracking-wide">
+              <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-wide">
                 Sản phẩm liên quan
               </h3>
               <div className="flex items-center gap-2 text-gray-400">
-                <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronLeft size={18} /></button>
-                <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronRight size={18} /></button>
+                <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronLeft size={20} /></button>
+                <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronRight size={20} /></button>
               </div>
             </div>
 
@@ -652,23 +658,23 @@ export default function ProductDetailPage() {
                 { name: 'MacBook Air M3 13 inch', price: 26990000, img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80', slug: 'macbook-air-m3' },
                 { name: 'iPhone 15 128GB New Seal', price: 19490000, img: 'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=400&q=80', slug: 'iphone-15' },
               ].map((p, idx) => (
-                <div key={idx} className="bg-white rounded border border-gray-200 p-3 flex flex-col justify-between hover:shadow-lg transition-all group">
+                <div key={idx} className="bg-white rounded-lg border border-gray-200 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all group">
                   <Link href={`/san-pham/${p.slug}`} className="w-full aspect-square flex items-center justify-center overflow-hidden mb-2">
                     <img src={p.img} alt={p.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
                   </Link>
                   <div>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase">APPLE</span>
-                    <Link href={`/san-pham/${p.slug}`} className="block font-bold text-xs text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
+                    <span className="text-[10px] font-black text-gray-400 uppercase">APPLE</span>
+                    <Link href={`/san-pham/${p.slug}`} className="block font-bold text-xs sm:text-sm text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
                       {p.name}
                     </Link>
-                    <div className="text-xs font-black text-[#d70018] mt-1.5">{formatVnd(p.price)}</div>
+                    <div className="text-sm sm:text-base font-black text-[#d70018] mt-1.5">{formatVnd(p.price)}</div>
                   </div>
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    className="w-full mt-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                    className="w-full mt-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    <ShoppingCart size={12} />
+                    <ShoppingCart size={14} />
                     <span>THÊM VÀO GIỎ</span>
                   </button>
                 </div>
@@ -678,6 +684,8 @@ export default function ProductDetailPage() {
         </div>
 
       </main>
+
+      {/* MODAL TRẢ GÓP KREDIVO / HOME PAYLATER */}
       <InstallmentModal
         isOpen={isInstallmentModalOpen}
         onClose={() => setIsInstallmentModalOpen(false)}
