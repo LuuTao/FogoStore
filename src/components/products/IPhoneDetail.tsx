@@ -16,7 +16,6 @@ import {
   MessageCircle,
   ChevronDown,
   ChevronUp,
-  Share2,
   Link2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -362,11 +361,11 @@ export default function IPhoneDetail({
 
         {/* MAIN CONTAINER */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
 
-            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM */}
-            <div className="lg:col-span-4 flex flex-col items-center w-full">
-              <div className="relative w-full aspect-square max-w-[480px] border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (KÍCH THƯỚC VỪA VẶN SÁT CỘT 2) */}
+            <div className="lg:col-span-5 flex flex-col items-center w-full">
+              <div className="relative w-full aspect-square max-w-[490px] border border-gray-200 rounded-3xl p-2 sm:p-4 flex items-center justify-center bg-white shadow-xs overflow-hidden">
                 <img
                   src={displayImage}
                   alt={product.name}
@@ -394,7 +393,7 @@ export default function IPhoneDetail({
 
               {/* Thumbnails */}
               <div className="flex items-center gap-2 mt-3.5 overflow-x-auto max-w-full pb-1">
-                <div className="w-13 h-13 border border-red-500 rounded-xl p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
+                <div className="w-14 h-14 border border-red-500 rounded-xl p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
                   <Video size={16} />
                   <span className="font-bold">Video</span>
                 </div>
@@ -406,7 +405,7 @@ export default function IPhoneDetail({
                       setCurrentImageIndex(idx);
                       setTimeout(() => setIsImageTransitioning(false), 150);
                     }}
-                    className={`w-13 h-13 border rounded-xl p-0.5 bg-white shrink-0 cursor-pointer transition-all ${
+                    className={`w-14 h-14 border rounded-xl p-0.5 bg-white shrink-0 cursor-pointer transition-all ${
                       currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -416,8 +415,8 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG VÀ BỘ BUTTON KREDIVO */}
-            <div className="lg:col-span-5 space-y-3.5 w-full">
+            {/* CỘT 2: THÔNG TIN MUA HÀNG (SÁT VỚI ẢNH, NÚT TO HƠN 2 SIZE) */}
+            <div className="lg:col-span-4 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
                   {cleanProductName} {selectedStorage} - Chính hãng Apple VN
@@ -448,23 +447,23 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG */}
+              {/* CHỌN DUNG LƯỢNG (TO LÊN 2 SIZE) */}
               {storageList.length > 0 && (
                 <div>
-                  <label className="block text-xs font-black text-gray-900 mb-1.5">
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Chọn dung lượng:
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2.5">
                     {storageList.map((st) => {
                       const isSelected = selectedStorage.toLowerCase() === st.toLowerCase();
                       return (
                         <button
                           key={st}
                           onClick={() => handleSelectStorage(st)}
-                          className={`px-3.5 py-1.5 text-xs font-bold rounded-lg border cursor-pointer transition-all ${
+                          className={`px-5 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base font-black rounded-xl border-2 cursor-pointer transition-all ${
                             isSelected
-                              ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/40 shadow-xs'
-                              : 'border-gray-200 text-gray-800 hover:border-[#d70018]/60 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] bg-white shadow-xs'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
                           }`}
                         >
                           {st}
@@ -475,13 +474,13 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC */}
+              {/* CHỌN MÀU SẮC (TO LÊN 2 SIZE) */}
               {currentColorOptions.length > 0 && (
                 <div>
-                  <label className="block text-xs font-black text-gray-900 mb-1.5">
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Màu sắc:
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2.5">
                     {currentColorOptions.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
@@ -490,16 +489,16 @@ export default function IPhoneDetail({
                         <button
                           key={color}
                           onClick={() => handleSelectColor(color)}
-                          className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-all cursor-pointer ${
+                          className={`px-4 sm:px-5 py-2 rounded-xl border-2 flex items-center gap-2.5 transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-2 border-[#d70018] text-[#d70018] font-bold bg-red-50/40 shadow-xs scale-102'
-                              : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] font-black bg-white shadow-xs'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
                           }`}
                         >
-                          <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
+                          <div className="w-6 h-6 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
                             <img src={formatImg(thumb)} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <span className="text-xs font-semibold">{color}</span>
+                          <span className="text-sm sm:text-base font-bold">{color}</span>
                         </button>
                       );
                     })}
@@ -510,23 +509,23 @@ export default function IPhoneDetail({
               {/* SỐ LƯỢNG */}
               {!isOutOfStock && (
                 <div className="pt-1 flex items-center gap-3">
-                  <span className="text-xs font-black text-gray-900">Số lượng:</span>
-                  <div className="flex items-center border border-gray-300 rounded-lg">
+                  <span className="text-sm sm:text-base font-black text-gray-900">Số lượng:</span>
+                  <div className="flex items-center border border-gray-300 rounded-xl px-1">
                     <button
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="w-7 h-7 flex items-center justify-center text-sm font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
-                      <Minus size={13} />
+                      <Minus size={15} />
                     </button>
-                    <span className="w-9 text-center text-sm font-black text-gray-900">{quantity}</span>
+                    <span className="w-10 text-center text-sm sm:text-base font-black text-gray-900">{quantity}</span>
                     <button
                       onClick={() => setQuantity((q) => Math.min(Number(currentVariant?.stock || 99), q + 1))}
-                      className="w-7 h-7 flex items-center justify-center text-sm font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
-                      <Plus size={13} />
+                      <Plus size={15} />
                     </button>
                   </div>
-                  <span className="text-xs text-gray-500 font-medium">
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">
                     (Còn sẵn hàng)
                   </span>
                 </div>
@@ -580,7 +579,6 @@ export default function IPhoneDetail({
 
               {/* BỘ NÚT KREDIVO TRẢ SAU & ƯU ĐÃI BAOKIM */}
               <div className="pt-2 space-y-2.5">
-                {/* 1. NÚT VÀNG MUA NGAY - TRẢ SAU KREDIVO */}
                 <button
                   type="button"
                   onClick={() => setIsInstallmentOpen(true)}
@@ -595,7 +593,6 @@ export default function IPhoneDetail({
                   </div>
                 </button>
 
-                {/* 2. KHUNG ƯU ĐÃI KHI THANH TOÁN KREDIVO (POWERED BY BAOKIM) */}
                 <div className="w-full border border-gray-200 rounded-xl overflow-hidden bg-white shadow-2xs">
                   <div className="bg-[#e5e7eb] py-2 px-3 text-center border-b border-gray-200">
                     <h4 className="text-xs font-black text-gray-800 flex items-center justify-center gap-1.5 flex-wrap">
@@ -606,7 +603,7 @@ export default function IPhoneDetail({
                       (SỬ DỤNG KHI XÁC NHẬN KHOẢN VAY TRÊN TRANG CỦA TỔ CHỨC TÀI CHÍNH)
                     </p>
                   </div>
-                  <div className="p-3.5 flex items-center justify-between text-[11px] text-gray-500">
+                  <div className="p-3 flex items-center justify-between text-[11px] text-gray-500">
                     <span>Hỗ trợ trả góp linh hoạt 3 - 6 - 12 tháng</span>
                     <div className="flex items-center gap-1 text-[10px] font-bold">
                       <span className="text-gray-400">Powered by</span>
@@ -615,7 +612,6 @@ export default function IPhoneDetail({
                   </div>
                 </div>
 
-                {/* 3. NÚT CHIA SẺ MẠNG XÃ HỘI */}
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-xs font-bold text-gray-700">Chia sẻ:</span>
                   <a
@@ -712,7 +708,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* BANNER KREDIVO BẰNG LINK ẢNH HSTATIC */}
+              {/* BANNER KREDIVO BẰNG LINK ẢNH */}
               <div
                 onClick={() => setIsInstallmentOpen(true)}
                 className="w-full rounded-2xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-all cursor-pointer group"
@@ -727,7 +723,7 @@ export default function IPhoneDetail({
 
           </div>
 
-          {/* KHỐI 3 TAB LỚN ĐƯỢC TĂNG 2 SIZE: text-xl sm:text-2xl font-black */}
+          {/* KHỐI 3 TAB ĐƯỢC TĂNG 2 SIZE: text-xl sm:text-2xl font-black */}
           <div className="mt-14 pt-8 border-t border-gray-200">
             <div className="flex items-center gap-8 sm:gap-12 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
               <button
@@ -765,7 +761,7 @@ export default function IPhoneDetail({
             {/* TAB CHÍNH SÁCH BÁN HÀNG */}
             {activeTab === 'policy' && (
               <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
-                <h3 className="text-base font-black text-[#1e3a8a]">
+                <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
                 <ul className="space-y-2 list-disc list-inside font-medium text-gray-700">
@@ -777,7 +773,7 @@ export default function IPhoneDetail({
               </div>
             )}
 
-            {/* TAB MÔ TẢ CĂN ĐỀU HAI BÊN & GIÃN ĐOẠN 1CM */}
+            {/* TAB MÔ TẢ CĂN ĐỀU HAI BÊN & KHỚP KHUNG ẢNH */}
             {activeTab === 'desc' && (
               <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8 shadow-xs relative">
                 <div
@@ -787,7 +783,7 @@ export default function IPhoneDetail({
                 >
                   {formattedDescription ? (
                     <div
-                      className="prose prose-sm sm:prose-base max-w-none text-gray-800 text-justify break-words [&_p]:mb-[1cm] [&_p]:leading-relaxed prose-img:rounded-xl prose-img:mx-auto prose-img:my-4 prose-img:max-h-[550px] prose-img:object-contain"
+                      className="prose prose-sm sm:prose-base max-w-none text-gray-800 text-justify break-words [&_p]:mb-[1cm] [&_p]:leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:my-4 prose-img:w-full prose-img:max-h-[600px] prose-img:object-contain"
                       dangerouslySetInnerHTML={{ __html: formattedDescription }}
                     />
                   ) : (
