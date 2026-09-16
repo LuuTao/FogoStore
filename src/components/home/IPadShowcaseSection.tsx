@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Star, ArrowRight } from 'lucide-react';
+import { ArrowRight, ShoppingCart, CreditCard, Wallet, Percent } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { ToastNotification } from '@/components/common/ToastNotification';
 
 interface TabItem {
   id: string;
@@ -46,7 +48,6 @@ const IPAD_SERIES_TABS: TabItem[] = [
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Hàm định dạng giá tiền chuẩn: Trả về "Liên hệ" nếu giá <= 0
 const formatVndPrice = (price: number) => {
   if (!price || price <= 0) return 'Liên hệ';
   return price.toLocaleString('vi-VN') + 'đ';
@@ -68,12 +69,29 @@ const formatProductImageUrl = (url?: string | null): string => {
   return `${API_URL}${path}`;
 };
 
+// Hàm định dạng tên sản phẩm đưa dung lượng lên trước các hậu tố
+const buildProductNameWithStorage = (originalName: string, storage: string): string => {
+  if (!storage) return originalName;
+  const upperStorage = storage.toUpperCase();
+  let clean = originalName.replace(new RegExp(`\\b${upperStorage}\\b`, 'gi'), '').trim();
+
+  const matchSuffix = clean.match(/(Chính Hãng.*|New Seal.*|CPO.*|Chưa Active.*|Đã Kích Hoạt.*)$/i);
+  if (matchSuffix) {
+    const mainTitle = clean.substring(0, matchSuffix.index).trim();
+    const suffix = matchSuffix[0].trim();
+    return `${mainTitle} ${upperStorage} ${suffix}`;
+  }
+
+  return `${clean} ${upperStorage}`;
+};
+
 export const IPadShowcaseSection: React.FC = () => {
+  const { addToCart } = useCart();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSeries, setActiveSeries] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
-  // Fetch dữ liệu từ API và tự động bóc tách từng dung lượng thành card riêng
   useEffect(() => {
     const fetchIPads = async () => {
       try {
@@ -102,27 +120,29 @@ export const IPadShowcaseSection: React.FC = () => {
               const v = variants[0] || {};
               const curPrice = Number(v.price || item.price || 0);
 
-              // Bỏ qua sản phẩm không có giá
               if (curPrice <= 0) return;
 
-              const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+              const origPrice = Number(v.originalPrice || item.originalPrice || Math.round(curPrice * 1.15));
               const stKey = Array.from(storageMap.keys())[0] || '';
-              const nameSuffix = stKey ? ` ${stKey}` : '';
               const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+              const finalName = buildProductNameWithStorage(item.name, stKey);
 
               formatted.push({
                 id: item.id,
-                name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                variantId: v.id || item.id,
+                name: finalName,
+                rawName: item.name,
+                modelSlug: item.slug,
                 slug: `${item.slug}${slugSuffix}`,
-                searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
                 href: `/san-pham/${item.slug}${slugSuffix}`,
                 currentPrice: formatVndPrice(curPrice),
                 originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
                 rawPrice: curPrice,
+                storage: stKey,
+                color: v.color || '',
                 discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
                 imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
-                downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-                rating: 5,
+                statusTag: 'Sẵn hàng',
                 isFeatured: item.isFeatured,
               });
             } else {
@@ -130,26 +150,28 @@ export const IPadShowcaseSection: React.FC = () => {
                 const v = varList[0];
                 const curPrice = Number(v.price || item.price || 0);
 
-                // Bỏ qua cấu hình không có giá
                 if (curPrice <= 0) return;
 
-                const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
-                const nameSuffix = stKey ? ` ${stKey}` : '';
+                const origPrice = Number(v.originalPrice || item.originalPrice || Math.round(curPrice * 1.15));
                 const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+                const finalName = buildProductNameWithStorage(item.name, stKey);
 
                 formatted.push({
                   id: `${item.id}-${stKey || 'base'}`,
-                  name: item.name.includes(stKey) ? item.name : `${item.name}${nameSuffix}`,
+                  variantId: v.id || `${item.id}-${stKey}`,
+                  name: finalName,
+                  rawName: item.name,
+                  modelSlug: item.slug,
                   slug: `${item.slug}${slugSuffix}`,
-                  searchKeywords: `${item.name} ${stKey} ${item.subSeriesName || ''}`.toLowerCase(),
                   href: `/san-pham/${item.slug}${slugSuffix}`,
                   currentPrice: formatVndPrice(curPrice),
                   originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
                   rawPrice: curPrice,
+                  storage: stKey,
+                  color: v.color || '',
                   discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
                   imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
-                  downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-                  rating: 5,
+                  statusTag: 'Sẵn hàng',
                   isFeatured: item.isFeatured,
                 });
               });
@@ -172,13 +194,30 @@ export const IPadShowcaseSection: React.FC = () => {
     setActiveSeries((prev) => (prev === series ? null : series));
   };
 
-  // Lọc theo tab Series và sắp xếp theo thứ tự ưu tiên (Pro -> Air -> Gen -> Mini) và giá giảm dần
+  // Khóa chặt bộ lọc theo dòng iPad trực tiếp trên tên sản phẩm
   const displayedItems = useMemo(() => {
     let list = [...products];
 
     if (activeSeries) {
-      const val = activeSeries.toLowerCase();
-      list = list.filter((p) => p.searchKeywords.includes(val));
+      const target = activeSeries.toLowerCase();
+      list = list.filter((p) => {
+        const nameLower = p.name.toLowerCase();
+
+        if (target === 'pro') {
+          return nameLower.includes('pro') && !nameLower.includes('air') && !nameLower.includes('mini');
+        }
+        if (target === 'air') {
+          return nameLower.includes('air') && !nameLower.includes('pro');
+        }
+        if (target === 'mini') {
+          return nameLower.includes('mini');
+        }
+        if (target === 'gen') {
+          const isNotOthers = !nameLower.includes('pro') && !nameLower.includes('air') && !nameLower.includes('mini');
+          return nameLower.includes('gen') || isNotOthers;
+        }
+        return nameLower.includes(target);
+      });
     }
 
     list.sort((a, b) => {
@@ -188,7 +227,7 @@ export const IPadShowcaseSection: React.FC = () => {
       const getPriority = (name: string) => {
         if (name.includes('pro')) return 1;
         if (name.includes('air')) return 2;
-        if (name.includes('gen') || name.includes('ipad')) return 3;
+        if (name.includes('gen') || name.includes('ipad 10') || name.includes('ipad 9')) return 3;
         if (name.includes('mini')) return 4;
         return 5;
       };
@@ -197,22 +236,46 @@ export const IPadShowcaseSection: React.FC = () => {
       const pB = getPriority(nameB);
 
       if (pA !== pB) return pA - pB;
-
-      // Cùng dòng thì ưu tiên giá cao xuống thấp
       return b.rawPrice - a.rawPrice;
     });
 
-    // Giới hạn chính xác tối đa 20 sản phẩm
     return list.slice(0, 20);
   }, [products, activeSeries]);
+
+  const handleAddToCartQuick = (e: React.MouseEvent, product: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    addToCart({
+      id: product.variantId,
+      name: product.name,
+      modelSlug: product.modelSlug,
+      price: product.rawPrice,
+      originalPrice: product.rawPrice,
+      storage: product.storage,
+      color: product.color || 'Tiêu chuẩn',
+      imageUrl: product.imageUrl,
+      quantity: 1,
+    });
+
+    setToast({
+      show: true,
+      message: `Đã thêm ${product.name} vào giỏ hàng!`,
+    });
+  };
 
   if (loading || products.length === 0) return null;
 
   return (
     <section className="max-w-7xl mx-auto px-2 sm:px-4 mt-6 sm:mt-10 select-none w-full overflow-hidden">
+      <ToastNotification
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
       <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-xl p-3 sm:p-5 md:p-8 shadow-xs">
-        
-        {/* ================= 1. HÀNG ICON DANH MỤC ================= */}
+        {/* 1. HÀNG ICON DANH MỤC */}
         <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 md:gap-x-9 gap-y-3 mb-6 sm:mb-8 max-w-3xl mx-auto w-full">
           {IPAD_SERIES_TABS.map((tab) => {
             const isSelected = activeSeries === tab.series;
@@ -251,100 +314,109 @@ export const IPadShowcaseSection: React.FC = () => {
           })}
         </div>
 
-        {/* ================= 2. LƯỚI CARD SẢN PHẨM ================= */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3.5">
+        {/* 2. LƯỚI CARD SẢN PHẨM */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
           {displayedItems.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-lg p-2.5 sm:p-3 flex flex-col justify-between shadow-xs hover:shadow-xl transition-all duration-300 group border border-gray-200/80"
+              className="bg-white rounded-lg p-2.5 sm:p-3 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group border border-gray-200/80 min-h-[410px]"
             >
               <div>
-                <div className="flex items-center justify-between h-5 sm:h-6">
-                  <span className="bg-[#d70018] text-white text-[9px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-sm">
+                <div className="flex items-center justify-between h-5">
+                  <span className="bg-[#d70018] text-white text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-sm">
                     -{product.discountPercent}%
                   </span>
-                  <div className="flex items-center gap-0.5 text-[8px] sm:text-[9px] font-bold text-gray-400">
-                    <span></span>
-                    <span className="scale-90 origin-right truncate">VN/A</span>
-                  </div>
+                  <span />
                 </div>
 
-                {/* Khung ảnh sản phẩm */}
                 <Link
                   href={product.href}
-                  className="w-full aspect-square my-2 flex items-center justify-center overflow-hidden"
+                  className="w-full h-44 sm:h-48 my-2 flex items-center justify-center bg-white overflow-hidden"
                 >
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-xs"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500';
+                    }}
+                    className="max-h-full max-w-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm"
                   />
                 </Link>
 
                 <Link
                   href={product.href}
-                  className="font-bold text-xs sm:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[34px] sm:min-h-[38px] leading-snug"
+                  className="font-bold text-xs sm:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[36px] sm:min-h-[38px] leading-snug"
                 >
                   {product.name}
                 </Link>
               </div>
 
               <div>
-                {/* Box Trả góp 0% */}
-                <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-1.5 text-center">
-                  <div className="text-[8px] sm:text-[9px] font-bold text-gray-500 flex items-center justify-around">
-                    <span>Trả Góp</span>
-                    <span>•</span>
-                    <span>Trả Trước</span>
-                    <span>•</span>
-                    <span>Phí</span>
+                {/* Khối trả góp chia đều 3 icon */}
+                <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-around text-[#d70018]">
+                  <div className="flex items-center gap-1">
+                    <CreditCard size={12} className="shrink-0" />
+                    <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả góp</span>
                   </div>
-                  <div className="text-[10px] sm:text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
-                    <span>0%</span>
-                    <span>0đ</span>
-                    <span>0đ</span>
+
+                  <span className="text-gray-300 font-normal">|</span>
+
+                  <div className="flex items-center gap-1">
+                    <Wallet size={12} className="shrink-0" />
+                    <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả trước</span>
+                  </div>
+
+                  <span className="text-gray-300 font-normal">|</span>
+
+                  <div className="flex items-center gap-1">
+                    <Percent size={11} className="shrink-0" />
+                    <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Phí</span>
                   </div>
                 </div>
 
-                {/* Giá tiền */}
-                <div className="mt-2 sm:mt-2.5 flex flex-wrap items-baseline gap-1">
-                  <span className="text-xs sm:text-sm md:text-base font-black text-[#d70018]">
+                <span className="mt-1.5 bg-[#ffe8e8] text-[#d70018] text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit block">
+                  {product.statusTag}
+                </span>
+
+                <div className="mt-1 flex items-baseline gap-1.5">
+                  <span className="font-black text-[#d70018] text-sm sm:text-base">
                     {product.currentPrice}
                   </span>
-                  <span className="text-[9px] sm:text-[11px] text-gray-400 line-through">
-                    {product.originalPrice}
-                  </span>
+                  {product.originalPrice && (
+                    <span className="text-[10px] sm:text-[11px] text-gray-400 line-through">
+                      {product.originalPrice}
+                    </span>
+                  )}
                 </div>
 
-                <div className="text-[9px] sm:text-[11px] text-gray-500 font-medium mt-0.5 truncate">
-                  Trả trước <strong className="text-gray-900">{product.downPayment}</strong>
-                </div>
-
-                <div className="flex items-center gap-0.5 mt-1.5 text-amber-400">
-                  {[...Array(product.rating || 5)].map((_, i) => (
-                    <Star key={i} size={10} className="fill-amber-400" />
-                  ))}
+                <div className="mt-2.5">
+                  <button
+                    type="button"
+                    onClick={(e) => handleAddToCartQuick(e, product)}
+                    className="w-full py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98"
+                  >
+                    <ShoppingCart size={13} />
+                    <span>Thêm Giỏ Hàng</span>
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ================= 3. NÚT XEM TẤT CẢ ================= */}
+        {/* 3. NÚT XEM TẤT CẢ */}
         <div className="flex justify-center items-center mt-6 sm:mt-8">
           <Link
-            href={activeSeries ? `/ipad/${activeSeries}` : '/ipad'}
+            href={activeSeries ? `/ipad?series=${activeSeries}` : '/ipad'}
             className="inline-flex items-center gap-1.5 sm:gap-2 bg-[#d70018] hover:bg-red-700 text-white font-extrabold text-xs sm:text-sm px-6 sm:px-8 py-2 sm:py-2.5 rounded-md shadow-xs hover:shadow-md transition-transform active:scale-95"
           >
             <span>
-              {activeSeries
-                ? `Xem toàn bộ ${activeSeries.toUpperCase()}`
-                : 'Xem toàn bộ iPad'}
+              {activeSeries ? `Xem toàn bộ iPad ${activeSeries.toUpperCase()}` : 'Xem toàn bộ iPad'}
             </span>
             <ArrowRight size={15} />
           </Link>
         </div>
-
       </div>
     </section>
   );

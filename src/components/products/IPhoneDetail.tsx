@@ -98,15 +98,51 @@ export default function IPhoneDetail({
 
     setSelectedColor(firstValidVar?.color || 'Titan Tự Nhiên');
 
+    // Fetch sản phẩm liên quan từ DB: Lấy dữ liệu thật, ảnh thật từ variants và có giá > 0
     fetch(`${API_URL}/api/products/filter?category=iphone`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
-        if (resJson.success && Array.isArray(resJson.data)) {
-          setRelatedProducts(resJson.data.filter((p: any) => p.id !== product.id).slice(0, 5));
+        let items = resJson.success && Array.isArray(resJson.data) ? resJson.data : [];
+        if (items.length === 0) {
+          return fetch(`${API_URL}/api/products`, { cache: 'no-store' })
+            .then((r) => r.json())
+            .then((j) => (j.success && Array.isArray(j.data) ? j.data : []));
         }
+        return items;
       })
-      .catch(() => setRelatedProducts([]));
+      .then((allItems: any[]) => {
+        // Lọc các sản phẩm thật khác với sản phẩm hiện tại
+        const filtered = allItems.filter((p: any) => p.id !== product.id && (p.name || '').toLowerCase().includes('iphone'));
 
+        // Chuẩn hóa từng sản phẩm liên quan để lấy đúng ảnh thật và mức giá thật
+        const mapped = filtered.map((p: any) => {
+          const vars: any[] = Array.isArray(p.variants) ? p.variants : [];
+          const bestVar = vars.find((v: any) => Number(v.price) > 0 && Array.isArray(v.images) && v.images.length > 0) || vars[0] || {};
+          
+          const realPrice = Number(bestVar.price || p.price || 0);
+          const realImage = formatImg(bestVar.images?.[0] || p.images?.[0] || p.imageUrl || p.image);
+
+          return {
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            realPrice,
+            priceDisplay: realPrice > 0 ? realPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+            imageUrl: realImage,
+            href: `/san-pham/${p.slug}`,
+          };
+        });
+
+        // Ưu tiên các sản phẩm có giá > 0 và có ảnh chuẩn
+        const validList = mapped.filter((p: any) => p.realPrice > 0 && !p.imageUrl.includes('photo-15'));
+        setRelatedProducts(validList.length >= 5 ? validList.slice(0, 5) : mapped.slice(0, 5));
+      })
+      .catch((err) => {
+        console.error('Lỗi khi fetch sản phẩm liên quan:', err);
+        setRelatedProducts([]);
+      });
+
+    // Quản lý sản phẩm vừa xem
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
       let viewedList: any[] = saved ? JSON.parse(saved) : [];
@@ -201,6 +237,7 @@ export default function IPhoneDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
+  // Gom ảnh thật của sản phẩm và các biến thể
   const imagesList: string[] = useMemo(() => {
     const list: string[] = [];
 
@@ -418,7 +455,7 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG (Chiếm 5/12 cột - DÀN HÀNG NGANG CHUẨN) */}
+            {/* CỘT 2: THÔNG TIN MUA HÀNG (Chiếm 5/12 cột) */}
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
@@ -450,7 +487,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG (DÀN NẰM NGANG HOÀN TOÀN) */}
+              {/* CHỌN DUNG LƯỢNG: NẰM THẲNG HÀNG NGANG KHÔNG XUỐNG DÒNG */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
@@ -477,7 +514,7 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC (DÀN NẰM NGANG 1 HÀNG) */}
+              {/* CHỌN MÀU SẮC: NẰM THẲNG 1 HÀNG NGANG */}
               {currentColorOptions.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
@@ -661,7 +698,7 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (CĂN CHUẨN THẲNG TRỤC 100%, ICON & CHỮ LỚN HƠN 3PX) */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (CĂN THẲNG TRỤC TUYỆT ĐỐI) */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
@@ -740,7 +777,7 @@ export default function IPhoneDetail({
 
           </div>
 
-          {/* KHỐI 3 TAB LỚN ĐƯỢC TĂNG 2 SIZE: text-xl sm:text-2xl font-black */}
+          {/* KHỐI 3 TAB LỚN ĐƯỢC TĂNG 2 SIZE */}
           <div className="mt-14 pt-8 border-t border-gray-200">
             <div className="flex items-center gap-8 sm:gap-12 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
               <button
@@ -775,7 +812,7 @@ export default function IPhoneDetail({
               </button>
             </div>
 
-            {/* TAB MÔ TẢ: KHUNG ĐẸP NHƯ ẢNH 1, CHỮ CĂN ĐỀU VỚI MÉP ẢNH */}
+            {/* TAB MÔ TẢ: KHUNG RỘNG RÃI CĂN CHUẨN ĐỀU THEO ẢNH 1 */}
             {activeTab === 'desc' && (
               <div className="w-full bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 lg:p-12 shadow-xs relative">
                 <div
@@ -838,13 +875,13 @@ export default function IPhoneDetail({
 
             {/* TAB THÔNG SỐ KỸ THUẬT */}
             {activeTab === 'specs' && (
-              <div className="w-full bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+              <div className="w-full bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
                 <p>Thông số kỹ thuật chi tiết chuẩn Apple VN/A.</p>
               </div>
             )}
           </div>
 
-          {/* CÁC DÒNG IPHONE KHÁC CÙNG QUAN TÂM */}
+          {/* CÁC DÒNG IPHONE KHÁC CÙNG QUAN TÂM (DỮ LIỆU THẬT & ẢNH THẬT TỪ DB) */}
           {relatedProducts.length > 0 && (
             <div className="mt-14 pt-8 border-t border-gray-200">
               <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
@@ -852,32 +889,29 @@ export default function IPhoneDetail({
                 <span>CÁC DÒNG IPHONE KHÁC CÙNG QUAN TÂM</span>
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-                {relatedProducts.map((rel) => {
-                  const relPrice = rel.price ? Number(rel.price).toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                  return (
-                    <Link
-                      key={rel.id}
-                      href={`/san-pham/${rel.slug || rel.id}`}
-                      className="bg-white rounded-xl p-3 border border-gray-200 hover:border-[#d70018] hover:shadow-md transition-all group flex flex-col justify-between"
-                    >
-                      <div className="w-full aspect-square flex items-center justify-center p-2">
-                        <img
-                          src={formatImg(rel.images?.[0] || rel.imageUrl || rel.image)}
-                          alt={rel.name}
-                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
-                        />
-                      </div>
-                      <div className="mt-2">
-                        <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
-                          {rel.name}
-                        </h4>
-                        <span className="text-xs sm:text-sm font-black text-[#d70018] mt-1.5 block">
-                          {relPrice}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
+                {relatedProducts.map((rel) => (
+                  <Link
+                    key={rel.id}
+                    href={rel.href}
+                    className="bg-white rounded-xl p-3 border border-gray-200 hover:border-[#d70018] hover:shadow-md transition-all group flex flex-col justify-between"
+                  >
+                    <div className="w-full aspect-square flex items-center justify-center p-2">
+                      <img
+                        src={rel.imageUrl}
+                        alt={rel.name}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
+                        {rel.name}
+                      </h4>
+                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-1.5 block">
+                        {rel.priceDisplay}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           )}
