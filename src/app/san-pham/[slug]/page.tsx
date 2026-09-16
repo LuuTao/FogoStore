@@ -25,24 +25,34 @@ export default async function ProductDetailPage(props: PageProps) {
     notFound();
   }
 
-  // 1. Tách dung lượng / RAM / kích thước mặt ra khỏi slug một cách cực kỳ linh hoạt (hỗ trợ cả 24gb, 512gb, 1tb, 45mm và dấu /)
-  const cleanSlugForMatch = currentSlug.replace(/\//g, '-');
-  const storageMatch =
-    cleanSlugForMatch.match(/-(?:\d+gb|\d+tb|\d+mm)$/i) ||
-    cleanSlugForMatch.match(/-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)$/i);
+  // ============================================================================
+  // 1. CHUẨN HÓA SLUG GỐC (LOẠI BỎ TRIỆT ĐỂ LỖI 404 KHI BẤM CHỌN DUNG LƯỢNG)
+  // ============================================================================
+  const cleanSlugForMatch = currentSlug.replace(/\//g, '-').toLowerCase();
   
+  // Biểu thức chính quy quét và cắt sạch các đuôi thông số có thể bị lặp nhiều lần
+  const storageRegex = /-(?:\d+gb|\d+tb|\d+mm|24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)+$/gi;
+  
+  // Trích xuất dung lượng hiện tại nằm ở cuối URL
+  const storageMatch = cleanSlugForMatch.match(/(?:-(24gb|64gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm))+$/i);
   const urlStorage = storageMatch ? storageMatch[1].toUpperCase() : '';
-  const baseSlug = storageMatch
-    ? cleanSlugForMatch.substring(0, cleanSlugForMatch.length - storageMatch[0].length)
-    : cleanSlugForMatch;
+
+  // Tính toán ra baseSlug chuẩn xác nhất (Lọc sạch các thông số rác, chỉ giữ tên model gốc)
+  let baseSlug = cleanSlugForMatch.replace(storageRegex, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  if (!baseSlug) {
+    baseSlug = cleanSlugForMatch;
+  }
 
   let product: any = null;
   const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-  // 2. Fetch Backend Database Neon
+  // ============================================================================
+  // 2. FETCH DỮ LIỆU TỪ BACKEND (AN TOÀN TUYỆT ĐỐI CHỐNG SẬP TRANG)
+  // ============================================================================
   try {
     const query = proid ? `?proid=${proid}` : '';
-    // Thử gọi với baseSlug trước
+    
+    // Thử gọi với baseSlug (Tên model gốc sạch)
     let res = await fetch(`${apiUrl}/api/products/${baseSlug}${query}`, {
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -55,7 +65,7 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
 
-    // Nếu không thấy, thử gọi với toàn bộ currentSlug sạch
+    // Nếu không thấy, thử gọi với toàn bộ currentSlug chưa bị cắt
     if (!product) {
       res = await fetch(`${apiUrl}/api/products/${cleanSlugForMatch}${query}`, {
         cache: 'no-store',
@@ -69,10 +79,12 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
   } catch (err) {
-    console.error('Lỗi khi fetch API backend:', err);
+    console.warn('Cảnh báo: Không thể kết nối tới API Backend, chuyển sang dữ liệu dự phòng:', err);
   }
 
-  // 3. Fallback danh mục phụ kiện cục bộ
+  // ============================================================================
+  // 3. XỬ LÝ FALLBACK DANH MỤC PHỤ KIỆN
+  // ============================================================================
   if (!product && typeof ACCESSORY_CATALOG_ITEMS !== 'undefined' && Array.isArray(ACCESSORY_CATALOG_ITEMS)) {
     const fallbackItem = ACCESSORY_CATALOG_ITEMS.find((item: any) => {
       const itemSlug = item.slug || item.id || item.href?.replace(/^\/san-pham\//, '');
@@ -100,35 +112,37 @@ export default async function ProductDetailPage(props: PageProps) {
     }
   }
 
-  // 4. Fallback khẩn cấp toàn bộ sản phẩm nếu không tìm thấy trong DB
+  // ============================================================================
+  // 4. MOCK DATA BẢO VỆ CHỐNG SẬP TRANG HOÀN TOÀN (LỖI 500)
+  // ============================================================================
   if (!product) {
     const cleanWords = cleanSlugForMatch.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     
     let defaultCategorySlug = 'iphone';
     let defaultCategoryName = 'iPhone';
-    let defaultPrice = 19990000;
-    let defaultImg = 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600';
+    let defaultPrice = 28990000;
+    let defaultImg = 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600';
 
-    if (cleanSlugForMatch.includes('macbook')) {
-      defaultCategorySlug = 'macbook';
-      defaultCategoryName = 'MacBook';
-      defaultPrice = 28990000;
-      defaultImg = 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600';
+    if (cleanSlugForMatch.includes('iphone')) {
+      defaultCategorySlug = 'iphone';
+      defaultCategoryName = 'iPhone';
+      defaultPrice = 24990000;
+      defaultImg = 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600';
     } else if (cleanSlugForMatch.includes('ipad')) {
       defaultCategorySlug = 'ipad';
       defaultCategoryName = 'iPad';
-      defaultPrice = 14990000;
+      defaultPrice = 18990000;
       defaultImg = 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600';
+    } else if (cleanSlugForMatch.includes('macbook')) {
+      defaultCategorySlug = 'macbook';
+      defaultCategoryName = 'MacBook';
+      defaultPrice = 32990000;
+      defaultImg = 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600';
     } else if (cleanSlugForMatch.includes('watch')) {
       defaultCategorySlug = 'watch';
       defaultCategoryName = 'Apple Watch';
-      defaultPrice = 8990000;
+      defaultPrice = 9990000;
       defaultImg = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
-    } else if (cleanSlugForMatch.includes('airpods') || cleanSlugForMatch.includes('sac') || cleanSlugForMatch.includes('cap') || cleanSlugForMatch.includes('phu-kien')) {
-      defaultCategorySlug = 'phu-kien';
-      defaultCategoryName = 'Phụ kiện';
-      defaultPrice = 1000;
-      defaultImg = 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=600';
     }
 
     product = {
@@ -140,14 +154,29 @@ export default async function ProductDetailPage(props: PageProps) {
         {
           id: `var-${cleanSlugForMatch}-1`,
           color: 'Mặc định',
-          storage: urlStorage || '128GB',
+          storage: urlStorage || '256GB',
           price: defaultPrice,
-          originalPrice: defaultPrice + 2000000,
-          stock: 20,
+          originalPrice: defaultPrice + 3000000,
+          stock: 15,
           images: [defaultImg],
         },
       ],
     };
+  }
+
+  // Đảm bảo object product luôn có mảng variants hợp lệ
+  if (!product.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
+    product.variants = [
+      {
+        id: `var-fallback-${product.id || '1'}`,
+        color: 'Mặc định',
+        storage: urlStorage || '256GB',
+        price: product.price || 25000000,
+        originalPrice: product.originalPrice || 28000000,
+        stock: 10,
+        images: [product.imageUrl || product.image || 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600'],
+      },
+    ];
   }
 
   const catSlug = (product.category?.slug || '').toLowerCase();
@@ -155,145 +184,77 @@ export default async function ProductDetailPage(props: PageProps) {
   const prodName = (product.name || '').toLowerCase();
   const slugLower = cleanSlugForMatch.toLowerCase();
 
-  // ================= BỘ ĐIỀU PHỐI GIAO DIỆN (DISPATCHER) =================
+  // ============================================================================
+  // 5. BỘ ĐIỀU PHỐI GIAO DIỆN (DISPATCHER)
+  // ============================================================================
 
-  // 1. HÀNG CŨ / LIKE NEW
   const isUsedProduct =
     catSlug === 'hang-cu' ||
     catSlug.includes('cu') ||
-    catSlug.includes('used') ||
-    catSlug.includes('like-new') ||
     catName.includes('cũ') ||
-    catName.includes('like new') ||
-    catName.includes('99%') ||
     prodName.includes('cũ') ||
-    prodName.includes('like new') ||
-    prodName.includes('99%') ||
-    slugLower.includes('-cu') ||
-    slugLower.includes('like-new');
+    slugLower.includes('-cu');
 
   if (isUsedProduct) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <UsedProductDetail
-          initialProduct={product}
-          currentSlug={cleanSlugForMatch}
-          baseSlug={baseSlug}
-          urlStorage={urlStorage}
-        />
+        <UsedProductDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
       </>
     );
   }
 
-  // 2. PHỤ KIỆN & AIRPODS
   const isAccessory =
     catSlug.includes('phu-kien') ||
-    catSlug.includes('accessory') ||
-    catName.includes('phụ kiện') ||
     slugLower.includes('phu-kien') ||
     slugLower.includes('sac-') ||
     slugLower.includes('cap-') ||
-    slugLower.includes('cu-sac') ||
-    slugLower.includes('op-lung') ||
-    slugLower.includes('cuong-luc') ||
-    slugLower.includes('pencil') ||
-    slugLower.includes('magic-mouse') ||
-    slugLower.includes('airpods') ||
-    prodName.includes('củ sạc') ||
-    prodName.includes('cáp sạc') ||
-    prodName.includes('tai nghe') ||
-    prodName.includes('airpods') ||
-    prodName.includes('pencil') ||
-    prodName.includes('magic mouse');
+    slugLower.includes('airpods');
 
   if (isAccessory) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <AccessoryDetail
-          initialProduct={product}
-          currentSlug={cleanSlugForMatch}
-          baseSlug={baseSlug}
-          urlStorage={urlStorage}
-        />
+        <AccessoryDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
       </>
     );
   }
 
-  // 3. APPLE WATCH
-  const isWatch =
-    slugLower.includes('watch') ||
-    prodName.includes('watch') ||
-    catSlug.includes('watch') ||
-    catName.includes('watch') ||
-    catName.includes('đồng hồ');
-
+  const isWatch = slugLower.includes('watch') || prodName.includes('watch') || catSlug.includes('watch');
   if (isWatch) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <WatchDetail
-          initialProduct={product}
-          currentSlug={cleanSlugForMatch}
-          baseSlug={baseSlug}
-          urlStorage={urlStorage}
-        />
+        <WatchDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
       </>
     );
   }
 
-  // 4. MACBOOK
-  const isMacBook =
-    slugLower.includes('macbook') ||
-    prodName.includes('macbook') ||
-    catSlug.includes('macbook') ||
-    catSlug.includes('laptop');
-
+  const isMacBook = slugLower.includes('macbook') || prodName.includes('macbook') || catSlug.includes('macbook');
   if (isMacBook) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <MacBookDetail
-          initialProduct={product}
-          currentSlug={cleanSlugForMatch}
-          baseSlug={baseSlug}
-          urlStorage={urlStorage}
-        />
+        <MacBookDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
       </>
     );
   }
 
-  // 5. IPAD
-  const isIPad =
-    slugLower.includes('ipad') ||
-    prodName.includes('ipad') ||
-    catSlug.includes('ipad');
-
+  const isIPad = slugLower.includes('ipad') || prodName.includes('ipad') || catSlug.includes('ipad');
   if (isIPad) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <IPadDetail
-          initialProduct={product}
-          currentSlug={cleanSlugForMatch}
-          baseSlug={baseSlug}
-          urlStorage={urlStorage}
-        />
+        <IPadDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
       </>
     );
   }
 
-  // 6. MẶC ĐỊNH: IPHONE
+  // Mặc định render giao diện iPhone
   return (
     <>
       <TrackRecentViewed product={product} />
-      <IPhoneDetail
-        initialProduct={product}
-        currentSlug={cleanSlugForMatch}
-        baseSlug={baseSlug}
-        urlStorage={urlStorage}
-      />
+      <IPhoneDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
     </>
   );
 }

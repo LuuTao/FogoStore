@@ -24,7 +24,7 @@ import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
-const IPHONE_STORAGES = ['64GB', '128GB', '256GB', '512GB', '1TB'];
+const IPAD_STORAGES = ['128GB', '256GB', '512GB', '1TB', '2TB'];
 
 interface Props {
   initialProduct: any;
@@ -37,7 +37,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onre
 
 const formatImg = (url?: string): string => {
   if (!url || typeof url !== 'string' || url.trim() === '') {
-    return 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600';
+    return 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600';
   }
   const clean = url.trim();
   if (clean.startsWith('http') || clean.startsWith('data:')) {
@@ -47,7 +47,7 @@ const formatImg = (url?: string): string => {
   return `${API_URL}/${clean.replace(/^\//, '')}`;
 };
 
-export default function IPhoneDetail({
+export default function IPadDetail({
   initialProduct,
   currentSlug,
   baseSlug,
@@ -78,26 +78,38 @@ export default function IPhoneDetail({
     message: '',
   });
 
+  // Đồng bộ lại product khi initialProduct thay đổi từ server
+  useEffect(() => {
+    if (initialProduct) {
+      setProduct(initialProduct);
+    }
+  }, [initialProduct]);
+
   useEffect(() => {
     if (!product?.variants) return;
 
-    // Lọc bỏ chữ "TIÊU CHUẨN", ưu tiên lấy dung lượng thực tế
-    const firstValidVar = product.variants.find((v: any) => {
-      const st = (v.storage || '').trim().toUpperCase();
-      return st && st !== 'TIÊU CHUẨN';
-    }) || product.variants[0];
+    const activeSt = (urlStorage || product.variants[0]?.storage || '128GB').toUpperCase();
 
-    const activeSt = (urlStorage || firstValidVar?.storage || '128GB').toUpperCase();
-    if (activeSt === 'TIÊU CHUẨN') {
-      setSelectedStorage('');
-    } else {
-      setSelectedStorage(activeSt);
+    let initVar = null;
+    if (initialProId) {
+      initVar = product.variants.find((v: any) => String(v.id) === initialProId);
+    }
+    if (!initVar) {
+      initVar =
+        product.variants.find(
+          (v: any) => (v.storage || '').toUpperCase() === activeSt && Number(v.stock || 0) > 0
+        ) ||
+        product.variants.find((v: any) => (v.storage || '').toUpperCase() === activeSt) ||
+        product.variants[0];
     }
 
-    setSelectedColor(firstValidVar?.color || 'Titan Tự Nhiên');
+    setSelectedStorage(activeSt);
+    if (!selectedColor) {
+      setSelectedColor(initVar?.color || product.variants[0]?.color || 'Space Black');
+    }
 
-    // Lấy danh sách iPhone liên quan từ DB
-    fetch(`${API_URL}/api/products/filter?category=iphone`, { cache: 'no-store' })
+    // Lấy danh sách iPad liên quan từ DB
+    fetch(`${API_URL}/api/products/filter?category=ipad`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
         if (resJson.success && Array.isArray(resJson.data)) {
@@ -105,19 +117,14 @@ export default function IPhoneDetail({
         }
       })
       .catch(() => setRelatedProducts([]));
-  }, [product, urlStorage]);
+  }, [product, urlStorage, baseSlug, initialProId, selectedColor]);
 
-  // Danh sách dung lượng thực tế (LOẠI BỎ HOÀN TOÀN 'TIÊU CHUẨN')
+  // Danh sách dung lượng thực tế
   const storageList = useMemo(() => {
-    if (!product?.variants) return IPHONE_STORAGES;
-    const set = new Set<string>();
-    product.variants.forEach((v: any) => {
-      const st = (v.storage || '').trim().toUpperCase();
-      if (st && st !== 'TIÊU CHUẨN') {
-        set.add(st);
-      }
-    });
-    const list = Array.from(set);
+    if (!product?.variants) return IPAD_STORAGES;
+    const existing = product.variants.map((v: any) => (v.storage || '').trim()).filter(Boolean);
+    const merged = Array.from(new Set([...IPAD_STORAGES, ...existing]));
+
     const parseSize = (s: string) => {
       const upper = s.toUpperCase();
       const num = parseInt(upper.replace(/[^0-9]/g, '')) || 0;
@@ -125,7 +132,7 @@ export default function IPhoneDetail({
       if (upper.includes('GB')) return num * 1024;
       return num;
     };
-    return list.sort((a, b) => parseSize(a) - parseSize(b));
+    return merged.sort((a, b) => parseSize(a) - parseSize(b));
   }, [product]);
 
   // Danh sách màu sắc thực tế
@@ -145,16 +152,13 @@ export default function IPhoneDetail({
 
   // Biến thể khớp dung lượng và màu
   const currentVariant = useMemo(() => {
-    if (!product?.variants || product.variants.length === 0) return null;
-
-    if (selectedStorage) {
-      const exact = product.variants.find(
-        (v: any) =>
-          (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
-          v.color.toLowerCase() === selectedColor.toLowerCase()
-      );
-      if (exact) return exact;
-    }
+    if (!product?.variants) return null;
+    const exact = product.variants.find(
+      (v: any) =>
+        (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
+        v.color.toLowerCase() === selectedColor.toLowerCase()
+    );
+    if (exact) return exact;
 
     const sample = product.variants.find(
       (v: any) => v.color.toLowerCase() === selectedColor.toLowerCase()
@@ -196,7 +200,7 @@ export default function IPhoneDetail({
     return map;
   }, [product, storageList, selectedColor]);
 
-  // Bấm dung lượng: chuyển URL sang trang mới
+  // Bấm dung lượng: chuyển URL sang trang mới an toàn tuyệt đối
   const handleSelectStorage = (st: string) => {
     if (selectedStorage.toUpperCase() === st.toUpperCase()) return;
     const matched = product.variants.find(
@@ -205,8 +209,9 @@ export default function IPhoneDetail({
         v.color.toLowerCase() === selectedColor.toLowerCase()
     ) || product.variants.find((v: any) => (v.storage || '').toUpperCase() === st.toUpperCase());
 
+    const cleanBase = baseSlug.toLowerCase().replace(/\/+$/, '').trim();
     const proidParam = matched ? `?proid=${matched.id}` : '';
-    router.push(`/san-pham/${baseSlug}-${st.toLowerCase()}${proidParam}`);
+    router.push(`/san-pham/${cleanBase}-${st.toLowerCase()}${proidParam}`);
   };
 
   // Bấm màu sắc: giữ nguyên trang
@@ -216,30 +221,30 @@ export default function IPhoneDetail({
 
     const matched = product.variants.find(
       (v: any) =>
-        (!selectedStorage || (v.storage || '').toUpperCase() === selectedStorage.toUpperCase()) &&
+        (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
         v.color.toLowerCase() === colorName.toLowerCase()
     );
 
     const nextId = matched ? matched.id : `mock-${selectedStorage.toLowerCase()}-${encodeURIComponent(colorName)}`;
+    const cleanBase = baseSlug.toLowerCase().replace(/\/+$/, '').trim();
 
     if (typeof window !== 'undefined') {
-      const stPath = selectedStorage ? `-${selectedStorage.toLowerCase()}` : '';
-      window.history.replaceState(null, '', `/san-pham/${baseSlug}${stPath}?proid=${nextId}`);
+      window.history.replaceState(null, '', `/san-pham/${cleanBase}-${selectedStorage.toLowerCase()}?proid=${nextId}`);
     }
   };
 
   const imagesList: string[] = useMemo(() => {
     if (currentVariant?.images && currentVariant.images.length > 0) return currentVariant.images;
-    return product?.variants?.[0]?.images || ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600'];
+    return product?.variants?.[0]?.images || ['https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600'];
   }, [currentVariant, product]);
 
   const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
 
   const formatVnd = (num: number) => (!num || num <= 0 ? '0đ' : num.toLocaleString('vi-VN') + 'đ');
 
-  const cleanProductName = product.name
-    .replace(/\b(64GB|128GB|256GB|512GB|1TB|2TB|Tiêu chuẩn)\b/gi, '')
-    .trim();
+  const cleanProductName = product?.name
+    ? product.name.replace(/\b(64GB|128GB|256GB|512GB|1TB|2TB)\b/gi, '').trim()
+    : 'iPad';
 
   const currentPrice = currentVariant?.price || product?.price || 21990000;
   const currentOriginalPrice = currentVariant?.originalPrice || product?.originalPrice || Math.round(currentPrice * 1.15);
@@ -296,24 +301,23 @@ export default function IPhoneDetail({
           <div className="max-w-7xl mx-auto flex items-center gap-2 truncate">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
             <span>/</span>
-            <Link href="/iphone" className="hover:text-[#d70018]">iPhone</Link>
+            <Link href="/ipad" className="hover:text-[#d70018]">iPad</Link>
             <span>/</span>
             <span className="text-gray-900 font-bold">{cleanProductName} {selectedStorage}</span>
           </div>
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-8">
-          {/* Cân đối lưới grid: lg:col-span-4 (ảnh) và lg:col-span-5 (thông tin mở rộng sang phải) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* ========================================================================= */}
-            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (lg:col-span-4)                                  */}
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (lg:col-span-4)                                   */}
             {/* ========================================================================= */}
             <div className="lg:col-span-4 flex flex-col items-center">
-              <div className="relative w-full aspect-square border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
+              <div className="relative w-full aspect-square max-w-[480px] border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
                 <img
                   src={displayImage}
-                  alt={product.name}
+                  alt={product?.name || 'iPad'}
                   className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-300 hover:scale-105"
                 />
                 {imagesList.length > 1 && (
@@ -355,7 +359,7 @@ export default function IPhoneDetail({
             </div>
 
             {/* ========================================================================= */}
-            {/* CỘT 2: THÔNG TIN SẢN PHẨM & MUA HÀNG (lg:col-span-5 MỞ RỘNG SANG PHẢI)    */}
+            {/* CỘT 2: THÔNG TIN SẢN PHẨM & MUA HÀNG (lg:col-span-5 mở rộng phải)         */}
             {/* ========================================================================= */}
             <div className="lg:col-span-5 space-y-5">
               <div>
@@ -393,7 +397,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG (ĐÃ BỎ "TIÊU CHUẨN") */}
+              {/* CHỌN DUNG LƯỢNG */}
               {storageList.length > 0 && (
                 <div className="pt-2">
                   <label className="block text-base font-black text-gray-900 mb-2.5">
@@ -421,13 +425,13 @@ export default function IPhoneDetail({
               )}
 
               {/* CHỌN MÀU SẮC */}
-              {colorList.length > 0 && (
+              {allColorOptions.length > 0 && (
                 <div className="pt-2">
                   <label className="block text-base font-black text-gray-900 mb-2.5">
                     Màu sắc:
                   </label>
                   <div className="flex flex-wrap gap-2.5">
-                    {colorList.map(({ color, sampleVariant }) => {
+                    {allColorOptions.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
 
@@ -472,14 +476,14 @@ export default function IPhoneDetail({
                     </button>
                   </div>
                   <span className="text-xs sm:text-sm text-gray-500 font-medium">
-                    (Còn {currentVariant?.stock || 40} sản phẩm trong kho)
+                    (Còn {currentVariant?.stock || 20} máy trong kho)
                   </span>
                 </div>
               )}
 
               {/* Banner ưu đãi */}
               <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-lg p-3.5 flex items-center justify-between text-xs sm:text-sm font-semibold text-[#d70018]">
-                <span>Giảm thêm 200.000đ khi mua kèm Củ sạc nhanh 20W & Ốp lưng MagSafe</span>
+                <span>Giảm thêm 300.000đ khi mua kèm Apple Pencil & Magic Keyboard</span>
                 <span className="bg-[#d70018] text-white text-xs font-black px-2.5 py-1 rounded shrink-0 ml-2">Ưu đãi</span>
               </div>
 
@@ -560,7 +564,7 @@ export default function IPhoneDetail({
             </div>
 
             {/* ========================================================================= */}
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (lg:col-span-3)              */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (lg:col-span-3)                 */}
             {/* ========================================================================= */}
             <div className="lg:col-span-3 space-y-5">
               <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-xs">
@@ -626,9 +630,7 @@ export default function IPhoneDetail({
 
           </div>
 
-          {/* ========================================================================= */}
-          {/* TABS & BẢNG THÔNG SỐ KỸ THUẬT                                           */}
-          {/* ========================================================================= */}
+          {/* TABS & BẢNG THÔNG SỐ KỸ THUẬT */}
           <div className="mt-14 border-t border-gray-200 pt-6">
             <div className="flex items-center gap-8 border-b border-gray-200 text-sm md:text-base font-black uppercase tracking-wide">
               <button
@@ -665,7 +667,7 @@ export default function IPhoneDetail({
                 <div className="space-y-4">
                   <h4 className="font-bold text-[#1e3a8a] text-base">Chính Sách Bảo Hành & Khuyến Mãi:</h4>
                   <div className="whitespace-pre-line text-sm md:text-base leading-relaxed text-gray-800 bg-gray-50/60 p-5 rounded-xl border border-gray-200 font-medium">
-                    {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.\n• Thu cũ lên đời trợ giá đến 90% - giá tốt nhất thị trường.`}
+                    {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.\n• Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.`}
                   </div>
                 </div>
               )}
@@ -676,7 +678,7 @@ export default function IPhoneDetail({
                     <div dangerouslySetInnerHTML={{ __html: product.description }} />
                   ) : (
                     <p>
-                      <strong className="text-gray-900">{cleanProductName}</strong> mang đến bước nhảy vọt về hiệu năng, thiết kế nguyên khối tinh tế và thời lượng pin bền bỉ cả ngày dài.
+                      <strong className="text-gray-900">{cleanProductName}</strong> là chiếc máy tính bảng hoàn hảo cho công việc sáng tạo, học tập và giải trí với vi xử lý Apple Silicon thế hệ mới, màn hình chuẩn đồ họa và hệ điều hành iPadOS tối ưu cho đa nhiệm.
                     </p>
                   )}
                 </div>
@@ -698,13 +700,13 @@ export default function IPhoneDetail({
                     {(Array.isArray(product?.specifications) && product.specifications.length > 0
                       ? product.specifications
                       : [
-                          { key: 'Màn hình', value: 'Super Retina XDR OLED, ProMotion 1-120Hz, Dynamic Island thu nhỏ' },
-                          { key: 'Hệ điều hành', value: 'iOS (Tích hợp Apple Intelligence & Siri AI tiếng Việt)' },
-                          { key: 'Vi xử lý', value: 'Chip Apple Silicon (CPU 6 lõi, GPU 7 lõi, Neural Engine 16 lõi)' },
-                          { key: 'Camera sau', value: '48MP Fusion + 48MP Siêu rộng + 48MP Tele (Zoom quang học cao cấp)' },
-                          { key: 'Camera trước', value: '18MP Center Stage (Khẩu độ f/1.9)' },
-                          { key: 'Pin & Sạc', value: 'Thời gian xem video bền bỉ suốt cả ngày | Sạc nhanh 50% trong 20 phút' },
-                          { key: 'Thiết kế & Độ bền', value: 'Khung viền nguyên khối cao cấp, kính Ceramic Shield, chuẩn kháng nước IP68' },
+                          { key: 'Màn hình', value: 'Ultra Retina XDR OLED / Liquid Retina sắc nét, công nghệ ProMotion 120Hz' },
+                          { key: 'Hệ điều hành', value: 'iPadOS phiên bản mới nhất tối ưu đa nhiệm Split View & Stage Manager' },
+                          { key: 'Vi xử lý', value: 'Chip Apple Silicon M-Series thế hệ mới mạnh mẽ' },
+                          { key: 'Camera sau', value: '12MP Wide, quay video 4K ProRes chuẩn điện ảnh' },
+                          { key: 'Camera trước', value: '12MP Ultra Wide Center Stage đặt cạnh ngang góc siêu rộng' },
+                          { key: 'Pin & Sạc', value: 'Thời lượng pin lướt web cả ngày dài | Cổng Thunderbolt / USB 4 sạc nhanh' },
+                          { key: 'Thiết kế & Độ bền', value: 'Khung vỏ nhôm nguyên khối tái chế 100%, thiết kế siêu mỏng nhẹ' },
                           { key: 'Màu sắc', value: selectedColor || 'Tiêu chuẩn' },
                         ]
                     ).map((row: any, idx: number) => (
@@ -735,7 +737,7 @@ export default function IPhoneDetail({
               <div>
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-6">
                   <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-wide">
-                    Các Dòng iPhone Khác Cùng Quan Tâm
+                    Các Dòng iPad Khác Cùng Quan Tâm
                   </h3>
                 </div>
 

@@ -24,6 +24,8 @@ import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
+const MACBOOK_STORAGES = ['256GB', '512GB', '1TB', '2TB'];
+
 interface Props {
   initialProduct: any;
   currentSlug: string;
@@ -78,21 +80,31 @@ export default function MacBookDetail({
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
 
-    // Lọc bỏ chữ "TIÊU CHUẨN", ưu tiên lấy dung lượng thực tế
     const firstValidVar = product.variants.find((v: any) => {
       const st = (v.storage || '').trim().toUpperCase();
       return st && st !== 'TIÊU CHUẨN';
     }) || product.variants[0];
 
-    const initialSt = (urlStorage || firstValidVar?.storage || '256GB').trim().toUpperCase();
-    if (initialSt === 'TIÊU CHUẨN') {
-      setSelectedStorage('');
-    } else {
-      setSelectedStorage(initialSt);
-    }
-    setSelectedColor(firstValidVar?.color || 'Space Gray');
+    let activeSt = (urlStorage || firstValidVar?.storage || '256GB').toUpperCase();
+    if (activeSt === 'TIÊU CHUẨN') activeSt = '256GB';
 
-    // Lấy danh sách MacBook liên quan
+    let initVar = null;
+    if (initialProId) {
+      initVar = product.variants.find((v: any) => String(v.id) === initialProId);
+    }
+    if (!initVar) {
+      initVar =
+        product.variants.find(
+          (v: any) => (v.storage || '').toUpperCase() === activeSt && Number(v.stock || 0) > 0
+        ) ||
+        product.variants.find((v: any) => (v.storage || '').toUpperCase() === activeSt) ||
+        firstValidVar;
+    }
+
+    setSelectedStorage(activeSt);
+    setSelectedColor(initVar?.color || firstValidVar?.color || 'Space Gray');
+
+    // Lấy danh sách MacBook liên quan từ DB
     fetch(`${API_URL}/api/products/filter?category=macbook`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
@@ -101,11 +113,11 @@ export default function MacBookDetail({
         }
       })
       .catch(() => setRelatedProducts([]));
-  }, [product, urlStorage]);
+  }, [product, urlStorage, initialProId]);
 
-  // Danh sách dung lượng SSD thực tế (LOẠI BỎ HOÀN TOÀN 'TIÊU CHUẨN')
+  // Danh sách dung lượng SSD thực tế (Loại bỏ Tiêu chuẩn)
   const storageList = useMemo(() => {
-    if (!product?.variants) return [];
+    if (!product?.variants) return MACBOOK_STORAGES;
     const set = new Set<string>();
     product.variants.forEach((v: any) => {
       const st = (v.storage || '').trim().toUpperCase();
@@ -113,7 +125,15 @@ export default function MacBookDetail({
         set.add(st);
       }
     });
-    return set.size > 0 ? Array.from(set) : ['256GB', '512GB', '1TB', '2TB'];
+    const list = Array.from(set);
+    const parseSize = (s: string) => {
+      const upper = s.toUpperCase();
+      const num = parseInt(upper.replace(/[^0-9]/g, '')) || 0;
+      if (upper.includes('TB')) return num * 1024 * 1024;
+      if (upper.includes('GB')) return num * 1024;
+      return num;
+    };
+    return (list.length > 0 ? list : MACBOOK_STORAGES).sort((a, b) => parseSize(a) - parseSize(b));
   }, [product]);
 
   // Danh sách màu sắc thực tế
@@ -131,25 +151,23 @@ export default function MacBookDetail({
     }));
   }, [product]);
 
-  // Xác định biến thể hiện tại theo dung lượng và màu đã chọn
+  // Xác định biến thể hiện tại
   const currentVariant = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return null;
 
     if (selectedStorage) {
       const exact = product.variants.find(
         (v: any) =>
-          (v.storage || '').trim().toUpperCase() === selectedStorage.trim().toUpperCase() &&
-          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
+          (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
+          v.color.toLowerCase() === selectedColor.toLowerCase()
       );
       if (exact) return exact;
     }
 
-    const byColor = product.variants.find(
-      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
+    const sample = product.variants.find(
+      (v: any) => v.color.toLowerCase() === selectedColor.toLowerCase()
     );
-    if (byColor) return byColor;
-
-    return product.variants[0];
+    return sample || product.variants[0];
   }, [product, selectedStorage, selectedColor]);
 
   const isOutOfStock = useMemo(() => {
@@ -178,7 +196,7 @@ export default function MacBookDetail({
     return map;
   }, [product, storageList, selectedColor]);
 
-  // Chuyển đổi dung lượng: Chuyển URL sang slug mới
+  // Chuyển đổi dung lượng: Chuyển URL sang slug mới kèm proid
   const handleSelectStorage = (st: string) => {
     if (selectedStorage.toUpperCase() === st.toUpperCase()) return;
     const matched = product.variants.find(
@@ -191,7 +209,7 @@ export default function MacBookDetail({
     router.push(`/san-pham/${baseSlug}-${st.toLowerCase()}${proidParam}`);
   };
 
-  // Chuyển đổi màu sắc: Giữ nguyên URL, đổi hình ảnh tại chỗ
+  // Chuyển đổi màu sắc: Giữ nguyên URL, cập nhật proid trên thanh địa chỉ
   const handleSelectColor = (colorName: string) => {
     setSelectedColor(colorName);
     setCurrentImageIndex(0);
@@ -288,12 +306,9 @@ export default function MacBookDetail({
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-8">
-          {/* Điều chỉnh lưới grid sang phải: lg:col-span-4 (ảnh) và lg:col-span-5 (thông tin mở rộng) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* ========================================================================= */}
-            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (lg:col-span-4)                                  */}
-            {/* ========================================================================= */}
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (lg:col-span-4) */}
             <div className="lg:col-span-4 flex flex-col items-center">
               <div className="relative w-full aspect-square max-w-[480px] border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
                 <img
@@ -339,9 +354,7 @@ export default function MacBookDetail({
               </div>
             </div>
 
-            {/* ========================================================================= */}
-            {/* CỘT 2: THÔNG TIN SẢN PHẨM & MUA HÀNG (lg:col-span-5 MỞ RỘNG SANG PHẢI)    */}
-            {/* ========================================================================= */}
+            {/* CỘT 2: THÔNG TIN SẢN PHẨM & MUA HÀNG (lg:col-span-5 mở rộng phải) */}
             <div className="lg:col-span-5 space-y-5">
               <div>
                 <span className="text-xs font-black tracking-widest text-gray-400 uppercase">
@@ -378,7 +391,7 @@ export default function MacBookDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG SSD (ĐÃ BỎ "TIÊU CHUẨN") */}
+              {/* CHỌN DUNG LƯỢNG SSD (LOẠI BỎ HOÀN TOÀN TIÊU CHUẨN) */}
               {storageList.length > 0 && (
                 <div className="pt-2">
                   <label className="block text-base font-black text-gray-900 mb-2.5">
@@ -426,7 +439,6 @@ export default function MacBookDetail({
                           v.color.toLowerCase() === color.toLowerCase()
                       );
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
-                      const inStockThisColor = variantForColor && Number(variantForColor.stock || 0) > 0;
                       const thumb = variantForColor?.images?.[0] || sampleVariant?.images?.[0] || imagesList[0];
 
                       return (
@@ -476,9 +488,9 @@ export default function MacBookDetail({
               )}
 
               {/* Banner ưu đãi */}
-              <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-lg p-3.5 flex items-center justify-between text-xs sm:text-sm font-semibold text-[#d70018]">
+              <div className="bg-[#1d1d1f] text-white p-3.5 rounded-lg flex items-center justify-between text-xs sm:text-sm font-semibold">
                 <span>Giảm thêm 500.000đ khi mua kèm Chuột Magic Mouse & Hub Type-C</span>
-                <span className="bg-[#d70018] text-white text-xs font-black px-2.5 py-1 rounded shrink-0 ml-2">Ưu đãi</span>
+                <span className="bg-[#ffea00] text-gray-900 font-black px-2.5 py-1 rounded shrink-0 ml-2">Ưu đãi</span>
               </div>
 
               {/* Nút Mua hàng */}
@@ -557,9 +569,7 @@ export default function MacBookDetail({
 
             </div>
 
-            {/* ========================================================================= */}
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (lg:col-span-3)              */}
-            {/* ========================================================================= */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (lg:col-span-3) */}
             <div className="lg:col-span-3 space-y-5">
               <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-xs">
                 <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3 mb-4">
@@ -624,9 +634,7 @@ export default function MacBookDetail({
 
           </div>
 
-          {/* ========================================================================= */}
-          {/* TABS CHÍNH SÁCH BÁN HÀNG - MÔ TẢ - BẢNG THÔNG SỐ GRADIENT ĐỎ               */}
-          {/* ========================================================================= */}
+          {/* TABS & BẢNG THÔNG SỐ KỸ THUẬT */}
           <div className="mt-14 border-t border-gray-200 pt-6">
             <div className="flex items-center gap-8 border-b border-gray-200 text-sm md:text-base font-black uppercase tracking-wide">
               <button
@@ -680,7 +688,6 @@ export default function MacBookDetail({
                 </div>
               )}
 
-              {/* BẢNG THÔNG SỐ KỸ THUẬT GRADIENT ĐỎ CHUẨN FORM */}
               {activeTab === 'specs' && (
                 <div className="max-w-4xl overflow-hidden rounded-xl border border-red-500 bg-white shadow-xs">
                   <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-sm md:text-base uppercase py-4 px-6">

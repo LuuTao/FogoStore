@@ -24,6 +24,8 @@ import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
+const IPHONE_STORAGES = ['64GB', '128GB', '256GB', '512GB', '1TB'];
+
 interface Props {
   initialProduct: any;
   currentSlug: string;
@@ -107,7 +109,7 @@ export default function IPhoneDetail({
 
   // Danh sách dung lượng thực tế (LOẠI BỎ HOÀN TOÀN 'TIÊU CHUẨN')
   const storageList = useMemo(() => {
-    if (!product?.variants) return [];
+    if (!product?.variants) return IPHONE_STORAGES;
     const set = new Set<string>();
     product.variants.forEach((v: any) => {
       const st = (v.storage || '').trim().toUpperCase();
@@ -148,18 +150,24 @@ export default function IPhoneDetail({
     if (selectedStorage) {
       const exact = product.variants.find(
         (v: any) =>
-          (v.storage || '').trim().toUpperCase() === selectedStorage.trim().toUpperCase() &&
-          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
+          (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
+          v.color.toLowerCase() === selectedColor.toLowerCase()
       );
       if (exact) return exact;
     }
 
-    const byColor = product.variants.find(
-      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
+    const sample = product.variants.find(
+      (v: any) => v.color.toLowerCase() === selectedColor.toLowerCase()
     );
-    if (byColor) return byColor;
-
-    return product.variants[0];
+    return {
+      id: `out-of-stock-${selectedStorage.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
+      storage: selectedStorage,
+      color: selectedColor,
+      price: sample?.price || product.variants[0]?.price || 0,
+      originalPrice: sample?.originalPrice || product.variants[0]?.originalPrice || 0,
+      stock: 0,
+      images: sample?.images || product.variants[0]?.images || [],
+    };
   }, [product, selectedStorage, selectedColor]);
 
   const isOutOfStock = useMemo(() => {
@@ -295,51 +303,49 @@ export default function IPhoneDetail({
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-8">
-          {/* ĐIỀU CHỈNH TỶ LỆ LƯỚI GRID: Cột ảnh 4 phần, Cột thông tin mở rộng sang phải 5 phần */}
+          {/* Cân đối lưới grid: lg:col-span-4 (ảnh) và lg:col-span-5 (thông tin mở rộng sang phải) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* ========================================================================= */}
             {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (lg:col-span-4)                                  */}
             {/* ========================================================================= */}
             <div className="lg:col-span-4 flex flex-col items-center">
-              <div className="relative w-full aspect-square border border-gray-200 rounded-sm p-4 flex items-center justify-center bg-white shadow-2xs">
+              <div className="relative w-full aspect-square border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
                 <img
                   src={displayImage}
                   alt={product.name}
-                  className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-200 hover:scale-105"
+                  className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-300 hover:scale-105"
                 />
                 {imagesList.length > 1 && (
                   <>
                     <button
                       onClick={() => setCurrentImageIndex((p) => (p - 1 + imagesList.length) % imagesList.length)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
-                      aria-label="Ảnh trước"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
-                      <ChevronLeft size={18} />
+                      <ChevronLeft size={20} />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((p) => (p + 1) % imagesList.length)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
-                      aria-label="Ảnh sau"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
-                      <ChevronRight size={18} />
+                      <ChevronRight size={20} />
                     </button>
                   </>
                 )}
               </div>
 
               {/* Thumbnails */}
-              <div className="flex items-center gap-2 mt-3 overflow-x-auto max-w-full pb-1">
-                <div className="w-14 h-14 border border-red-500 rounded-sm p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
-                  <Video size={16} />
-                  <span className="font-bold scale-90">Video</span>
+              <div className="flex items-center gap-3 mt-4 overflow-x-auto max-w-full pb-1">
+                <div className="w-16 h-16 border border-red-500 rounded-xl p-1 flex flex-col items-center justify-center bg-red-50/50 text-[11px] text-[#d70018] shrink-0 cursor-pointer">
+                  <Video size={18} />
+                  <span className="font-bold">Video</span>
                 </div>
                 {imagesList.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`w-14 h-14 border rounded-sm p-1 bg-white shrink-0 cursor-pointer transition-all ${
-                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs' : 'border-gray-200 hover:border-gray-300'
+                    className={`w-16 h-16 border rounded-xl p-1 bg-white shrink-0 cursor-pointer transition-all ${
+                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <img src={formatImg(img)} alt="" className="w-full h-full object-contain" />
@@ -349,38 +355,38 @@ export default function IPhoneDetail({
             </div>
 
             {/* ========================================================================= */}
-            {/* CỘT 2: THÔNG TIN CHI TIẾT & MUA HÀNG (lg:col-span-5 MỞ RỘNG SANG PHẢI)    */}
+            {/* CỘT 2: THÔNG TIN SẢN PHẨM & MUA HÀNG (lg:col-span-5 MỞ RỘNG SANG PHẢI)    */}
             {/* ========================================================================= */}
-            <div className="lg:col-span-5 space-y-3.5 text-xs">
+            <div className="lg:col-span-5 space-y-5">
               <div>
-                <span className="text-[10px] font-bold text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded-xs uppercase">
+                <span className="text-xs font-black tracking-widest text-gray-400 uppercase">
                    Authorized Reseller
                 </span>
-                <h1 className="text-xl md:text-2xl font-black text-gray-900 leading-snug mt-1">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-snug mt-1">
                   {cleanProductName} {selectedStorage} - Chính hãng Apple VN
                 </h1>
-                <div className="flex items-center gap-1 text-amber-400 text-sm mt-1">
+                <div className="flex items-center gap-1.5 text-amber-400 text-base mt-1.5">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={15} className="fill-amber-400" />
+                    <Star key={i} size={18} className="fill-amber-400" />
                   ))}
-                  <span className="text-gray-500 text-xs ml-1 font-medium">(Đánh giá 5 sao chuẩn Apple VN/A)</span>
+                  <span className="text-gray-500 text-sm ml-2 font-medium">(Đánh giá 5 sao chuẩn Apple VN/A)</span>
                 </div>
               </div>
 
               {/* Mức giá */}
-              <div className="pt-2 border-t border-gray-100">
-                <span className="text-gray-500 block text-[11px]">Giá bán:</span>
-                <div className="flex items-baseline gap-2.5 mt-0.5">
-                  <span className="text-2xl md:text-3xl font-black text-[#d70018]">
+              <div className="pt-1">
+                <span className="text-gray-500 block text-xs font-bold uppercase tracking-wider">Giá bán ưu đãi:</span>
+                <div className="flex items-baseline gap-4 mt-1">
+                  <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#d70018]">
                     {formatVnd(currentPrice)}
                   </span>
                   {currentOriginalPrice > currentPrice && (
-                    <span className="text-xs text-gray-400 line-through">
+                    <span className="text-lg text-gray-400 line-through font-semibold">
                       {formatVnd(currentOriginalPrice)}
                     </span>
                   )}
                   {isOutOfStock && (
-                    <span className="bg-red-50 text-[#d70018] border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-xs ml-2">
+                    <span className="bg-red-50 text-[#d70018] border border-red-200 text-xs font-bold px-2.5 py-1 rounded">
                       Tạm hết hàng
                     </span>
                   )}
@@ -389,38 +395,24 @@ export default function IPhoneDetail({
 
               {/* CHỌN DUNG LƯỢNG (ĐÃ BỎ "TIÊU CHUẨN") */}
               {storageList.length > 0 && (
-                <div className="pt-1">
-                  <label className="block font-bold text-gray-800 mb-1.5">
-                    Chọn dung lượng (Chuyển phiên bản):
+                <div className="pt-2">
+                  <label className="block text-base font-black text-gray-900 mb-2.5">
+                    Chọn dung lượng:
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  <div className="flex flex-wrap gap-3">
                     {storageList.map((st) => {
-                      const isSelected = selectedStorage.toUpperCase() === st.toUpperCase();
-                      const info = storageStatusMap[st];
-                      const inStock = isSelected ? !isOutOfStock : (info?.inStock ?? false);
-                      const displayPrice = isSelected ? currentVariant?.price : (info?.displayPrice ?? 0);
-
+                      const isSelected = selectedStorage.toLowerCase() === st.toLowerCase();
                       return (
                         <button
                           key={st}
                           onClick={() => handleSelectStorage(st)}
-                          className={`relative p-2 border rounded-sm text-center transition-all cursor-pointer ${
+                          className={`px-5 py-2.5 text-base font-bold rounded-lg border cursor-pointer transition-all ${
                             isSelected
-                              ? 'border-2 border-[#d70018] bg-white shadow-2xs'
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/40 shadow-xs'
+                              : 'border-gray-300 text-gray-800 hover:border-[#d70018]/60 bg-white'
                           }`}
                         >
-                          <span className={`block font-black text-xs ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
-                            {st}
-                          </span>
-                          <span className={`block text-[10px] font-medium mt-0.5 ${!inStock ? 'text-[#d70018] font-bold' : 'text-gray-500'}`}>
-                            {!inStock ? 'Liên hệ' : formatVnd(displayPrice)}
-                          </span>
-                          {isSelected && (
-                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
-                              ✓
-                            </div>
-                          )}
+                          {st}
                         </button>
                       );
                     })}
@@ -429,46 +421,30 @@ export default function IPhoneDetail({
               )}
 
               {/* CHỌN MÀU SẮC */}
-              {allColorOptions.length > 0 && (
-                <div className="pt-1">
-                  <label className="block font-bold text-gray-800 mb-1.5">Màu sắc:</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {allColorOptions.map(({ color, sampleVariant }) => {
-                      const variantForColor = product.variants.find(
-                        (v: any) =>
-                          (!selectedStorage || (v.storage || '').toUpperCase() === selectedStorage.toUpperCase()) &&
-                          v.color.toLowerCase() === color.toLowerCase()
-                      );
+              {colorList.length > 0 && (
+                <div className="pt-2">
+                  <label className="block text-base font-black text-gray-900 mb-2.5">
+                    Màu sắc:
+                  </label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {colorList.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
-                      const inStockThisColor = variantForColor && Number(variantForColor.stock || 0) > 0;
-                      const thumb = variantForColor?.images?.[0] || sampleVariant?.images?.[0] || imagesList[0];
+                      const thumb = sampleVariant?.images?.[0] || imagesList[0];
 
                       return (
                         <button
                           key={color}
                           onClick={() => handleSelectColor(color)}
-                          className={`relative p-1.5 border rounded-sm flex items-center gap-2 transition-all cursor-pointer ${
+                          className={`px-3.5 py-2 rounded-lg border flex items-center gap-2 transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-2 border-[#d70018] bg-white shadow-2xs'
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              ? 'border-2 border-[#d70018] text-[#d70018] font-bold bg-red-50/40 shadow-xs'
+                              : 'border-gray-300 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
-                          <div className="w-7 h-7 shrink-0 border border-gray-100 rounded-xs p-0.5 bg-gray-50 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full overflow-hidden p-0.5 border border-gray-200">
                             <img src={formatImg(thumb)} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <div className="text-left overflow-hidden min-w-0">
-                            <span className={`block font-bold text-[11px] truncate ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
-                              {color}
-                            </span>
-                            <span className={`block text-[10px] ${!inStockThisColor ? 'text-[#d70018] font-bold' : 'text-gray-500'}`}>
-                              {!inStockThisColor ? 'Liên hệ' : formatVnd(variantForColor?.price || 0)}
-                            </span>
-                          </div>
-                          {isSelected && (
-                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
-                              ✓
-                            </div>
-                          )}
+                          <span className="text-sm font-bold">{color}</span>
                         </button>
                       );
                     })}
@@ -478,104 +454,104 @@ export default function IPhoneDetail({
 
               {/* Số lượng */}
               {!isOutOfStock && (
-                <div className="flex items-center gap-3 pt-1">
-                  <span className="font-semibold text-gray-700">Số lượng:</span>
-                  <div className="flex items-center border border-gray-300 rounded-xs overflow-hidden">
+                <div className="pt-2 flex items-center gap-4">
+                  <span className="text-base font-black text-gray-900">Số lượng:</span>
+                  <div className="flex items-center border border-gray-300 rounded-lg">
                     <button
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
+                      className="w-9 h-9 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
-                      <Minus size={13} />
+                      <Minus size={15} />
                     </button>
-                    <span className="w-10 h-8 flex items-center justify-center text-xs font-bold text-gray-900 border-x border-gray-300">
-                      {quantity}
-                    </span>
+                    <span className="w-12 text-center text-base font-black text-gray-900">{quantity}</span>
                     <button
                       onClick={() => setQuantity((q) => Math.min(Number(currentVariant?.stock || 99), q + 1))}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
+                      className="w-9 h-9 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
-                      <Plus size={13} />
+                      <Plus size={15} />
                     </button>
                   </div>
-                  <span className="text-[11px] text-gray-500">(Còn {currentVariant?.stock || 40} sản phẩm trong kho)</span>
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">
+                    (Còn {currentVariant?.stock || 40} sản phẩm trong kho)
+                  </span>
                 </div>
               )}
 
               {/* Banner ưu đãi */}
-              <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-sm p-3 flex items-center justify-between text-xs font-semibold text-[#d70018]">
+              <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-lg p-3.5 flex items-center justify-between text-xs sm:text-sm font-semibold text-[#d70018]">
                 <span>Giảm thêm 200.000đ khi mua kèm Củ sạc nhanh 20W & Ốp lưng MagSafe</span>
-                <span className="bg-[#d70018] text-white text-[10px] font-bold px-2 py-0.5 rounded-xs shrink-0 ml-2">Ưu đãi</span>
+                <span className="bg-[#d70018] text-white text-xs font-black px-2.5 py-1 rounded shrink-0 ml-2">Ưu đãi</span>
               </div>
 
               {/* Nút Mua hàng */}
               {isOutOfStock ? (
-                <div className="pt-1 space-y-2">
-                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-sm text-center">
-                    <p className="text-xs font-bold text-[#d70018]">
-                      Cấu hình {cleanProductName} ({selectedColor}) tạm hết hàng.
+                <div className="pt-2 space-y-2">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+                    <p className="text-sm font-bold text-[#d70018]">
+                      Cấu hình {cleanProductName} ({selectedColor}) hiện đang tạm hết hàng.
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <a
                       href="tel:0566003333"
-                      className="w-full py-2.5 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-[11px] uppercase rounded-sm shadow flex items-center justify-center gap-1.5 text-center"
+                      className="w-full py-3.5 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-xs uppercase rounded-lg shadow flex items-center justify-center gap-2 text-center"
                     >
-                      <PhoneCall size={14} />
-                      <span>GỌI HOTLINE</span>
+                      <PhoneCall size={18} />
+                      <span>GỌI 056.600.3333</span>
                     </a>
                     <a
                       href="https://zalo.me"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-2.5 border border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-[11px] uppercase rounded-sm flex items-center justify-center gap-1.5 text-center"
+                      className="w-full py-3.5 border-2 border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-xs uppercase rounded-lg flex items-center justify-center gap-2 text-center"
                     >
-                      <MessageCircle size={14} />
-                      <span>CHAT ZALO</span>
+                      <MessageCircle size={18} />
+                      <span>CHAT ZALO TƯ VẤN</span>
                     </a>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div className="grid grid-cols-2 gap-3.5 pt-2">
                   <button
                     onClick={() => handleAddToCart(false)}
-                    className="py-2.5 px-2 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 rounded-sm font-bold text-xs uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    className="py-3.5 px-3 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 rounded-lg font-black text-sm uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <ShoppingCart size={15} />
-                    <span>THÊM GIỎ HÀNG</span>
+                    <ShoppingCart size={18} />
+                    <span>THÊM VÀO GIỎ</span>
                   </button>
                   <button
                     onClick={() => handleAddToCart(true)}
-                    className="py-2.5 px-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-sm font-black text-xs uppercase tracking-wide transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                    className="py-3.5 px-3 bg-[#d70018] hover:bg-[#b50014] text-white rounded-lg font-black text-sm uppercase tracking-wide transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
                   >
-                    <Zap size={15} />
+                    <Zap size={18} />
                     <span>MUA NGAY</span>
                   </button>
                 </div>
               )}
 
               {/* Nút MUA NGAY - TRẢ SAU & Chia sẻ */}
-              <div className="pt-1 space-y-3">
+              <div className="pt-2 space-y-4">
                 <button
                   type="button"
                   onClick={() => setIsInstallmentOpen(true)}
-                  className="w-full py-2.5 bg-[#fde047] hover:bg-[#facc15] text-[#1e3a8a] rounded-sm font-black text-xs uppercase tracking-wider shadow-xs flex items-center justify-center transition-all cursor-pointer"
+                  className="w-full py-3.5 bg-[#fde047] hover:bg-[#facc15] text-[#1e3a8a] rounded-lg font-black text-sm uppercase tracking-wider shadow-xs flex items-center justify-center transition-all cursor-pointer"
                 >
                   MUA NGAY - TRẢ SAU
                 </button>
 
-                <div className="flex items-center gap-2 pt-0.5 text-xs text-gray-700 font-bold">
+                <div className="flex items-center gap-3 pt-1 text-sm text-gray-800 font-bold">
                   <span>Chia sẻ:</span>
-                  <div className="flex items-center gap-2">
-                    <a href="https://facebook.com" target="_blank" rel="noreferrer" className="w-7 h-7 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-xs font-black hover:opacity-90">f</a>
-                    <a href="https://m.me" target="_blank" rel="noreferrer" className="w-7 h-7 rounded-full bg-[#0084FF] text-white flex items-center justify-center text-xs hover:opacity-90">💬</a>
-                    <a href="https://twitter.com" target="_blank" rel="noreferrer" className="w-7 h-7 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center text-xs hover:opacity-90">🐦</a>
+                  <div className="flex items-center gap-2.5">
+                    <a href="https://facebook.com" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-sm font-black hover:opacity-90">f</a>
+                    <a href="https://m.me" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#0084FF] text-white flex items-center justify-center text-sm hover:opacity-90">💬</a>
+                    <a href="https://twitter.com" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center text-sm hover:opacity-90">🐦</a>
                     <button
                       type="button"
                       onClick={handleCopyLink}
-                      className="w-7 h-7 rounded-full bg-[#0ea5e9] text-white flex items-center justify-center hover:opacity-90 cursor-pointer"
+                      className="w-8 h-8 rounded-full bg-[#0ea5e9] text-white flex items-center justify-center hover:opacity-90 cursor-pointer transition-opacity"
                       title="Sao chép liên kết"
                     >
-                      {copied ? <Check size={13} /> : <Copy size={13} />}
+                      {copied ? <Check size={15} /> : <Copy size={15} />}
                     </button>
                   </div>
                 </div>
@@ -586,44 +562,44 @@ export default function IPhoneDetail({
             {/* ========================================================================= */}
             {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO (lg:col-span-3)              */}
             {/* ========================================================================= */}
-            <div className="lg:col-span-3 space-y-4">
-              <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-xs">
-                <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2.5 mb-3">
+            <div className="lg:col-span-3 space-y-5">
+              <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-xs">
+                <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3 mb-4">
                   Chính sách bán hàng
                 </h3>
-                <div className="space-y-3.5 text-xs text-gray-700">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                      <Check size={13} strokeWidth={3} />
+                <div className="space-y-4 text-sm text-gray-800 font-medium">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                      <Check size={14} strokeWidth={3} />
                     </span>
                     <span>Cam kết 100% chính hãng Apple</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base shrink-0">💵</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl shrink-0">💵</span>
                     <span>Lên đời trợ giá lên đến 95%</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base shrink-0">🔄</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl shrink-0">🔄</span>
                     <span>Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
                   </div>
                 </div>
 
-                <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2.5 mt-5 mb-3">
+                <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3 mt-6 mb-4">
                   Thông tin thêm
                 </h3>
-                <div className="space-y-3.5 text-xs text-gray-700">
-                  <div className="flex items-center gap-2.5">
-                    <span className="px-1.5 py-0.5 border border-blue-600 text-blue-700 font-bold text-[9px] rounded">
+                <div className="space-y-4 text-sm text-gray-800 font-medium">
+                  <div className="flex items-center gap-3">
+                    <span className="px-1.5 py-0.5 border border-blue-600 text-blue-700 font-black text-[10px] rounded">
                       VISA
                     </span>
                     <span>Trả góp lãi suất 0%, đa dạng hình thức góp</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base shrink-0">🛵</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl shrink-0">🛵</span>
                     <span>Miễn phí giao hàng nội thành TP.HCM</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="px-1.5 py-0.5 bg-red-600 text-white font-bold text-[8px] rounded">
+                  <div className="flex items-center gap-3">
+                    <span className="px-1.5 py-0.5 bg-red-600 text-white font-black text-[9px] rounded">
                       HOME
                     </span>
                     <span>Giảm đến 500K khi góp qua Home Pay Later</span>
@@ -634,16 +610,16 @@ export default function IPhoneDetail({
               {/* Banner Kredivo */}
               <div
                 onClick={() => setIsInstallmentOpen(true)}
-                className="block rounded-lg overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-shadow group cursor-pointer"
+                className="block rounded-xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-shadow group cursor-pointer"
               >
-                <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-4 border-b border-orange-100 flex flex-col items-center text-center">
-                  <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Kredivo × Home PayLater</div>
-                  <div className="text-sm font-black text-gray-900 mt-1">MUA TRƯỚC TRẢ SAU</div>
-                  <div className="flex items-center gap-3 my-2">
-                    <span className="text-xs font-black text-[#d70018] bg-red-100 px-2 py-0.5 rounded">0% Lãi Suất</span>
-                    <span className="text-xs font-black text-blue-600 bg-blue-100 px-2 py-0.5 rounded">5 Phút Duyệt</span>
+                <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-5 border-b border-orange-100 flex flex-col items-center text-center">
+                  <div className="text-xs font-black text-orange-600 uppercase tracking-widest">Kredivo × Home PayLater</div>
+                  <div className="text-base font-black text-gray-900 mt-1">MUA TRƯỚC TRẢ SAU</div>
+                  <div className="flex items-center gap-3 my-2.5">
+                    <span className="text-xs font-black text-[#d70018] bg-red-100 px-2.5 py-0.5 rounded">0% Lãi Suất</span>
+                    <span className="text-xs font-black text-blue-600 bg-blue-100 px-2.5 py-0.5 rounded">5 Phút Duyệt</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">Đăng ký Online - Không Chứng Minh Thu Nhập</p>
+                  <p className="text-xs text-gray-500 font-medium">Đăng ký Online - Không Chứng Minh Thu Nhập</p>
                 </div>
               </div>
             </div>
@@ -654,7 +630,7 @@ export default function IPhoneDetail({
           {/* TABS & BẢNG THÔNG SỐ KỸ THUẬT                                           */}
           {/* ========================================================================= */}
           <div className="mt-14 border-t border-gray-200 pt-6">
-            <div className="flex items-center gap-8 border-b border-gray-200 text-xs md:text-sm font-bold uppercase tracking-wide">
+            <div className="flex items-center gap-8 border-b border-gray-200 text-sm md:text-base font-black uppercase tracking-wide">
               <button
                 type="button"
                 onClick={() => setActiveTab('policy')}
@@ -684,18 +660,18 @@ export default function IPhoneDetail({
               </button>
             </div>
 
-            <div className="py-6 text-xs md:text-sm text-gray-700 leading-relaxed">
+            <div className="py-6 text-sm md:text-base text-gray-800 leading-relaxed">
               {activeTab === 'policy' && (
                 <div className="space-y-4">
-                  <h4 className="font-bold text-[#1e3a8a] text-sm">Chính Sách Bảo Hành & Khuyến Mãi:</h4>
-                  <div className="whitespace-pre-line text-xs md:text-sm leading-relaxed text-gray-800 bg-gray-50/50 p-4 rounded-lg border border-gray-200">
-                    {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.\n• Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.`}
+                  <h4 className="font-bold text-[#1e3a8a] text-base">Chính Sách Bảo Hành & Khuyến Mãi:</h4>
+                  <div className="whitespace-pre-line text-sm md:text-base leading-relaxed text-gray-800 bg-gray-50/60 p-5 rounded-xl border border-gray-200 font-medium">
+                    {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.\n• Thu cũ lên đời trợ giá đến 90% - giá tốt nhất thị trường.`}
                   </div>
                 </div>
               )}
 
               {activeTab === 'desc' && (
-                <div className="space-y-3 whitespace-pre-line text-xs md:text-sm leading-relaxed text-gray-800">
+                <div className="space-y-3.5 whitespace-pre-line text-sm md:text-base leading-relaxed text-gray-800 font-medium">
                   {product?.description ? (
                     <div dangerouslySetInnerHTML={{ __html: product.description }} />
                   ) : (
@@ -706,10 +682,11 @@ export default function IPhoneDetail({
                 </div>
               )}
 
+              {/* BẢNG THÔNG SỐ KỸ THUẬT GRADIENT ĐỎ */}
               {activeTab === 'specs' && (
                 <div className="max-w-4xl overflow-hidden rounded-xl border border-red-500 bg-white shadow-xs">
-                  <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-xs md:text-sm uppercase py-3.5 px-5">
-                    <div className="col-span-4 flex items-center gap-1.5">
+                  <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-sm md:text-base uppercase py-4 px-6">
+                    <div className="col-span-4 flex items-center gap-2">
                       <span>🔥 ĐẶC ĐIỂM NỔI BẬT</span>
                     </div>
                     <div className="col-span-8">
@@ -717,7 +694,7 @@ export default function IPhoneDetail({
                     </div>
                   </div>
 
-                  <div className="divide-y divide-gray-200 text-xs md:text-sm">
+                  <div className="divide-y divide-gray-200 text-sm md:text-base">
                     {(Array.isArray(product?.specifications) && product.specifications.length > 0
                       ? product.specifications
                       : [
@@ -731,7 +708,7 @@ export default function IPhoneDetail({
                           { key: 'Màu sắc', value: selectedColor || 'Tiêu chuẩn' },
                         ]
                     ).map((row: any, idx: number) => (
-                      <div key={idx} className="grid grid-cols-12 p-3.5 md:p-4 hover:bg-gray-50/70 transition-colors">
+                      <div key={idx} className="grid grid-cols-12 p-4 md:p-5 hover:bg-gray-50/80 transition-colors">
                         <div className="col-span-4 font-bold text-gray-900 pr-3">{row.key}</div>
                         <div className="col-span-8 text-gray-700 leading-relaxed font-medium">{row.value || 'Đang cập nhật'}</div>
                       </div>
@@ -744,7 +721,7 @@ export default function IPhoneDetail({
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-xs font-bold text-gray-500 hover:text-[#d70018] flex items-center gap-1 cursor-pointer transition-colors"
+                  className="text-sm font-bold text-gray-500 hover:text-[#d70018] flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <span>{isExpanded ? '— Rút gọn nội dung' : '+ Xem thêm nội dung'}</span>
                 </button>
@@ -757,7 +734,7 @@ export default function IPhoneDetail({
             <div className="mt-14 space-y-12">
               <div>
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-6">
-                  <h3 className="text-base md:text-lg font-black text-gray-900 uppercase tracking-wide">
+                  <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-wide">
                     Các Dòng iPhone Khác Cùng Quan Tâm
                   </h3>
                 </div>
@@ -768,7 +745,7 @@ export default function IPhoneDetail({
                     const relPrice = Number(v.price || rel.price || 0);
 
                     return (
-                      <div key={rel.id} className="bg-white rounded border border-gray-200 p-3 flex flex-col justify-between hover:shadow-lg transition-all group">
+                      <div key={rel.id} className="bg-white rounded-lg border border-gray-200 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all group">
                         <Link href={`/san-pham/${rel.slug}`} className="w-full aspect-square flex items-center justify-center overflow-hidden mb-2">
                           <img
                             src={formatImg(v.images?.[0] || rel.imageUrl)}
@@ -777,18 +754,18 @@ export default function IPhoneDetail({
                           />
                         </Link>
                         <div>
-                          <span className="text-[9px] font-bold text-gray-400 uppercase">APPLE</span>
-                          <Link href={`/san-pham/${rel.slug}`} className="block font-bold text-xs text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
+                          <span className="text-[10px] font-black text-gray-400 uppercase">APPLE</span>
+                          <Link href={`/san-pham/${rel.slug}`} className="block font-bold text-xs sm:text-sm text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
                             {rel.name}
                           </Link>
-                          <div className="text-xs font-black text-[#d70018] mt-1.5">{formatVnd(relPrice)}</div>
+                          <div className="text-sm sm:text-base font-black text-[#d70018] mt-1.5">{formatVnd(relPrice)}</div>
                         </div>
                         <button
                           type="button"
                           onClick={() => router.push(`/san-pham/${rel.slug}`)}
-                          className="w-full mt-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                          className="w-full mt-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                         >
-                          <ShoppingCart size={12} />
+                          <ShoppingCart size={14} />
                           <span>XEM CHI TIẾT</span>
                         </button>
                       </div>
