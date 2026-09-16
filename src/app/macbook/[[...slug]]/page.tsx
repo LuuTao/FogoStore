@@ -23,6 +23,8 @@ interface SubModelItem {
   img: string;
 }
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
 const DEFAULT_MACBOOK_SERIES: SeriesTabItem[] = [
   {
     name: 'Tất cả',
@@ -145,6 +147,22 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
+const formatProductImageUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80';
+  }
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  }
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
+};
+
 const resolveMacbookSlug = (raw: string): string => {
   if (!raw) return '';
   let s = raw.toLowerCase().trim();
@@ -177,7 +195,7 @@ export default function DynamicMacBookPage() {
 
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-  const [dbItems, setDbItems] = useState<any[]>([]);
+  const [rawDbProducts, setRawDbProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
@@ -190,7 +208,7 @@ export default function DynamicMacBookPage() {
   const slugArray = (params?.slug as string[]) || [];
   const rawParam = slugArray[0] || searchParams?.get('series') || '';
 
-  // 1. Nạp Banner & Danh mục từ Admin
+  // 1. Nạp cấu hình Banner từ LocalStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -198,9 +216,7 @@ export default function DynamicMacBookPage() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           const macBanners = parsed.filter((it: any) => it.group === 'macbook_banners');
-          if (macBanners.length > 0) {
-            setAdminBanners(macBanners);
-          }
+          if (macBanners.length > 0) setAdminBanners(macBanners);
 
           const adminSubs = parsed.filter(
             (it: any) => it.group === 'sub_macbook' && it.name.toLowerCase() !== 'tất cả'
@@ -235,9 +251,7 @@ export default function DynamicMacBookPage() {
   useEffect(() => {
     try {
       const savedSeo = localStorage.getItem('fogo_seo_macbook_seo_desc');
-      if (savedSeo && savedSeo.trim()) {
-        setSeoContent(savedSeo);
-      }
+      if (savedSeo && savedSeo.trim()) setSeoContent(savedSeo);
     } catch (e) {
       console.warn('Lỗi nạp bài viết SEO MacBook:', e);
     }
@@ -253,60 +267,32 @@ export default function DynamicMacBookPage() {
     }
   }, []);
 
-  // 4. Fetch danh sách sản phẩm
+  // 4. Fetch danh sách sản phẩm MacBook từ API
   useEffect(() => {
     const fetchLiveMacbook = async () => {
       try {
         setLoading(true);
-        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=macbook', {
+        let res = await fetch(`${API_URL}/api/products/filter?category=macbook`, {
           cache: 'no-store',
         });
         let json = await res.json();
 
         if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+          res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
           json = await res.json();
         }
 
         const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+        const macItems = itemsList.filter((item: any) => {
+          const lower = (item.name || '').toLowerCase();
+          const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+          return cat.includes('mac') || lower.includes('macbook') || lower.includes('mac');
+        });
 
-        const mapped = itemsList
-          .filter((item: any) => {
-            const lower = (item.name || '').toLowerCase();
-            const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
-            return cat.includes('mac') || lower.includes('macbook') || lower.includes('mac');
-          })
-          .map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || item.price || 0;
-            const origPrice = v.originalPrice || item.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
-
-            return {
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              href: `/san-pham/${item.slug || item.id}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              rawPrice: curPrice,
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                item.imageUrl ||
-                'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80',
-              downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-              statusTag: 'Sẵn hàng',
-              rating: 5,
-              searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
-            };
-          });
-
-        setDbItems(mapped);
+        setRawDbProducts(macItems);
       } catch (err) {
         console.error('Lỗi khi fetch MacBook từ API:', err);
-        setDbItems([]);
+        setRawDbProducts([]);
       } finally {
         setLoading(false);
       }
@@ -314,6 +300,76 @@ export default function DynamicMacBookPage() {
 
     fetchLiveMacbook();
   }, []);
+
+  // 5. TỰ ĐỘNG PHÂN TÁCH TỪNG DUNG LƯỢNG THÀNH TỪNG CARD SẢN PHẨM RIÊNG BIỆT
+  const expandedProducts = useMemo(() => {
+    const result: any[] = [];
+
+    rawDbProducts.forEach((prod) => {
+      const variants: any[] = Array.isArray(prod.variants) ? prod.variants : [];
+
+      const storageMap = new Map<string, any[]>();
+      variants.forEach((v) => {
+        const rawSt = (v.storage && String(v.storage).trim()) || '';
+        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+        if (!storageMap.has(stKey)) {
+          storageMap.set(stKey, []);
+        }
+        storageMap.get(stKey)!.push(v);
+      });
+
+      if (storageMap.size <= 1) {
+        const v = variants[0] || {};
+        const curPrice = Number(v.price || prod.price || 0);
+        const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+        const stKey = Array.from(storageMap.keys())[0] || '';
+        const nameSuffix = stKey ? ` ${stKey}` : '';
+        const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+        result.push({
+          id: prod.id,
+          name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+          slug: `${prod.slug}${slugSuffix}`,
+          href: `/san-pham/${prod.slug}${slugSuffix}`,
+          currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+          originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+          rawPrice: curPrice,
+          discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+          imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+          downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+          statusTag: 'Sẵn hàng',
+          rating: 5,
+          searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
+        });
+      } else {
+        storageMap.forEach((varList, stKey) => {
+          const v = varList[0];
+          const curPrice = Number(v.price || prod.price || 0);
+          const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+          const nameSuffix = stKey ? ` ${stKey}` : '';
+          const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+          result.push({
+            id: `${prod.id}-${stKey || 'base'}`,
+            name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+            slug: `${prod.slug}${slugSuffix}`,
+            href: `/san-pham/${prod.slug}${slugSuffix}`,
+            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+            rawPrice: curPrice,
+            discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+            imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+            downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+            statusTag: 'Sẵn hàng',
+            rating: 5,
+            searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
+          });
+        });
+      }
+    });
+
+    return result;
+  }, [rawDbProducts]);
 
   const currentFilter = useMemo(() => resolveMacbookSlug(rawParam), [rawParam]);
 
@@ -328,7 +384,7 @@ export default function DynamicMacBookPage() {
   const activeSubmodels = currentSeriesTag ? MACBOOK_SUBMODELS_MAP[currentSeriesTag] || [] : [];
 
   const filteredProducts = useMemo(() => {
-    let items = [...dbItems];
+    let items = [...expandedProducts];
 
     items = items.filter((i) => {
       const lowerName = (i.name || '').toLowerCase();
@@ -376,7 +432,7 @@ export default function DynamicMacBookPage() {
     });
 
     return items;
-  }, [dbItems, currentFilter, currentSort, activeFilters]);
+  }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
@@ -458,7 +514,7 @@ export default function DynamicMacBookPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* ================= 1. BANNER ĐÔI 600x200px THUẦN ẢNH ================= */}
+          {/* 1. BANNER ĐÔI 600x200px THUẦN ẢNH */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link
@@ -485,7 +541,7 @@ export default function DynamicMacBookPage() {
             </div>
           </div>
 
-          {/* ================= 2. HÀNG SERIES CHA: BO TRÒN TUYỆT ĐỐI (80PX) ================= */}
+          {/* 2. HÀNG SERIES CHA: BO TRÒN TUYỆT ĐỐI (80PX) */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {seriesTabs.map((series, idx) => {
@@ -527,7 +583,7 @@ export default function DynamicMacBookPage() {
             </div>
           </div>
 
-          {/* ================= 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE (BO TRÒN TUYỆT ĐỐI) ================= */}
+          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
@@ -575,7 +631,7 @@ export default function DynamicMacBookPage() {
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
               <p className="text-xs text-gray-500 mt-0.5">
-                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} cấu hình phù hợp`}
+                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} phiên bản cấu hình phù hợp`}
               </p>
             </div>
 
@@ -587,7 +643,7 @@ export default function DynamicMacBookPage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM */}
+          {/* LƯỚI SẢN PHẨM PHÂN TÁCH DUNG LƯỢNG */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -631,6 +687,10 @@ export default function DynamicMacBookPage() {
                     <img
                       src={product.imageUrl}
                       alt={product.name}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80';
+                      }}
                       className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
                     />
                   </Link>
@@ -689,7 +749,7 @@ export default function DynamicMacBookPage() {
             </div>
           )}
 
-          {/* ================= 4. BÀI VIẾT SEO CHÂN TRANG (HỖ TRỢ RICH TEXT WORD) ================= */}
+          {/* BÀI VIẾT SEO CHÂN TRANG */}
           <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
             <div
               className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal ${

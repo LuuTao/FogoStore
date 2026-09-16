@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Star, CornerDownLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -16,6 +16,8 @@ interface SeriesTabItem {
   img: string;
   queryTag: string | null;
 }
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 // 1. Danh mục cấp 1: Kèm nút "Tất cả"
 const DEFAULT_USED_CATEGORIES: SeriesTabItem[] = [
@@ -132,25 +134,45 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
+const formatProductImageUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=600&q=80';
+  }
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  }
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
+};
+
 export default function DynamicUsedPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
 
-  const [dbProducts, setDbItems] = useState<any[]>([]);
+  const [rawDbProducts, setRawDbProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
-  // State Banner & Submodel nạp từ Admin
   const [adminBanners, setAdminBanners] = useState<any[]>([]);
   const [categories] = useState<SeriesTabItem[]>(DEFAULT_USED_CATEGORIES);
 
-  // State bài viết SEO
   const [seoContent, setSeoContent] = useState<string>(DEFAULT_USED_SEO_TEXT);
   const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
 
   const slugParam = params?.slug;
-  const currentFilter = Array.isArray(slugParam) ? slugParam[0] || '' : (slugParam as string) || '';
+  const rawParam =
+    (Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)) ||
+    searchParams?.get('series') ||
+    '';
+  const currentFilter = (rawParam || '').toLowerCase().trim();
 
   // 1. Nạp Banner đôi Hàng Cũ từ Admin
   useEffect(() => {
@@ -160,9 +182,7 @@ export default function DynamicUsedPage() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           const usedBanners = parsed.filter((it: any) => it.group === 'hang_cu_banners');
-          if (usedBanners.length > 0) {
-            setAdminBanners(usedBanners);
-          }
+          if (usedBanners.length > 0) setAdminBanners(usedBanners);
         }
       }
     } catch (e) {
@@ -174,9 +194,7 @@ export default function DynamicUsedPage() {
   useEffect(() => {
     try {
       const savedSeo = localStorage.getItem('fogo_seo_hang_cu_seo_desc');
-      if (savedSeo && savedSeo.trim()) {
-        setSeoContent(savedSeo);
-      }
+      if (savedSeo && savedSeo.trim()) setSeoContent(savedSeo);
     } catch (e) {
       console.warn('Lỗi nạp bài viết SEO Hàng Cũ:', e);
     }
@@ -192,69 +210,52 @@ export default function DynamicUsedPage() {
     }
   }, []);
 
-  // 4. Fetch danh sách sản phẩm máy cũ
+  // 4. Fetch danh sách sản phẩm từ API
   useEffect(() => {
     const fetchLiveUsedProducts = async () => {
       try {
         setLoading(true);
-        let res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+        let res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
         let json = await res.json();
 
         const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
 
-        const mapped = itemsList.map((item: any) => {
-          const v = item.variants?.[0] || {};
-          const curPrice = v.price || item.price || 0;
-          const origPrice = v.originalPrice || item.originalPrice || curPrice;
-          const discountPercent = origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12;
-
-          const lower = (item.name || '').toLowerCase();
+        // Lọc lấy sản phẩm máy cũ / đã qua sử dụng
+        const usedItems = itemsList.filter((item: any) => {
+          const lowerName = (item.name || '').toLowerCase();
           const catName = (item.category?.name || item.category?.slug || '').toLowerCase();
 
-          // Phân loại thiết bị chính xác ngay từ đầu
-          let deviceType: 'iphone' | 'ipad' | 'macbook' = 'iphone';
-          if (lower.includes('macbook') || lower.includes('mac mini') || catName.includes('mac')) {
-            deviceType = 'macbook';
-          } else if (lower.includes('ipad') || catName.includes('ipad')) {
-            deviceType = 'ipad';
-          } else if (lower.includes('iphone') || catName.includes('iphone')) {
-            deviceType = 'iphone';
-          }
-
-          const isUsed =
-            lower.includes('cũ') ||
-            lower.includes('like new') ||
-            lower.includes('likenew') ||
-            lower.includes('99%') ||
-            lower.includes('98%') ||
-            lower.includes('qua sử dụng') ||
+          const isExplicitUsed =
+            lowerName.includes('cũ') ||
+            lowerName.includes('like new') ||
+            lowerName.includes('likenew') ||
+            lowerName.includes('99%') ||
+            lowerName.includes('98%') ||
+            lowerName.includes('qua sử dụng') ||
+            item.isUsed === true ||
             catName.includes('cũ') ||
             catName.includes('hang-cu');
 
-          return {
-            id: item.id,
-            name: item.name,
-            deviceType,
-            isUsed,
-            href: `/san-pham/${item.slug || item.id}`,
-            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-            rawPrice: curPrice,
-            discountPercent,
-            conditionTag: '99% Zin Đẹp',
-            imageUrl: v.images?.[0] || item.imageUrl || 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=400&q=80',
-            downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-            rating: 5,
-            searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
-          };
+          // Loại trừ phụ kiện
+          const isAccessory =
+            lowerName.includes('củ sạc') ||
+            lowerName.includes('cáp sạc') ||
+            lowerName.includes('dock sạc') ||
+            lowerName.includes('ốp lưng') ||
+            lowerName.includes('tai nghe');
+
+          return isExplicitUsed && !isAccessory;
         });
 
-        // Chỉ lấy sản phẩm máy cũ
-        const onlyUsed = mapped.filter((p: any) => p.isUsed);
-        setDbItems(onlyUsed.length > 0 ? onlyUsed : mapped.filter((p: any) => !p.name.toLowerCase().includes('new seal')));
+        // Nếu DB chưa có gắn nhãn cũ, lấy các sản phẩm thông dụng (trừ new seal)
+        setRawDbProducts(
+          usedItems.length > 0
+            ? usedItems
+            : itemsList.filter((p: any) => !(p.name || '').toLowerCase().includes('new seal'))
+        );
       } catch (err) {
         console.error('Lỗi khi fetch hàng cũ từ API:', err);
-        setDbItems([]);
+        setRawDbProducts([]);
       } finally {
         setLoading(false);
       }
@@ -262,6 +263,92 @@ export default function DynamicUsedPage() {
 
     fetchLiveUsedProducts();
   }, []);
+
+  // 5. TỰ ĐỘNG PHÂN TÁCH TỪNG BIẾN THỂ DUNG LƯỢNG THÀNH TỪNG THẺ CARD RIÊNG BIỆT
+  const expandedProducts = useMemo(() => {
+    const result: any[] = [];
+
+    rawDbProducts.forEach((prod) => {
+      const variants: any[] = Array.isArray(prod.variants) ? prod.variants : [];
+
+      // Nhận diện thiết bị
+      const lower = (prod.name || '').toLowerCase();
+      const cat = (prod.category?.slug || prod.category?.name || '').toLowerCase();
+
+      let deviceType: 'iphone' | 'ipad' | 'macbook' = 'iphone';
+      if (lower.includes('macbook') || lower.includes('mac mini') || cat.includes('mac')) {
+        deviceType = 'macbook';
+      } else if (lower.includes('ipad') || cat.includes('ipad')) {
+        deviceType = 'ipad';
+      } else if (lower.includes('iphone') || cat.includes('iphone')) {
+        deviceType = 'iphone';
+      }
+
+      // Gom nhóm variants theo dung lượng
+      const storageMap = new Map<string, any[]>();
+      variants.forEach((v) => {
+        const rawSt = (v.storage && String(v.storage).trim()) || '';
+        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+        if (!storageMap.has(stKey)) {
+          storageMap.set(stKey, []);
+        }
+        storageMap.get(stKey)!.push(v);
+      });
+
+      if (storageMap.size <= 1) {
+        const v = variants[0] || {};
+        const curPrice = Number(v.price || prod.price || 0);
+        const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+        const stKey = Array.from(storageMap.keys())[0] || '';
+        const nameSuffix = stKey ? ` ${stKey}` : '';
+        const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+        result.push({
+          id: prod.id,
+          name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+          slug: `${prod.slug}${slugSuffix}`,
+          href: `/san-pham/${prod.slug}${slugSuffix}`,
+          deviceType,
+          currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+          originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+          rawPrice: curPrice,
+          discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12,
+          imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+          downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+          conditionTag: '99% Zin Đẹp',
+          rating: 5,
+          searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
+        });
+      } else {
+        storageMap.forEach((varList, stKey) => {
+          const v = varList[0];
+          const curPrice = Number(v.price || prod.price || 0);
+          const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+          const nameSuffix = stKey ? ` ${stKey}` : '';
+          const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+          result.push({
+            id: `${prod.id}-${stKey || 'base'}`,
+            name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+            slug: `${prod.slug}${slugSuffix}`,
+            href: `/san-pham/${prod.slug}${slugSuffix}`,
+            deviceType,
+            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+            rawPrice: curPrice,
+            discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12,
+            imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+            downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+            conditionTag: '99% Zin Đẹp',
+            rating: 5,
+            searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
+          });
+        });
+      }
+    });
+
+    return result;
+  }, [rawDbProducts]);
 
   const currentCategoryKey = useMemo(() => {
     if (!currentFilter) return null;
@@ -274,66 +361,61 @@ export default function DynamicUsedPage() {
   const activeSubmodels = currentCategoryKey ? USED_SUBMODELS_MAP[currentCategoryKey] || [] : null;
 
   // =========================================================================
-  // LOGIC LỌC CHUẨN XÁC THEO TỪNG THIẾT BỊ VÀ THẾ HỆ
+  // LOGIC LỌC CHUẨN XÁC TUYỆT ĐỐI THEO THIẾT BỊ VÀ THẾ HỆ
   // =========================================================================
   const filteredProducts = useMemo(() => {
-    let items = [...dbProducts];
-
-    // Loại trừ phụ kiện
-    items = items.filter((i) => {
-      const lower = i.name.toLowerCase();
-      return !lower.includes('dock sạc') && !lower.includes('cáp sạc') && !lower.includes('new seal');
-    });
+    let items = [...expandedProducts];
 
     if (currentFilter) {
       const slug = currentFilter.toLowerCase();
 
       // 1. NHÓM IPHONE CŨ
       if (slug.startsWith('iphone')) {
-        // Bắt buộc phải là điện thoại iPhone
-        items = items.filter((i) => i.deviceType === 'iphone' && i.searchIndex.includes('iphone'));
+        items = items.filter((i) => i.deviceType === 'iphone');
 
-        if (slug === 'iphone-17-series-cu') {
+        if (slug.includes('17')) {
           items = items.filter((i) => i.searchIndex.includes('17'));
-        } else if (slug === 'iphone-16-series-cu') {
+        } else if (slug.includes('16')) {
           items = items.filter((i) => i.searchIndex.includes('16'));
-        } else if (slug === 'iphone-15-series-cu') {
+        } else if (slug.includes('15')) {
           items = items.filter((i) => i.searchIndex.includes('15'));
-        } else if (slug === 'iphone-14-series-cu') {
+        } else if (slug.includes('14')) {
           items = items.filter((i) => i.searchIndex.includes('14'));
-        } else if (slug === 'iphone-13-series-cu') {
+        } else if (slug.includes('13')) {
           items = items.filter((i) => i.searchIndex.includes('13'));
         }
       }
       // 2. NHÓM IPAD CŨ
       else if (slug.startsWith('ipad')) {
-        // Bắt buộc phải là máy tính bảng iPad
-        items = items.filter((i) => i.deviceType === 'ipad' && i.searchIndex.includes('ipad'));
+        items = items.filter((i) => i.deviceType === 'ipad');
 
-        if (slug === 'ipad-pro-cu') {
+        if (slug.includes('pro')) {
           items = items.filter((i) => i.searchIndex.includes('pro') && !i.searchIndex.includes('air'));
-        } else if (slug === 'ipad-air-cu') {
+        } else if (slug.includes('air')) {
           items = items.filter((i) => i.searchIndex.includes('air') && !i.searchIndex.includes('pro'));
-        } else if (slug === 'ipad-mini-cu') {
+        } else if (slug.includes('mini')) {
           items = items.filter((i) => i.searchIndex.includes('mini'));
-        } else if (slug === 'ipad-gen-cu') {
-          items = items.filter((i) => i.searchIndex.includes('gen') || (!i.searchIndex.includes('pro') && !i.searchIndex.includes('air') && !i.searchIndex.includes('mini')));
+        } else if (slug.includes('gen')) {
+          items = items.filter(
+            (i) =>
+              i.searchIndex.includes('gen') ||
+              (!i.searchIndex.includes('pro') && !i.searchIndex.includes('air') && !i.searchIndex.includes('mini'))
+          );
         }
       }
       // 3. NHÓM MACBOOK CŨ
       else if (slug.startsWith('macbook')) {
-        // Bắt buộc phải là máy MacBook
-        items = items.filter((i) => i.deviceType === 'macbook' && (i.searchIndex.includes('macbook') || i.searchIndex.includes('mac')));
+        items = items.filter((i) => i.deviceType === 'macbook');
 
-        if (slug === 'macbook-pro-cu') {
+        if (slug.includes('pro')) {
           items = items.filter((i) => i.searchIndex.includes('pro'));
-        } else if (slug === 'macbook-air-cu') {
+        } else if (slug.includes('air')) {
           items = items.filter((i) => i.searchIndex.includes('air'));
         }
       }
     }
 
-    // Lọc theo giá
+    // Lọc theo khoảng giá
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -347,20 +429,9 @@ export default function DynamicUsedPage() {
       });
     }
 
-    if (activeFilters.ram) {
-      const ramVal = activeFilters.ram.toLowerCase();
-      items = items.filter((item) => item.searchIndex.includes(ramVal));
-    }
-
     if (activeFilters.storage) {
       const storeVal = activeFilters.storage.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(storeVal));
-    }
-
-    if (activeFilters.chip && activeFilters.chip.length > 0) {
-      items = items.filter((item) =>
-        activeFilters.chip!.some((c) => item.searchIndex.includes(c.toLowerCase().replace('apple ', '')))
-      );
     }
 
     // Sắp xếp
@@ -375,7 +446,7 @@ export default function DynamicUsedPage() {
     });
 
     return items;
-  }, [dbProducts, currentFilter, currentSort, activeFilters]);
+  }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
   const displayTitle = useMemo(() => {
     switch (currentFilter) {
@@ -397,7 +468,6 @@ export default function DynamicUsedPage() {
     }
   }, [currentFilter]);
 
-  // Cấu hình 2 Banner đôi
   const banner1 = adminBanners[0] || {
     name: 'Cam Kết Máy Cũ Chuẩn Zin',
     link: '/hang-cu',
@@ -461,7 +531,7 @@ export default function DynamicUsedPage() {
             </div>
           </div>
 
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (w-20 h-20) */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {categories.map((cat, idx) => {
@@ -503,7 +573,7 @@ export default function DynamicUsedPage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON: ICON TRÒN NHỎ HƠN 2 SIZE (w-14 h-14) */}
+          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE */}
           {activeSubmodels && activeSubmodels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex flex-col items-center">
@@ -557,7 +627,7 @@ export default function DynamicUsedPage() {
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
               <p className="text-xs text-gray-500 mt-0.5">
-                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} máy tuyển chọn chất lượng cao`}
+                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} phiên bản cấu hình tuyển chọn`}
               </p>
             </div>
 
@@ -569,7 +639,7 @@ export default function DynamicUsedPage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM */}
+          {/* LƯỚI SẢN PHẨM PHÂN TÁCH DUNG LƯỢNG */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -612,6 +682,10 @@ export default function DynamicUsedPage() {
                     <img
                       src={product.imageUrl}
                       alt={product.name}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=400&q=80';
+                      }}
                       className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
                     />
                   </Link>
@@ -664,9 +738,7 @@ export default function DynamicUsedPage() {
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* BÀI VIẾT SEO CHÂN TRANG HÀNG CŨ (HỖ TRỢ HTML)             */}
-          {/* ========================================================= */}
+          {/* BÀI VIẾT SEO CHÂN TRANG HÀNG CŨ */}
           <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
             <div
               className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal ${

@@ -23,6 +23,8 @@ interface SubModelItem {
   img: string;
 }
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
 const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   {
     name: 'Tất cả',
@@ -187,13 +189,29 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
+const formatProductImageUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80';
+  }
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  }
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
+};
+
 export default function DynamicIPhonePage() {
   const params = useParams();
   const searchParams = useSearchParams();
 
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-  const [dbProducts, setDbProducts] = useState<any[]>([]);
+  const [rawDbProducts, setRawDbProducts] = useState<any[]>([]);
   const [loadingDb, setLoadingDb] = useState(true);
   const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_IPHONE_SERIES);
   const [adminBanners, setAdminBanners] = useState<any[]>([]);
@@ -231,9 +249,7 @@ export default function DynamicIPhonePage() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           const ipBanners = parsed.filter((it: any) => it.group === 'iphone_banners');
-          if (ipBanners.length > 0) {
-            setAdminBanners(ipBanners);
-          }
+          if (ipBanners.length > 0) setAdminBanners(ipBanners);
 
           const adminSubs = parsed.filter(
             (it: any) => it.group === 'sub_iphone' && it.name.toLowerCase() !== 'tất cả'
@@ -266,57 +282,27 @@ export default function DynamicIPhonePage() {
     const fetchIPhoneProducts = async () => {
       try {
         setLoadingDb(true);
-        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=iphone', {
+        let res = await fetch(`${API_URL}/api/products/filter?category=iphone`, {
           cache: 'no-store',
         });
         let json = await res.json();
 
         if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+          res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
           json = await res.json();
         }
 
-        if (json.success && Array.isArray(json.data)) {
-          const formatted = json.data
-            .filter((item: any) => {
-              const lower = (item.name || '').toLowerCase();
-              const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
-              return cat.includes('iphone') || lower.includes('iphone');
-            })
-            .map((item: any) => {
-              const v = item.variants?.[0] || {};
-              const curPrice = v.price || item.price || 0;
-              const origPrice = v.originalPrice || item.originalPrice || curPrice;
-              const discountPercent =
-                origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+        const items = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+        const filtered = items.filter((item: any) => {
+          const lower = (item.name || '').toLowerCase();
+          const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+          return cat.includes('iphone') || lower.includes('iphone');
+        });
 
-              return {
-                id: item.id,
-                name: item.name,
-                slug: item.slug,
-                searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''} ${item.subSeriesName || ''}`.toLowerCase(),
-                href: `/san-pham/${item.slug || item.id}`,
-                currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-                rawPrice: curPrice,
-                discountPercent,
-                imageUrl:
-                  v.images?.[0] ||
-                  item.imageUrl ||
-                  'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80',
-                downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-                statusTag: 'Sẵn hàng',
-                rating: 5,
-              };
-            });
-
-          setDbProducts(formatted);
-        } else {
-          setDbProducts([]);
-        }
+        setRawDbProducts(filtered);
       } catch (err) {
         console.error('Lỗi khi fetch sản phẩm iPhone:', err);
-        setDbProducts([]);
+        setRawDbProducts([]);
       } finally {
         setLoadingDb(false);
       }
@@ -325,8 +311,78 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
+  // TỰ ĐỘNG PHÂN TÁCH TỪNG BIẾN THỂ DUNG LƯỢNG THÀNH TỪNG THẺ CARD RIÊNG BIỆT
+  const expandedProducts = useMemo(() => {
+    const result: any[] = [];
+
+    rawDbProducts.forEach((prod) => {
+      const variants: any[] = Array.isArray(prod.variants) ? prod.variants : [];
+
+      const storageMap = new Map<string, any[]>();
+      variants.forEach((v) => {
+        const rawSt = (v.storage && String(v.storage).trim()) || '';
+        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+        if (!storageMap.has(stKey)) {
+          storageMap.set(stKey, []);
+        }
+        storageMap.get(stKey)!.push(v);
+      });
+
+      if (storageMap.size <= 1) {
+        const v = variants[0] || {};
+        const curPrice = Number(v.price || prod.price || 0);
+        const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+        const stKey = Array.from(storageMap.keys())[0] || '';
+        const nameSuffix = stKey ? ` ${stKey}` : '';
+        const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+        result.push({
+          id: prod.id,
+          name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+          slug: `${prod.slug}${slugSuffix}`,
+          href: `/san-pham/${prod.slug}${slugSuffix}`,
+          currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+          originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+          rawPrice: curPrice,
+          discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+          imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+          downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+          statusTag: 'Sẵn hàng',
+          rating: 5,
+          searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
+        });
+      } else {
+        storageMap.forEach((varList, stKey) => {
+          const v = varList[0];
+          const curPrice = Number(v.price || prod.price || 0);
+          const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+          const nameSuffix = stKey ? ` ${stKey}` : '';
+          const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+          result.push({
+            id: `${prod.id}-${stKey || 'base'}`,
+            name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+            slug: `${prod.slug}${slugSuffix}`,
+            href: `/san-pham/${prod.slug}${slugSuffix}`,
+            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+            rawPrice: curPrice,
+            discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+            imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+            downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+            statusTag: 'Sẵn hàng',
+            rating: 5,
+            searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.subSeriesName || ''}`.toLowerCase(),
+          });
+        });
+      }
+    });
+
+    return result;
+  }, [rawDbProducts]);
+
   const filteredProducts = useMemo(() => {
-    let items = [...dbProducts];
+    let items = [...expandedProducts];
 
     if (currentFilter) {
       const lowerFilter = currentFilter.toLowerCase();
@@ -399,7 +455,7 @@ export default function DynamicIPhonePage() {
     });
 
     return items;
-  }, [dbProducts, currentFilter, currentSort, activeFilters]);
+  }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
   const displayTitle = useMemo(() => {
     if (!currentFilter) return 'Tất cả sản phẩm iPhone';
@@ -462,9 +518,7 @@ export default function DynamicIPhonePage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* ========================================================================= */}
-          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN TỶ LỆ 600x200px (KHÔNG CHỮ ĐÈ, KHÔNG KHUNG) */}
-          {/* ========================================================================= */}
+          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN 600x200px */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link
@@ -491,9 +545,7 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX (BO TRÒN TUYỆT ĐỐI)           */}
-          {/* ========================================================================= */}
+          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX */}
           <div className="my-6 py-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
               {seriesTabs.map((series, idx) => {
@@ -535,9 +587,7 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE (BO TRÒN TUYỆT ĐỐI)                   */}
-          {/* ========================================================================= */}
+          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE */}
           {subModels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
@@ -585,7 +635,7 @@ export default function DynamicIPhonePage() {
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
               <p className="text-xs text-gray-500 mt-0.5">
-                {loadingDb ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} sản phẩm phù hợp`}
+                {loadingDb ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} phiên bản phù hợp`}
               </p>
             </div>
 
@@ -597,7 +647,7 @@ export default function DynamicIPhonePage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM */}
+          {/* LƯỚI SẢN PHẨM PHÂN TÁCH DUNG LƯỢNG */}
           {loadingDb ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -641,6 +691,10 @@ export default function DynamicIPhonePage() {
                     <img
                       src={product.imageUrl}
                       alt={product.name}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80';
+                      }}
                       className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
                     />
                   </Link>
@@ -666,6 +720,12 @@ export default function DynamicIPhonePage() {
                       <span>0đ</span>
                     </div>
                   </div>
+
+                  {product.statusTag && (
+                    <span className="mt-1 bg-[#ffe8e8] text-[#d70018] text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit">
+                      {product.statusTag}
+                    </span>
+                  )}
 
                   <div className="mt-2 flex items-baseline gap-1.5">
                     <span className="text-sm md:text-base font-black text-[#d70018]">{product.currentPrice}</span>

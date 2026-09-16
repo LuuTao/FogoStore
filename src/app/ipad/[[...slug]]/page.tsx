@@ -23,7 +23,9 @@ interface SubModelItem {
   img: string;
 }
 
-// 1. Danh sách Series iPad mặc định có nút "Tất cả"
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+// 1. Danh sách Series iPad mặc định
 const DEFAULT_IPAD_SERIES: SeriesTabItem[] = [
   {
     name: 'Tất cả',
@@ -56,7 +58,7 @@ const DEFAULT_IPAD_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// 2. Danh mục model con nhỏ hơn 2 size kèm hình ảnh tròn
+// 2. Danh mục sub-model con
 const IPAD_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   pro: [
     {
@@ -146,13 +148,29 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
+const formatProductImageUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80';
+  }
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  }
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
+};
+
 export default function DynamicIPadPage() {
   const params = useParams();
   const searchParams = useSearchParams();
 
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
-  const [dbProducts, setDbItems] = useState<any[]>([]);
+  const [rawDbProducts, setRawDbProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
@@ -169,7 +187,7 @@ export default function DynamicIPadPage() {
     '';
   const currentFilter = (rawFilter || '').toLowerCase().trim();
 
-  // 1. Nạp Banner & Submodel từ LocalStorage
+  // 1. Nạp cấu hình Banner từ LocalStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -177,9 +195,7 @@ export default function DynamicIPadPage() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           const ipadBanners = parsed.filter((it: any) => it.group === 'ipad_banners');
-          if (ipadBanners.length > 0) {
-            setAdminBanners(ipadBanners);
-          }
+          if (ipadBanners.length > 0) setAdminBanners(ipadBanners);
 
           const adminSubs = parsed.filter(
             (it: any) => it.group === 'sub_ipad' && it.name.toLowerCase() !== 'tất cả'
@@ -211,7 +227,7 @@ export default function DynamicIPadPage() {
     }
   }, []);
 
-  // 2. Nạp nội dung bài viết SEO
+  // 2. Nạp nội dung SEO
   useEffect(() => {
     try {
       const savedSeo = localStorage.getItem('fogo_seo_ipad_seo_desc');
@@ -223,7 +239,7 @@ export default function DynamicIPadPage() {
     }
   }, []);
 
-  // 3. Đọc sản phẩm đã xem gần đây
+  // 3. Đọc danh sách xem gần đây
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
@@ -233,60 +249,30 @@ export default function DynamicIPadPage() {
     }
   }, []);
 
-  // 4. Kết nối API nạp sản phẩm iPad
+  // 4. Fetch sản phẩm iPad từ API
   useEffect(() => {
     const fetchLiveProducts = async () => {
       try {
         setLoading(true);
-        let res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=ipad', {
-          cache: 'no-store',
-        });
+        let res = await fetch(`${API_URL}/api/products/filter?category=ipad`, { cache: 'no-store' });
         let json = await res.json();
 
         if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          res = await fetch('https://fogo-store-api.onrender.com/api/products', { cache: 'no-store' });
+          res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
           json = await res.json();
         }
 
         const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+        const ipadItems = itemsList.filter((item: any) => {
+          const lower = (item.name || '').toLowerCase();
+          const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
+          return cat.includes('ipad') || lower.includes('ipad');
+        });
 
-        const mapped = itemsList
-          .filter((item: any) => {
-            const lower = (item.name || '').toLowerCase();
-            const cat = (item.category?.slug || item.category?.name || '').toLowerCase();
-            return cat.includes('ipad') || lower.includes('ipad');
-          })
-          .map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || item.price || 0;
-            const origPrice = v.originalPrice || item.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
-
-            return {
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              href: `/san-pham/${item.slug || item.id}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              rawPrice: curPrice,
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                item.imageUrl ||
-                'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80',
-              downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-              statusTag: 'Sẵn hàng',
-              rating: 5,
-              searchIndex: `${item.name || ''} ${item.description || ''} ${item.category?.name || ''}`.toLowerCase(),
-            };
-          });
-
-        setDbItems(mapped);
+        setRawDbProducts(ipadItems);
       } catch (err) {
         console.error('Lỗi khi fetch iPad từ API:', err);
-        setDbItems([]);
+        setRawDbProducts([]);
       } finally {
         setLoading(false);
       }
@@ -295,7 +281,80 @@ export default function DynamicIPadPage() {
     fetchLiveProducts();
   }, []);
 
-  // Nhận diện nhóm dòng máy cha chính xác
+  // 5. TỰ ĐỘNG PHÂN TÁCH TỪNG DUNG LƯỢNG THÀNH TỪNG CARD SẢN PHẨM RIÊNG BIỆT
+  const expandedProducts = useMemo(() => {
+    const result: any[] = [];
+
+    rawDbProducts.forEach((prod) => {
+      const variants: any[] = Array.isArray(prod.variants) ? prod.variants : [];
+
+      // Nhóm variants theo mức dung lượng (64GB, 128GB, 256GB, 512GB, 1TB, 2TB...)
+      const storageMap = new Map<string, any[]>();
+      variants.forEach((v) => {
+        const rawSt = (v.storage && String(v.storage).trim()) || '';
+        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase();
+        if (!storageMap.has(stKey)) {
+          storageMap.set(stKey, []);
+        }
+        storageMap.get(stKey)!.push(v);
+      });
+
+      // Nếu sản phẩm chỉ có 1 mức dung lượng hoặc không có variants
+      if (storageMap.size <= 1) {
+        const v = variants[0] || {};
+        const curPrice = Number(v.price || prod.price || 0);
+        const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+        const stKey = Array.from(storageMap.keys())[0] || '';
+        const nameSuffix = stKey ? ` ${stKey}` : '';
+        const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+        result.push({
+          id: prod.id,
+          name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+          slug: `${prod.slug}${slugSuffix}`,
+          href: `/san-pham/${prod.slug}${slugSuffix}`,
+          currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+          originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+          rawPrice: curPrice,
+          discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+          imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+          downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+          statusTag: 'Sẵn hàng',
+          rating: 5,
+          searchIndex: `${prod.name} ${stKey} ${prod.description || ''}`.toLowerCase(),
+        });
+      } else {
+        // Tách mỗi dung lượng thành 1 sản phẩm riêng biệt ngoài trang danh mục
+        storageMap.forEach((varList, stKey) => {
+          const v = varList[0];
+          const curPrice = Number(v.price || prod.price || 0);
+          const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+          const nameSuffix = stKey ? ` ${stKey}` : '';
+          const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
+
+          result.push({
+            id: `${prod.id}-${stKey || 'base'}`,
+            name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+            slug: `${prod.slug}${slugSuffix}`,
+            href: `/san-pham/${prod.slug}${slugSuffix}`,
+            currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
+            originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+            rawPrice: curPrice,
+            discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+            imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
+            downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
+            statusTag: 'Sẵn hàng',
+            rating: 5,
+            searchIndex: `${prod.name} ${stKey} ${prod.description || ''}`.toLowerCase(),
+          });
+        });
+      }
+    });
+
+    return result;
+  }, [rawDbProducts]);
+
+  // Nhận diện nhóm dòng máy cha (pro, air, gen, mini)
   const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.startsWith('pro') || currentFilter === 'ipad-pro') return 'pro';
@@ -307,9 +366,9 @@ export default function DynamicIPadPage() {
 
   const activeSubmodels = currentSeriesTag ? IPAD_SUBMODELS_MAP[currentSeriesTag] || [] : [];
 
-  // Logic lọc chuẩn xác tuyệt đối - Không nhầm iPad Air với iPad Pro
+  // Lọc sản phẩm chính xác theo bộ lọc
   const filteredProducts = useMemo(() => {
-    let items = [...dbProducts];
+    let items = [...expandedProducts];
 
     if (currentFilter) {
       const f = currentFilter.toLowerCase();
@@ -326,7 +385,7 @@ export default function DynamicIPadPage() {
         } else if (f.includes('m2')) {
           items = items.filter((i) => i.searchIndex.includes('m2'));
         }
-      } 
+      }
       // 2. Phân loại theo nhóm iPad AIR
       else if (f.startsWith('air') || f === 'ipad-air') {
         items = items.filter((i) => {
@@ -339,7 +398,7 @@ export default function DynamicIPadPage() {
         } else if (f.includes('5')) {
           items = items.filter((i) => i.searchIndex.includes('air 5') || i.searchIndex.includes('m1'));
         }
-      } 
+      }
       // 3. Phân loại theo nhóm iPad GEN
       else if (f.startsWith('gen') || f === 'ipad-gen') {
         items = items.filter((i) => {
@@ -353,7 +412,7 @@ export default function DynamicIPadPage() {
         } else if (f.includes('9')) {
           items = items.filter((i) => i.searchIndex.includes('9'));
         }
-      } 
+      }
       // 4. Phân loại theo nhóm iPad MINI
       else if (f.startsWith('mini') || f === 'ipad-mini') {
         items = items.filter((i) => i.searchIndex.includes('mini'));
@@ -392,7 +451,7 @@ export default function DynamicIPadPage() {
     });
 
     return items;
-  }, [dbProducts, currentFilter, currentSort, activeFilters]);
+  }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
   // Tiêu đề hiển thị chuẩn chỉnh đầy đủ chữ "iPad"
   const displayTitle = useMemo(() => {
@@ -436,9 +495,8 @@ export default function DynamicIPadPage() {
     }
   }, [currentFilter]);
 
-  // Cấu hình Banner
   const banner1 = adminBanners[0] || {
-    name: 'iPad Pro M5',
+    name: 'iPad Pro M4',
     link: '/ipad',
     imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&h=200&q=80',
   };
@@ -591,7 +649,7 @@ export default function DynamicIPadPage() {
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-900">{displayTitle}</h1>
               <p className="text-xs text-gray-500 mt-0.5">
-                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} sản phẩm phù hợp`}
+                {loading ? 'Đang nạp dữ liệu từ kho...' : `Tìm thấy ${filteredProducts.length} phiên bản phù hợp`}
               </p>
             </div>
 
@@ -603,7 +661,7 @@ export default function DynamicIPadPage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM */}
+          {/* LƯỚI SẢN PHẨM HIỂN THỊ CHI TIẾT TỪNG PHIÊN BẢN DUNG LƯỢNG */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -647,6 +705,10 @@ export default function DynamicIPadPage() {
                     <img
                       src={product.imageUrl}
                       alt={product.name}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80';
+                      }}
                       className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
                     />
                   </Link>
@@ -705,7 +767,7 @@ export default function DynamicIPadPage() {
             </div>
           )}
 
-          {/* 4. BÀI VIẾT SEO CHÂN TRANG (HỖ TRỢ RICH TEXT WORD) */}
+          {/* BÀI VIẾT SEO CHÂN TRANG */}
           <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
             <div
               className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal ${
