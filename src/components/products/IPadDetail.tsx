@@ -200,11 +200,9 @@ export default function IPadDetail({
     return map;
   }, [product, storageList, selectedColor]);
 
-  // Bấm dung lượng: Chuyển hướng an toàn tuyệt đối, loại bỏ hoàn toàn lỗi 404 / reload loop
-  const handleSelectStorage = (st: string) => {
+ const handleSelectStorage = (st: string) => {
     if (selectedStorage.toUpperCase() === st.toUpperCase()) return;
 
-    // Tìm kiếm chính xác biến thể khớp cả dung lượng mới và màu đang chọn
     const matched = product?.variants?.find(
       (v: any) =>
         (v.storage || '').toUpperCase() === st.toUpperCase() &&
@@ -212,12 +210,12 @@ export default function IPadDetail({
     ) || product?.variants?.find((v: any) => (v.storage || '').toUpperCase() === st.toUpperCase());
 
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
-    const targetStorage = st.toLowerCase();
     
-    // Đính kèm proid để phía Server Component nhận diện chính xác biến thể mà không cần query lại vất vả
+    // Ép buộc thay thế mọi dấu / trong tên dung lượng thành dấu - (Ví dụ: 36gb/2tb -> 36gb-2tb)
+    const targetStorage = st.toLowerCase().replace(/\//g, '-'); 
+    
     const proidParam = matched ? `?proid=${matched.id}` : '';
     
-    // Sử dụng router.replace thay vì push để tránh ghi đè lịch sử gây kẹt vòng lặp reload
     router.replace(`/san-pham/${cleanBase}-${targetStorage}${proidParam}`);
   };
 
