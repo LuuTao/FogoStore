@@ -427,13 +427,13 @@ export default function IPhoneDetail({
               )}
 
               {/* CHỌN MÀU SẮC */}
-              {colorList.length > 0 && (
+              {allColorOptions.length > 0 && (
                 <div className="pt-2">
                   <label className="block text-base font-black text-gray-900 mb-2.5">
                     Màu sắc:
                   </label>
                   <div className="flex flex-wrap gap-2.5">
-                    {colorList.map(({ color, sampleVariant }) => {
+                    {allColorOptions.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
 

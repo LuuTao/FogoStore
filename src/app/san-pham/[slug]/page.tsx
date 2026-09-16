@@ -31,20 +31,20 @@ export default async function ProductDetailPage(props: PageProps) {
   // ... (giữ nguyên phần còn lại của logic bên dưới)
 
   // ============================================================================
-  // 2. CHUẨN HÓA SLUG & BÓC TÁCH MỌI THÔNG SỐ (HỖ TRỢ MACBOOK, IPAD, IPHONE)
+  // 2. CHUẨN HÓA SLUG & BÓC TÁCH MỌI CẤU HÌNH PHỨC TẠP (MACBOOK, IPHONE, IPAD)
   // ============================================================================
   const cleanSlugForMatch = currentSlug.replace(/\//g, '-').toLowerCase();
 
-  // Tập hợp các định dạng thông số cấu hình phần cứng (Dung lượng, Kích thước, RAM, CPU, GPU)
-  const specPattern = '(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|18cpu|32gpu|14cpu|20gpu)';
+  // Mẫu regex tổng hợp quét tất cả thông số phần cứng nằm ở đuôi URL
+  const specPattern = '(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|15cpu|18cpu|14cpu|16gpu|18gpu|20gpu|32gpu|40gpu)';
   
   const regEnd = new RegExp(`-(${specPattern})+$`, 'i');
   const storageMatchEnd = cleanSlugForMatch.match(regEnd);
 
   const urlStorage = storageMatchEnd ? storageMatchEnd[1].toUpperCase() : '';
 
-  // Lọc sạch mọi thông số cấu hình ở đuôi URL để quy hoạch về baseSlug chuẩn của model gốc
-  const storageRegex = new RegExp(`-(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|18cpu|32gpu|14cpu|20gpu)+$`, 'gi');
+  // Regex lọc sạch các thông số rác ở đuôi URL để tìm ra baseSlug chính xác trong Database
+  const storageRegex = new RegExp(`-(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|15cpu|18cpu|14cpu|16gpu|18gpu|20gpu|32gpu|40gpu)+$`, 'gi');
   
   let baseSlug = cleanSlugForMatch.replace(storageRegex, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
   if (!baseSlug) {
