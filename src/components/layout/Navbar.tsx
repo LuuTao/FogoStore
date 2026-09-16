@@ -8,10 +8,11 @@ import { MENU_DATA } from '@/data/navigation';
 const API_URL = 'https://fogo-store-api.onrender.com';
 
 export const Navbar: React.FC = () => {
+  const [mounted, setMounted] = useState(false);
   const [navData, setNavData] = useState(MENU_DATA);
 
-  const fetchNavbarData = async () => {
-    // 1. Kiểm tra nhanh cache local để giao diện mượt mà, không giật trắng
+  useEffect(() => {
+    setMounted(true);
     try {
       const cached = localStorage.getItem('fogo_menu_config');
       if (cached) {
@@ -24,37 +25,33 @@ export const Navbar: React.FC = () => {
       console.warn('Lỗi đọc cache menu:', e);
     }
 
-    // 2. Fetch dữ liệu mới nhất được lưu trong Database Neon
-    try {
-      const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: {
-          Pragma: 'no-cache',
-          'Cache-Control': 'no-cache',
-        },
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data || json;
-        if (Array.isArray(data) && data.length > 0) {
-          setNavData(data);
-          localStorage.setItem('fogo_menu_config', JSON.stringify(data));
+    const fetchNavbarData = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const data = json.data || json;
+          if (Array.isArray(data) && data.length > 0) {
+            setNavData(data);
+            localStorage.setItem('fogo_menu_config', JSON.stringify(data));
+          }
         }
+      } catch (err) {
+        // Giữ nguyên menu dự phòng nếu lỗi mạng hoặc cold start
       }
-    } catch (err) {
-      // Khi server cold start hoặc mất mạng, giữ nguyên menu đang hiển thị
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchNavbarData();
-
-    // Lắng nghe sự kiện khi Admin nhấn lưu để cập nhật thanh menu ngay lập tức
     const handleSync = () => fetchNavbarData();
     window.addEventListener('fogo_menu_updated', handleSync);
     return () => window.removeEventListener('fogo_menu_updated', handleSync);
   }, []);
+
+  if (!mounted) {
+    return <nav className="hidden lg:block bg-[#d70018] text-white h-12" />;
+  }
 
   return (
     <nav className="hidden lg:block bg-[#d70018] text-white select-none relative z-30 shadow-md">
@@ -73,7 +70,6 @@ export const Navbar: React.FC = () => {
               )}
             </Link>
 
-            {/* Menu cấp 2 & cấp 3 */}
             {item.groups && item.groups.length > 0 && (
               <div className="hidden group-hover/level1:block absolute left-0 top-full w-64 bg-white text-gray-800 shadow-xl border border-gray-100 rounded-b-md z-50 py-2">
                 {item.groups.map((group, gIdx) => (
