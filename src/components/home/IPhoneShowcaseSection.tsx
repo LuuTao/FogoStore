@@ -34,7 +34,7 @@ const DEFAULT_TABS: TabItem[] = [
     id: 'sub-ip-4',
     name: 'iPhone 17 Series',
     imageUrl: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100',
-    queryTag: '17',
+    queryValue: '17',
   },
   {
     id: 'sub-ip-5',
@@ -43,6 +43,30 @@ const DEFAULT_TABS: TabItem[] = [
     queryValue: '16',
   },
 ];
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+// Hàm định dạng giá tiền chuẩn: Hiển thị "Liên hệ" nếu giá <= 0
+const formatVndPrice = (price: number) => {
+  if (!price || price <= 0) return 'Liên hệ';
+  return price.toLocaleString('vi-VN') + 'đ';
+};
+
+const formatProductImageUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80';
+  }
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  }
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
+};
 
 export const IPhoneShowcaseSection: React.FC = () => {
   const [tabs, setTabs] = useState<TabItem[]>(DEFAULT_TABS);
@@ -81,40 +105,39 @@ export const IPhoneShowcaseSection: React.FC = () => {
     }
   }, []);
 
-  // 2. Fetch dữ liệu từ API
+  // 2. Fetch dữ liệu từ API và lọc chỉ lấy sản phẩm có giá > 0
   useEffect(() => {
     const fetchIPhones = async () => {
       try {
-        const res = await fetch('https://fogo-store-api.onrender.com/api/products/filter?category=iphone', {
+        const res = await fetch(`${API_URL}/api/products/filter?category=iphone`, {
           cache: 'no-store',
         });
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          const formatted = json.data.map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || 0;
-            const origPrice = v.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
-
-            return {
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
-              href: `/san-pham/${item.slug}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                item.imageUrl ||
-                'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500',
-              downPayment: Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ',
-              rating: 5,
-              isFeatured: item.isFeatured,
-            };
-          });
+          const formatted = json.data
+            .map((item: any) => {
+              const v = item.variants?.[0] || {};
+              const curPrice = Number(v.price || item.price || 0);
+              const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+              
+              return {
+                id: item.id,
+                name: item.name,
+                slug: item.slug,
+                searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
+                href: `/san-pham/${item.slug}`,
+                currentPrice: formatVndPrice(curPrice),
+                originalPrice: curPrice > 0 ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+                rawPrice: curPrice,
+                discountPercent: origPrice > curPrice && curPrice > 0 ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
+                downPayment: curPrice > 0 ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+                rating: 5,
+                isFeatured: item.isFeatured,
+              };
+            })
+            // CHỈ LẤY CÁC SẢN PHẨM CÓ GIÁ TIỀN > 0
+            .filter((p: any) => p.rawPrice > 0);
 
           const sorted = formatted.sort(
             (a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0)
@@ -139,14 +162,17 @@ export const IPhoneShowcaseSection: React.FC = () => {
     }
   };
 
+  // 3. Lọc theo tab Series/Submodel đang chọn và giới hạn TỐI ĐA 20 SẢN PHẨM
   const displayedItems = useMemo(() => {
-    if (!selectedTab || !selectedTab.queryValue) {
-      return products.slice(0, 10);
+    let items = [...products];
+
+    if (selectedTab && selectedTab.queryValue) {
+      const val = selectedTab.queryValue.toLowerCase();
+      items = items.filter((p) => p.searchKeywords.includes(val));
     }
-    const val = selectedTab.queryValue.toLowerCase();
-    return products
-      .filter((p) => p.searchKeywords.includes(val))
-      .slice(0, 10);
+
+    // Cắt giới hạn chính xác tối đa 20 sản phẩm hiển thị ra trang chủ
+    return items.slice(0, 20);
   }, [products, selectedTab]);
 
   if (loading || products.length === 0) return null;
@@ -155,7 +181,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
     <section className="max-w-7xl mx-auto px-2 sm:px-4 mt-6 sm:mt-10 select-none w-full overflow-hidden">
       <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-xl p-3 sm:p-5 md:p-8 shadow-xs">
         
-        {/* ================= 1. HÀNG ICON SERIES: BO TRÒN TUYỆT ĐỐI KHÔNG LÒI GÓC VUÔNG ================= */}
+        {/* ================= 1. HÀNG ICON SERIES ================= */}
         <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 md:gap-x-9 gap-y-3 mb-6 sm:mb-8">
           {tabs.map((tab) => {
             const isSelected =
@@ -168,7 +194,6 @@ export const IPhoneShowcaseSection: React.FC = () => {
                 onClick={() => handleTabClick(tab)}
                 className="flex flex-col items-center gap-1.5 group cursor-pointer w-[72px] sm:w-[88px] md:w-[100px] transition-transform active:scale-95"
               >
-                {/* Khung tròn chuẩn 80px, bo tròn hoàn toàn và khóa góc lòi bằng overflow-hidden */}
                 <div
                   className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                     isSelected

@@ -4,7 +4,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Star, ArrowRight } from 'lucide-react';
 
-const IPAD_SERIES_TABS = [
+interface TabItem {
+  id: string;
+  series: string | null;
+  name: string;
+  imageUrl: string;
+}
+
+const IPAD_SERIES_TABS: TabItem[] = [
   {
     id: 'ALL',
     series: null,
@@ -37,11 +44,18 @@ const IPAD_SERIES_TABS = [
   },
 ];
 
+// Hàm định dạng giá tiền chuẩn: Trả về "Liên hệ" nếu giá <= 0
+const formatVndPrice = (price: number) => {
+  if (!price || price <= 0) return 'Liên hệ';
+  return price.toLocaleString('vi-VN') + 'đ';
+};
+
 export const IPadShowcaseSection: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSeries, setActiveSeries] = useState<string | null>(null);
 
+  // Fetch dữ liệu từ API và chỉ lấy các sản phẩm có giá > 0
   useEffect(() => {
     const fetchIPads = async () => {
       try {
@@ -50,29 +64,40 @@ export const IPadShowcaseSection: React.FC = () => {
         });
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          const formatted = json.data.map((item: any) => {
-            const v = item.variants?.[0] || {};
-            const curPrice = v.price || 0;
-            const origPrice = v.originalPrice || curPrice;
-            const discountPercent =
-              origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
+          const formatted = json.data
+            .map((item: any) => {
+              const v = item.variants?.[0] || {};
+              const curPrice = Number(v.price || item.price || 0);
+              const origPrice = Number(v.originalPrice || item.originalPrice || curPrice);
+              const discountPercent =
+                origPrice > curPrice && curPrice > 0 ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5;
 
-            return {
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              href: `/san-pham/${item.slug}`,
-              currentPrice: curPrice.toLocaleString('vi-VN') + 'đ',
-              originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
-              discountPercent,
-              imageUrl:
-                v.images?.[0] ||
-                'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500',
-              downPayment: (Math.round(curPrice * 0.3)).toLocaleString('vi-VN') + 'đ',
-              rating: 5,
-            };
-          });
-          setProducts(formatted);
+              return {
+                id: item.id,
+                name: item.name,
+                slug: item.slug,
+                searchKeywords: `${item.name} ${item.subSeriesName || ''}`.toLowerCase(),
+                href: `/san-pham/${item.slug}`,
+                currentPrice: formatVndPrice(curPrice),
+                originalPrice: curPrice > 0 ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+                rawPrice: curPrice,
+                discountPercent,
+                imageUrl:
+                  v.images?.[0] ||
+                  item.imageUrl ||
+                  'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500',
+                downPayment: curPrice > 0 ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+                rating: 5,
+                isFeatured: item.isFeatured,
+              };
+            })
+            // CHỈ LẤY CÁC SẢN PHẨM CÓ GIÁ TIỀN > 0
+            .filter((p: any) => p.rawPrice > 0);
+
+          const sorted = formatted.sort(
+            (a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0)
+          );
+          setProducts(sorted);
         }
       } catch (err) {
         console.error('Lỗi nạp sản phẩm iPad:', err);
@@ -88,12 +113,14 @@ export const IPadShowcaseSection: React.FC = () => {
     setActiveSeries((prev) => (prev === series ? null : series));
   };
 
+  // Lọc theo tab Series đang chọn và giới hạn CHÍNH XÁC TỐI ĐA 20 SẢN PHẨM
   const displayedItems = useMemo(() => {
     let list = products;
     if (activeSeries) {
-      list = list.filter((p) => p.name.toLowerCase().includes(activeSeries.toLowerCase()));
+      const val = activeSeries.toLowerCase();
+      list = list.filter((p) => p.searchKeywords.includes(val));
     }
-    return list.slice(0, 10);
+    return list.slice(0, 20);
   }, [products, activeSeries]);
 
   if (loading || products.length === 0) return null;
@@ -102,7 +129,7 @@ export const IPadShowcaseSection: React.FC = () => {
     <section className="max-w-7xl mx-auto px-2 sm:px-4 mt-6 sm:mt-10 select-none w-full overflow-hidden">
       <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-xl p-3 sm:p-5 md:p-8 shadow-xs">
         
-        {/* ================= 1. HÀNG ICON DANH MỤC: BO TRÒN TUYỆT ĐỐI ================= */}
+        {/* ================= 1. HÀNG ICON DANH MỤC ================= */}
         <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 md:gap-x-9 gap-y-3 mb-6 sm:mb-8 max-w-3xl mx-auto w-full">
           {IPAD_SERIES_TABS.map((tab) => {
             const isSelected = activeSeries === tab.series;
@@ -113,7 +140,6 @@ export const IPadShowcaseSection: React.FC = () => {
                 onClick={() => handleTabClick(tab.series)}
                 className="flex flex-col items-center gap-1.5 group cursor-pointer w-[72px] sm:w-[88px] md:w-[100px] transition-transform active:scale-95"
               >
-                {/* Khung tròn chuẩn 80px, bo tròn hoàn toàn và khóa góc lòi bằng overflow-hidden */}
                 <div
                   className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                     isSelected
@@ -237,3 +263,5 @@ export const IPadShowcaseSection: React.FC = () => {
     </section>
   );
 };
+
+export default IPadShowcaseSection;
