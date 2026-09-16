@@ -7,11 +7,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const API_URL = 'https://fogo-store-api.onrender.com';
 const API_BASE = `${API_URL}/api`;
 
-const DEFAULT_HERO_BANNERS = [
-];
-
-const DEFAULT_PROMO_CARDS = [
-];
+const DEFAULT_HERO_BANNERS = [];
+const DEFAULT_PROMO_CARDS = [];
 
 const getFullImageUrl = (url?: string | null): string => {
   if (!url) return '';
@@ -105,18 +102,13 @@ export const HeroSection: React.FC = () => {
     promoPairs.push(activePromos.slice(i, i + 2));
   }
 
-  // =========================================================================
-  // ĐỒNG BỘ: CỨ 5 GIÂY LƯỚT CHUYỂN CẢ BANNER TRÊN VÀ DƯỚI CÙNG LÚC
-  // =========================================================================
   useEffect(() => {
     if (isHovered) return;
 
     const timer = setInterval(() => {
-      // 1. Chuyển Banner lớn
       if (activeBanners.length > 1) {
         setTopIndex((prev) => (prev + 1) % activeBanners.length);
       }
-      // 2. Chuyển đồng thời cặp Banner nhỏ phía dưới
       if (promoPairs.length > 1) {
         setBottomIndex((prev) => (prev + 1) % promoPairs.length);
       }
@@ -125,7 +117,6 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(timer);
   }, [isHovered, activeBanners.length, promoPairs.length]);
 
-  // Touch handlers cho Banner lớn
   const handleTopTouchStart = (e: React.TouchEvent) => {
     setIsHovered(true);
     topTouchStartX.current = e.touches[0].clientX;
@@ -145,7 +136,6 @@ export const HeroSection: React.FC = () => {
     topTouchStartX.current = null;
   };
 
-  // Touch handlers cho 2 Banner nhỏ
   const handleBottomTouchStart = (e: React.TouchEvent) => {
     setIsHovered(true);
     bottomTouchStartX.current = e.touches[0].clientX;
@@ -169,10 +159,10 @@ export const HeroSection: React.FC = () => {
     return (
       <div className="w-full relative pb-6 lg:pb-16 animate-pulse">
         <div className="block lg:hidden px-3 pt-2">
-          <div className="w-full aspect-[1920/540] bg-gray-200 rounded-xl" />
+          <div className="w-full aspect-[16/7] bg-gray-200 rounded-xl" />
           <div className="grid grid-cols-2 gap-2 mt-3">
-            <div className="aspect-[3/1] bg-gray-300 rounded-lg" />
-            <div className="aspect-[3/1] bg-gray-300 rounded-lg" />
+            <div className="h-[105px] bg-gray-300 rounded-lg" />
+            <div className="h-[105px] bg-gray-300 rounded-lg" />
           </div>
         </div>
         <div className="hidden lg:block">
@@ -195,12 +185,12 @@ export const HeroSection: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* ========================================================================= */}
-      {/* 1. GIAO DIỆN MOBILE (< 640px)                                             */}
+      {/* 1. GIAO DIỆN MOBILE (< 640px) - BANNER TRÊN & DƯỚI TO HƠN 3 SIZE          */}
       {/* ========================================================================= */}
-      <div className="block sm:hidden px-3 pt-2 pb-4">
-        {/* Banner Lớn: Trượt ngang mượt mà */}
+      <div className="block sm:hidden px-2 pt-1 pb-3">
+        {/* Banner Trên: Tăng độ cao từ 540 lên tỉ lệ 16/7 (to hơn đáng kể, không bị dẹt) */}
         <div
-          className="relative w-full aspect-[1920/540] rounded-xl overflow-hidden bg-gray-100 shadow-md"
+          className="relative w-full aspect-[16/7] rounded-xl overflow-hidden bg-gray-100 shadow-md"
           onTouchStart={handleTopTouchStart}
           onTouchEnd={handleTopTouchEnd}
         >
@@ -215,7 +205,7 @@ export const HeroSection: React.FC = () => {
                     src={banner.imageUrl}
                     alt={banner.title || 'Banner'}
                     draggable={false}
-                    className="w-full h-full object-contain pointer-events-none"
+                    className="w-full h-full object-cover pointer-events-none"
                   />
                 </Link>
               </div>
@@ -236,7 +226,7 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* 2 Banner Nhỏ Dưới: Cùng trượt êm ái */}
+        {/* 2 Banner Dưới: Chiều cao h-[105px] (to hơn rõ rệt so với aspect-[3/1] cũ) */}
         {promoPairs.length > 0 && (
           <div className="mt-2.5 relative">
             <div
@@ -254,7 +244,7 @@ export const HeroSection: React.FC = () => {
                       <Link
                         key={promo.id || idx}
                         href={promo.link || '/'}
-                        className="block relative aspect-[3/1] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
+                        className="block relative w-full h-[105px] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
                       >
                         <img
                           src={promo.imageUrl}
@@ -335,7 +325,6 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* 2 Banner Dưới Tablet */}
         {promoPairs.length > 0 && (
           <div className="mt-3 relative">
             <div
@@ -375,7 +364,6 @@ export const HeroSection: React.FC = () => {
       {/* 3. GIAO DIỆN DESKTOP (>= 1024px)                                          */}
       {/* ========================================================================= */}
       <div className="hidden lg:block pb-16">
-        {/* Banner Hero: Trượt ngang êm ái */}
         <div className="relative w-full aspect-[1920/540] max-h-[540px] overflow-hidden bg-gray-100">
           <div
             className="flex h-full w-full transition-transform duration-700 ease-in-out"
@@ -411,7 +399,6 @@ export const HeroSection: React.FC = () => {
                 <ChevronRight size={24} />
               </button>
 
-              {/* Dấu chấm tròn điều hướng */}
               <div className="absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
                 {activeBanners.map((_, idx) => (
                   <button
@@ -428,7 +415,6 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* 2 Banner Nhỏ Dưới: Trượt ngang đồng bộ nhịp 5 giây */}
         {promoPairs.length > 0 && (
           <div className="max-w-7xl mx-auto px-4 relative z-30 -mt-12 md:-mt-16">
             <div className="relative overflow-hidden rounded-md">
