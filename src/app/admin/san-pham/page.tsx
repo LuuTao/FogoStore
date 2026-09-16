@@ -21,32 +21,21 @@ import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Hàm trích xuất tên gốc của máy (loại bỏ dung lượng để tìm các phiên bản cùng dòng)
-const getBaseModelName = (name: string): string => {
-  return name
-    .replace(/\b(64gb|128gb|256gb|512gb|1tb|2tb)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
-
-// Hàm trích xuất dung lượng từ tên sản phẩm hoặc slug
-const extractStorageFromName = (text: string): string => {
-  const match = text.match(/\b(64gb|128gb|256gb|512gb|1tb|2tb)\b/i);
-  return match ? match[0].toUpperCase() : '';
-};
-
-// Hàm xử lý URL ảnh tuyệt đối an toàn
+// Chuẩn hóa đường dẫn hình ảnh an toàn từ Database
 const formatProductImageUrl = (url?: string | null): string => {
-  if (!url) return 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80';
-  if (url.startsWith('data:') || url.startsWith('https://')) return url;
-  if (url.startsWith('http://localhost')) {
-    return url.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=80';
   }
-  if (url.startsWith('http://')) {
-    return url.replace('http://', 'https://');
+  const cleanUrl = url.trim();
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('http://localhost')) {
+    return cleanUrl.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
   }
-  const clean = url.startsWith('/') ? url : `/${url}`;
-  return `${API_URL}${clean}`;
+  if (cleanUrl.startsWith('http://')) {
+    return cleanUrl.replace('http://', 'https://');
+  }
+  const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  return `${API_URL}${path}`;
 };
 
 export default function ProductDetailPage() {
@@ -62,7 +51,8 @@ export default function ProductDetailPage() {
   // Modal trả góp
   const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState<boolean>(false);
 
-  // Biến thể màu sắc & hình ảnh
+  // State biến thể được chọn từ Database
+  const [selectedStorage, setSelectedStorage] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
@@ -78,13 +68,13 @@ export default function ProductDetailPage() {
     type: 'success',
   });
 
-  // 1. Fetch dữ liệu sản phẩm hiện tại và các sản phẩm cùng dòng họ trong Database
+  // 1. Fetch dữ liệu sản phẩm từ Database
   useEffect(() => {
     let isMounted = true;
-    const fetchDetailAndSiblings = async () => {
+
+    const fetchProductData = async () => {
       try {
         setLoading(true);
-        // Lấy chi tiết sản phẩm
         const res = await fetch(`${API_URL}/api/products/${encodeURIComponent(slug)}`, {
           cache: 'no-store',
         });
@@ -95,37 +85,48 @@ export default function ProductDetailPage() {
         if (!isMounted) return;
         setProduct(curData);
 
-        // Khởi tạo màu và ảnh
-        const firstVariant = Array.isArray(curData.variants) && curData.variants.length > 0 ? curData.variants[0] : null;
-        const initialColor = firstVariant?.color || (typeof curData.colors?.[0] === 'object' ? curData.colors[0].name : curData.colors?.[0] || 'Tiêu chuẩn');
-        const initialImg = formatProductImageUrl(firstVariant?.images?.[0] || curData.imageUrl || curData.image);
+        // Lấy biến thể đầu tiên có trong database
+        const variantsList: any[] = Array.isArray(curData.variants) ? curData.variants : [];
+        const firstVariant = variantsList[0] || null;
 
-        setSelectedColor(initialColor);
-        setSelectedImage(initialImg);
+        const initStorage = firstVariant?.storage || curData.storage || 'Tiêu chuẩn';
+        const initColor = firstVariant?.color || 'Tiêu chuẩn';
 
-        // Fetch toàn bộ sản phẩm để tìm các bản dung lượng khác cùng dòng trong DB
+        // Lấy hình ảnh hợp lệ đầu tiên
+        let initImg = '';
+        if (firstVariant?.images && firstVariant.images.length > 0) {
+          initImg = formatProductImageUrl(firstVariant.images[0]);
+        } else if (curData.imageUrl || curData.image) {
+          initImg = formatProductImageUrl(curData.imageUrl || curData.image);
+        }
+
+        setSelectedStorage(initStorage);
+        setSelectedColor(initColor);
+        setSelectedImage(initImg);
+
+        // Tìm các sản phẩm cùng Series trong Database để chuyển đổi nếu có
         try {
           const listRes = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
           if (listRes.ok) {
             const listJson = await listRes.json();
             const allProducts: any[] = Array.isArray(listJson.data) ? listJson.data : Array.isArray(listJson) ? listJson : [];
-            
-            const currentBase = getBaseModelName(curData.name).toLowerCase();
-            const categoryId = curData.categoryId || curData.category?.id;
 
-            // Lọc các sản phẩm cùng danh mục và cùng tên dòng máy
-            const siblings = allProducts.filter((item: any) => {
-              const itemBase = getBaseModelName(item.name).toLowerCase();
-              const isSameCat = !categoryId || item.categoryId === categoryId || item.category?.id === categoryId;
-              return isSameCat && (itemBase === currentBase || item.name.toLowerCase().includes(currentBase) || currentBase.includes(itemBase));
+            const currentSeriesId = curData.seriesId || curData.series?.id;
+            const currentCatId = curData.categoryId || curData.category?.id;
+
+            const siblings = allProducts.filter((p: any) => {
+              if (currentSeriesId && (p.seriesId === currentSeriesId || p.series?.id === currentSeriesId)) {
+                return true;
+              }
+              return currentCatId && (p.categoryId === currentCatId || p.category?.id === currentCatId);
             });
 
-            if (isMounted) {
-              setSiblingProducts(siblings.length > 0 ? siblings : [curData]);
+            if (isMounted && siblings.length > 0) {
+              setSiblingProducts(siblings);
             }
           }
-        } catch (e) {
-          console.warn('Lỗi tìm sản phẩm cùng dòng:', e);
+        } catch (err) {
+          console.warn('Lỗi lấy danh sách sản phẩm liên quan:', err);
         }
       } catch (err) {
         console.error(err);
@@ -134,79 +135,84 @@ export default function ProductDetailPage() {
       }
     };
 
-    if (slug) fetchDetailAndSiblings();
+    if (slug) fetchProductData();
     return () => {
       isMounted = false;
     };
   }, [slug]);
 
-  // 2. Danh sách các lựa chọn Dung Lượng từ Database (Mỗi nút tương ứng 1 sản phẩm riêng có slug riêng)
-  const storageOptions = useMemo(() => {
-    if (!siblingProducts || siblingProducts.length === 0) {
-      const selfStorage = extractStorageFromName(product?.name || '') || '128GB';
-      return [{ storage: selfStorage, slug: product?.slug || slug, isCurrent: true }];
+  // 2. Lấy danh sách Dung lượng thực tế từ variants của sản phẩm trong Database
+  const availableStorages = useMemo(() => {
+    if (!product?.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
+      return ['Tiêu chuẩn'];
     }
-
-    const map = new Map<string, { storage: string; slug: string; isCurrent: boolean }>();
-
-    siblingProducts.forEach((item) => {
-      let st = extractStorageFromName(item.name);
-      if (!st && Array.isArray(item.variants) && item.variants[0]?.storage) {
-        st = item.variants[0].storage.toUpperCase();
-      }
-      if (!st) st = 'BẢN CHUẨN';
-
-      if (!map.has(st)) {
-        map.set(st, {
-          storage: st,
-          slug: item.slug || item.id,
-          isCurrent: String(item.slug || item.id) === String(slug),
-        });
-      }
-    });
-
-    return Array.from(map.values());
-  }, [siblingProducts, product, slug]);
-
-  // Dung lượng hiện tại của sản phẩm đang xem
-  const currentProductStorage = useMemo(() => {
-    return extractStorageFromName(product?.name || '') || 'Tiêu chuẩn';
-  }, [product]);
-
-  // 3. Danh sách màu sắc khả dụng cho sản phẩm này
-  const availableColors = useMemo(() => {
-    if (!product?.variants || !Array.isArray(product.variants)) {
-      return ['Đen Titan', 'Trắng Titan', 'Xám'];
-    }
-    const colorSet = new Set<string>();
+    const set = new Set<string>();
     product.variants.forEach((v: any) => {
-      if (v.color) colorSet.add(v.color);
+      if (v.storage && String(v.storage).trim()) {
+        set.add(String(v.storage).trim());
+      }
     });
-    return colorSet.size > 0 ? Array.from(colorSet) : ['Mặc định'];
+    return set.size > 0 ? Array.from(set) : ['Tiêu chuẩn'];
   }, [product]);
 
-  // 4. Biến thể hiện tại dựa trên màu đang chọn
-  const currentVariant = useMemo(() => {
-    if (!product?.variants || !Array.isArray(product.variants)) return null;
-    return product.variants.find((v: any) => v.color === selectedColor) || product.variants[0];
-  }, [product, selectedColor]);
-
-  const currentPrice = currentVariant?.price || product?.price || 21990000;
-  const currentOriginalPrice = currentVariant?.originalPrice || product?.originalPrice || Math.round(currentPrice * 1.15);
-
-  // Khi chọn dung lượng khác -> Điều hướng sang URL trang của sản phẩm đó
-  const handleSelectStorageOption = (targetSlug: string) => {
-    if (targetSlug !== slug) {
-      router.push(`/san-pham/${targetSlug}`);
+  // 3. Lấy danh sách Màu sắc thực tế từ variants của sản phẩm trong Database
+  const availableColors = useMemo(() => {
+    if (!product?.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
+      return ['Tiêu chuẩn'];
     }
-  };
+    const set = new Set<string>();
+    product.variants.forEach((v: any) => {
+      if (v.color && String(v.color).trim()) {
+        set.add(String(v.color).trim());
+      }
+    });
+    return set.size > 0 ? Array.from(set) : ['Tiêu chuẩn'];
+  }, [product]);
 
-  // Khi đổi màu sắc -> Giữ nguyên URL, chỉ thay đổi hình ảnh và màu đang chọn
+  // 4. Tìm biến thể khớp với Dung lượng & Màu sắc đang chọn
+  const currentVariant = useMemo(() => {
+    if (!product?.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
+      return null;
+    }
+    return (
+      product.variants.find(
+        (v: any) => v.storage === selectedStorage && v.color === selectedColor
+      ) ||
+      product.variants.find((v: any) => v.color === selectedColor) ||
+      product.variants.find((v: any) => v.storage === selectedStorage) ||
+      product.variants[0]
+    );
+  }, [product, selectedStorage, selectedColor]);
+
+  // 5. Tính giá bán & giá gốc từ Database
+  const currentPrice = currentVariant?.price ? Number(currentVariant.price) : Number(product?.price || 21990000);
+  const currentOriginalPrice = currentVariant?.originalPrice
+    ? Number(currentVariant.originalPrice)
+    : Number(product?.originalPrice || Math.round(currentPrice * 1.15));
+
+  // Đổi màu sắc: Cập nhật màu và tự động chuyển ảnh sang ảnh của biến thể đó
   const handleSelectColor = (col: string) => {
     setSelectedColor(col);
     if (product?.variants) {
-      const match = product.variants.find((v: any) => v.color === col);
-      if (match?.images?.[0]) {
+      const match = product.variants.find(
+        (v: any) => v.color === col && (!selectedStorage || v.storage === selectedStorage)
+      ) || product.variants.find((v: any) => v.color === col);
+
+      if (match?.images && match.images.length > 0) {
+        setSelectedImage(formatProductImageUrl(match.images[0]));
+      }
+    }
+  };
+
+  // Đổi dung lượng: Cập nhật dung lượng
+  const handleSelectStorage = (st: string) => {
+    setSelectedStorage(st);
+    if (product?.variants) {
+      const match = product.variants.find(
+        (v: any) => v.storage === st && v.color === selectedColor
+      ) || product.variants.find((v: any) => v.storage === st);
+
+      if (match?.images && match.images.length > 0) {
         setSelectedImage(formatProductImageUrl(match.images[0]));
       }
     }
@@ -223,7 +229,7 @@ export default function ProductDetailPage() {
       originalPrice: currentOriginalPrice,
       imageUrl: selectedImage,
       quantity,
-      storage: currentProductStorage,
+      storage: selectedStorage,
       color: selectedColor,
       modelSlug: product.slug,
     });
@@ -254,7 +260,7 @@ export default function ProductDetailPage() {
         <Navbar />
         <div className="max-w-7xl mx-auto py-28 text-center">
           <div className="w-12 h-12 border-4 border-[#d70018] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 font-bold text-base">Đang tải dữ liệu sản phẩm...</p>
+          <p className="text-gray-600 font-bold text-base">Đang tải chi tiết sản phẩm...</p>
         </div>
         <Footer />
       </div>
@@ -280,7 +286,9 @@ export default function ProductDetailPage() {
         <div className="max-w-7xl mx-auto flex items-center gap-2">
           <Link href="/" className="hover:text-[#d70018] transition-colors">Trang chủ</Link>
           <span>/</span>
-          <Link href="/iphone" className="hover:text-[#d70018] transition-colors">Sản phẩm</Link>
+          <Link href="/iphone" className="hover:text-[#d70018] transition-colors">
+            {product?.category?.name || 'Sản phẩm'}
+          </Link>
           <span>/</span>
           <span className="text-gray-900 font-bold">{product?.name}</span>
         </div>
@@ -296,33 +304,45 @@ export default function ProductDetailPage() {
             <div className="w-full aspect-square max-w-[550px] border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
               <img
                 src={selectedImage}
-                alt={product?.name || 'Sản phẩm'}
-                onError={() => setSelectedImage('https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80')}
+                alt={product?.name || 'Hình sản phẩm'}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=80';
+                }}
                 className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-300 hover:scale-105"
               />
             </div>
 
-            {/* Thumbnail danh sách hình ảnh theo màu */}
+            {/* Thumbnail danh sách hình ảnh theo các biến thể */}
             <div className="flex items-center gap-3 mt-4 overflow-x-auto py-2 max-w-full">
-              {[
-                selectedImage,
-                ...(currentVariant?.images?.map((img: string) => formatProductImageUrl(img)) || []),
-                formatProductImageUrl(product?.imageUrl),
-              ]
-                .filter((url, idx, self) => url && self.indexOf(url) === idx)
-                .slice(0, 5)
-                .map((imgUrl, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setSelectedImage(imgUrl)}
-                    className={`w-18 h-18 rounded-xl border-2 p-1.5 bg-white cursor-pointer transition-all ${
-                      selectedImage === imgUrl ? 'border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <img src={imgUrl} alt="thumb" className="w-full h-full object-contain" />
-                  </button>
-                ))}
+              {Array.from(
+                new Set([
+                  selectedImage,
+                  ...(currentVariant?.images?.map((img: string) => formatProductImageUrl(img)) || []),
+                  formatProductImageUrl(product?.imageUrl),
+                ].filter(Boolean))
+              ).slice(0, 5).map((imgUrl, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSelectedImage(imgUrl)}
+                  className={`w-18 h-18 rounded-xl border-2 p-1.5 bg-white cursor-pointer transition-all ${
+                    selectedImage === imgUrl
+                      ? 'border-[#d70018] shadow-xs scale-105'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt="thumb"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=80';
+                    }}
+                    className="w-full h-full object-contain"
+                  />
+                </button>
+              ))}
             </div>
           </div>
 
@@ -357,30 +377,30 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* CHỌN DUNG LƯỢNG - MỖI NÚT LÀ MỘT SẢN PHẨM VỚI URL RIÊNG TRONG DATABASE */}
+            {/* CHỌN DUNG LƯỢNG (LẤY TỪ DATABASE CỦA SẢN PHẨM) */}
             <div className="pt-2">
               <label className="block text-base font-black text-gray-900 mb-2.5">
-                Chọn dung lượng (Chuyển phiên bản):
+                Chọn dung lượng:
               </label>
               <div className="flex flex-wrap gap-3">
-                {storageOptions.map((opt) => (
+                {availableStorages.map((st) => (
                   <button
-                    key={opt.storage}
+                    key={st}
                     type="button"
-                    onClick={() => handleSelectStorageOption(opt.slug)}
+                    onClick={() => handleSelectStorage(st)}
                     className={`px-5 py-2.5 text-base font-bold rounded-lg border cursor-pointer transition-all ${
-                      opt.isCurrent
+                      selectedStorage === st
                         ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/40 shadow-xs'
                         : 'border-gray-300 text-gray-800 hover:border-[#d70018]/60 bg-white'
                     }`}
                   >
-                    {opt.storage}
+                    {st}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* CHỌN MÀU SẮC - ĐỔI MÀU & HÌNH ẢNH TẠI TRANG HIỆN TẠI (KHÔNG ĐỔI URL) */}
+            {/* CHỌN MÀU SẮC (LẤY TỪ DATABASE CỦA SẢN PHẨM) */}
             <div className="pt-2">
               <label className="block text-base font-black text-gray-900 mb-2.5">Màu sắc:</label>
               <div className="flex flex-wrap gap-2.5">
@@ -421,7 +441,9 @@ export default function ProductDetailPage() {
                   +
                 </button>
               </div>
-              <span className="text-xs sm:text-sm text-gray-500 font-medium">(Còn sẵn hàng trong kho)</span>
+              <span className="text-xs sm:text-sm text-gray-500 font-medium">
+                (Tồn kho: {currentVariant?.stock !== undefined ? currentVariant.stock : 'Sẵn hàng'})
+              </span>
             </div>
 
             {/* Banner ưu đãi phụ kiện */}
@@ -676,51 +698,60 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* SẢN PHẨM LIÊN QUAN */}
-        <div className="mt-14 space-y-12">
-          <div>
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-6">
-              <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-wide">
-                Sản phẩm liên quan
-              </h3>
-              <div className="flex items-center gap-2 text-gray-400">
-                <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronLeft size={20} /></button>
-                <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronRight size={20} /></button>
+        {/* SẢN PHẨM LIÊN QUAN / CÙNG DÒNG MÁY */}
+        {siblingProducts.length > 0 && (
+          <div className="mt-14 space-y-12">
+            <div>
+              <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-6">
+                <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-wide">
+                  Các sản phẩm cùng dòng máy
+                </h3>
+                <div className="flex items-center gap-2 text-gray-400">
+                  <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronLeft size={20} /></button>
+                  <button type="button" className="p-1 hover:text-gray-700 cursor-pointer"><ChevronRight size={20} /></button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+                {siblingProducts.slice(0, 5).map((p, idx) => {
+                  const pImg = formatProductImageUrl(p.variants?.[0]?.images?.[0] || p.imageUrl || p.image);
+                  const pPrice = Number(p.variants?.[0]?.price || p.price || 0);
+
+                  return (
+                    <div key={p.id || idx} className="bg-white rounded-lg border border-gray-200 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all group">
+                      <Link href={`/san-pham/${p.slug || p.id}`} className="w-full aspect-square flex items-center justify-center overflow-hidden mb-2">
+                        <img
+                          src={pImg}
+                          alt={p.name}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=80';
+                          }}
+                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                        />
+                      </Link>
+                      <div>
+                        <span className="text-[10px] font-black text-gray-400 uppercase">APPLE</span>
+                        <Link href={`/san-pham/${p.slug || p.id}`} className="block font-bold text-xs sm:text-sm text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
+                          {p.name}
+                        </Link>
+                        <div className="text-sm sm:text-base font-black text-[#d70018] mt-1.5">{formatVnd(pPrice)}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/san-pham/${p.slug || p.id}`)}
+                        className="w-full mt-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <ShoppingCart size={14} />
+                        <span>XEM CHI TIẾT</span>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-              {[
-                { name: 'iPhone 16 Pro Max 256GB', price: 34490000, img: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80', slug: 'iphone-16-pro-max' },
-                { name: 'iPhone 16 Pro 128GB', price: 28490000, img: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=400&q=80', slug: 'iphone-16-pro' },
-                { name: 'iPad Pro M4 11 inch WiFi', price: 27990000, img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=400&q=80', slug: 'ipad-pro-m4' },
-                { name: 'MacBook Air M3 13 inch', price: 26990000, img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80', slug: 'macbook-air-m3' },
-                { name: 'iPhone 15 128GB New Seal', price: 19490000, img: 'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=400&q=80', slug: 'iphone-15' },
-              ].map((p, idx) => (
-                <div key={idx} className="bg-white rounded-lg border border-gray-200 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all group">
-                  <Link href={`/san-pham/${p.slug}`} className="w-full aspect-square flex items-center justify-center overflow-hidden mb-2">
-                    <img src={p.img} alt={p.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
-                  </Link>
-                  <div>
-                    <span className="text-[10px] font-black text-gray-400 uppercase">APPLE</span>
-                    <Link href={`/san-pham/${p.slug}`} className="block font-bold text-xs sm:text-sm text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
-                      {p.name}
-                    </Link>
-                    <div className="text-sm sm:text-base font-black text-[#d70018] mt-1.5">{formatVnd(p.price)}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddToCart}
-                    className="w-full mt-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <ShoppingCart size={14} />
-                    <span>THÊM VÀO GIỎ</span>
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
-        </div>
+        )}
 
       </main>
 
