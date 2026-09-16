@@ -3,12 +3,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, ShoppingCart, CreditCard, Wallet, Percent } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MACBOOK_HELPFUL_NEWS } from '@/data/macbookCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
+import { useCart } from '@/context/CartContext';
+import { ToastNotification } from '@/components/common/ToastNotification';
 
 interface SeriesTabItem {
   name: string;
@@ -132,7 +134,6 @@ const parsePrice = (priceStr: string | number) => {
   return Number(String(priceStr).replace(/[^0-9]/g, '')) || 0;
 };
 
-// Hàm định dạng giá tiền: Trả về "Liên hệ" nếu giá <= 0
 const formatVndPrice = (price: number) => {
   if (!price || price <= 0) return 'Liên hệ';
   return price.toLocaleString('vi-VN') + 'đ';
@@ -152,6 +153,22 @@ const formatProductImageUrl = (url?: string | null): string => {
   }
   const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
   return `${API_URL}${path}`;
+};
+
+// Hàm định dạng tên sản phẩm đưa dung lượng lên trước các hậu tố
+const buildProductNameWithStorage = (originalName: string, storage: string): string => {
+  if (!storage) return originalName;
+  const upperStorage = storage.toUpperCase();
+  let clean = originalName.replace(new RegExp(`\\b${upperStorage}\\b`, 'gi'), '').trim();
+
+  const matchSuffix = clean.match(/(Chính Hãng.*|New Seal.*|CPO.*|Chưa Active.*|Đã Kích Hoạt.*)$/i);
+  if (matchSuffix) {
+    const mainTitle = clean.substring(0, matchSuffix.index).trim();
+    const suffix = matchSuffix[0].trim();
+    return `${mainTitle} ${upperStorage} ${suffix}`;
+  }
+
+  return `${clean} ${upperStorage}`;
 };
 
 const resolveMacbookSlug = (raw: string): string => {
@@ -183,7 +200,9 @@ const resolveMacbookSlug = (raw: string): string => {
 export default function DynamicMacBookPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const { addToCart } = useCart();
 
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [currentSort, setCurrentSort] = useState<SortType>('price_desc');
   const [activeFilters, setActiveFilters] = useState<FilterState>({});
   const [rawDbProducts, setRawDbProducts] = useState<any[]>([]);
@@ -314,52 +333,52 @@ export default function DynamicMacBookPage() {
         const curPrice = Number(v.price || prod.price || 0);
         const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
         const stKey = Array.from(storageMap.keys())[0] || '';
-        const nameSuffix = stKey ? ` ${stKey}` : '';
         const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
-
-        // QUY TẮC: CÓ GIÁ (> 0) LÀ SẴN HÀNG, GIÁ <= 0 LÀ LIÊN HỆ & TẠM HẾT HÀNG
+        const finalName = buildProductNameWithStorage(prod.name, stKey);
         const hasPrice = curPrice > 0;
 
         result.push({
           id: prod.id,
-          name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+          variantId: v.id || prod.id,
+          name: finalName,
+          rawName: prod.name,
+          modelSlug: prod.slug,
           slug: `${prod.slug}${slugSuffix}`,
           href: `/san-pham/${prod.slug}${slugSuffix}`,
           currentPrice: formatVndPrice(curPrice),
           originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
+          storage: stKey,
+          color: v.color || '',
           discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-          downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
           statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-          rating: 5,
-          searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
         });
       } else {
         storageMap.forEach((varList, stKey) => {
           const v = varList[0];
           const curPrice = Number(v.price || prod.price || 0);
           const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
-          const nameSuffix = stKey ? ` ${stKey}` : '';
           const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
-
-          // QUY TẮC: CÓ GIÁ (> 0) LÀ SẴN HÀNG, GIÁ <= 0 LÀ LIÊN HỆ & TẠM HẾT HÀNG
+          const finalName = buildProductNameWithStorage(prod.name, stKey);
           const hasPrice = curPrice > 0;
 
           result.push({
             id: `${prod.id}-${stKey || 'base'}`,
-            name: prod.name.includes(stKey) ? prod.name : `${prod.name}${nameSuffix}`,
+            variantId: v.id || `${prod.id}-${stKey}`,
+            name: finalName,
+            rawName: prod.name,
+            modelSlug: prod.slug,
             slug: `${prod.slug}${slugSuffix}`,
             href: `/san-pham/${prod.slug}${slugSuffix}`,
             currentPrice: formatVndPrice(curPrice),
             originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
             rawPrice: curPrice,
+            storage: stKey,
+            color: v.color || '',
             discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-            downPayment: hasPrice ? Math.round(curPrice * 0.3).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
             statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-            rating: 5,
-            searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
           });
         });
       }
@@ -380,6 +399,7 @@ export default function DynamicMacBookPage() {
 
   const activeSubmodels = currentSeriesTag ? MACBOOK_SUBMODELS_MAP[currentSeriesTag] || [] : [];
 
+  // Lọc sản phẩm chính xác theo bộ lọc trực tiếp trên tên sản phẩm
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -390,19 +410,28 @@ export default function DynamicMacBookPage() {
 
     if (currentFilter) {
       const lowerFilter = currentFilter.toLowerCase();
+      
+      // 1. Phân loại theo dòng máy cha (Pro / Air / Neo)
       if (lowerFilter.includes('pro')) {
-        items = items.filter((i) => i.searchIndex.includes('pro'));
+        items = items.filter((i) => {
+          const nameLower = i.name.toLowerCase();
+          return nameLower.includes('pro') && !nameLower.includes('air');
+        });
       } else if (lowerFilter.includes('air')) {
-        items = items.filter((i) => i.searchIndex.includes('air'));
+        items = items.filter((i) => {
+          const nameLower = i.name.toLowerCase();
+          return nameLower.includes('air') && !nameLower.includes('pro');
+        });
       } else if (lowerFilter.includes('neo')) {
-        items = items.filter((i) => i.searchIndex.includes('neo'));
+        items = items.filter((i) => i.name.toLowerCase().includes('neo'));
       }
 
-      if (lowerFilter.includes('m5')) items = items.filter((i) => i.searchIndex.includes('m5'));
-      if (lowerFilter.includes('m4')) items = items.filter((i) => i.searchIndex.includes('m4'));
-      if (lowerFilter.includes('m3')) items = items.filter((i) => i.searchIndex.includes('m3'));
-      if (lowerFilter.includes('m2')) items = items.filter((i) => i.searchIndex.includes('m2'));
-      if (lowerFilter.includes('m1')) items = items.filter((i) => i.searchIndex.includes('m1'));
+      // 2. Phân loại theo chip xử lý M-Series
+      if (lowerFilter.includes('m5')) items = items.filter((i) => i.name.toLowerCase().includes('m5'));
+      if (lowerFilter.includes('m4')) items = items.filter((i) => i.name.toLowerCase().includes('m4'));
+      if (lowerFilter.includes('m3')) items = items.filter((i) => i.name.toLowerCase().includes('m3'));
+      if (lowerFilter.includes('m2')) items = items.filter((i) => i.name.toLowerCase().includes('m2'));
+      if (lowerFilter.includes('m1')) items = items.filter((i) => i.name.toLowerCase().includes('m1'));
     }
 
     if (activeFilters.price) {
@@ -475,6 +504,30 @@ export default function DynamicMacBookPage() {
     }
   }, [currentFilter]);
 
+  const handleAddToCartQuick = (e: React.MouseEvent, product: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (product.rawPrice <= 0) return;
+
+    addToCart({
+      id: product.variantId,
+      name: product.name,
+      modelSlug: product.modelSlug,
+      price: product.rawPrice,
+      originalPrice: parsePrice(product.originalPrice) || product.rawPrice,
+      storage: product.storage,
+      color: product.color || 'Tiêu chuẩn',
+      imageUrl: product.imageUrl,
+      quantity: 1,
+    });
+
+    setToast({
+      show: true,
+      message: `Đã thêm ${product.name} vào giỏ hàng!`,
+    });
+  };
+
   const banner1 = adminBanners[0] || {
     name: 'MacBook Pro M5 / M4',
     link: '/macbook',
@@ -489,6 +542,12 @@ export default function DynamicMacBookPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
+      <ToastNotification
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
       <div>
         <div className="sticky top-0 z-50 shadow-md">
           <Header />
@@ -580,7 +639,7 @@ export default function DynamicMacBookPage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON: NHỎ HƠN 2 SIZE */}
+          {/* 3. HÀNG SUBMODEL CON */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
               <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
@@ -640,26 +699,18 @@ export default function DynamicMacBookPage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM PHÂN TÁCH DUNG LƯỢNG */}
+          {/* LƯỚI SẢN PHẨM: ẢNH TO, NỀN TRẮNG TINH, KHÔNG VIỀN KHUNG */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={index}
-                  className="bg-white rounded-sm p-3 flex flex-col justify-between border border-gray-200 min-h-[430px] animate-pulse"
+                  className="bg-white p-3 flex flex-col justify-between min-h-[420px] animate-pulse"
                 >
-                  <div className="flex justify-between items-center h-6">
-                    <div className="w-10 h-4 bg-gray-200" />
-                    <div className="w-16 h-3 bg-gray-200" />
-                  </div>
-                  <div className="w-full h-40 bg-gray-100 my-2 rounded" />
-                  <div className="space-y-2">
-                    <div className="w-full h-4 bg-gray-200" />
-                    <div className="w-3/4 h-4 bg-gray-200" />
-                  </div>
-                  <div className="w-full h-8 bg-gray-100 my-2" />
-                  <div className="w-1/2 h-5 bg-gray-200" />
-                  <div className="w-1/3 h-3 bg-gray-100" />
+                  <div className="w-10 h-4 bg-gray-100 mb-2" />
+                  <div className="w-full h-44 bg-gray-50 my-2 rounded" />
+                  <div className="w-full h-4 bg-gray-100 mt-2" />
+                  <div className="w-3/4 h-4 bg-gray-100 mt-2" />
                 </div>
               ))}
             </div>
@@ -668,25 +719,27 @@ export default function DynamicMacBookPage() {
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-200 min-h-[430px]"
+                  className="bg-white p-2.5 sm:p-3 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group border border-gray-200/80 rounded-lg min-h-[420px]"
                 >
-                  <div className="flex items-center justify-between h-6">
+                  {/* TAG GIẢM GIÁ (ĐÃ BỎ AUTHORIZED RESELLER) */}
+                  <div className="flex items-center justify-between h-5">
                     {product.rawPrice > 0 ? (
-                      <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-none">
+                      <span className="bg-[#d70018] text-white text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-sm">
                         -{product.discountPercent}%
                       </span>
                     ) : (
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5">
+                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
                         Hot
                       </span>
                     )}
-                    <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
-                      <span></span>
-                      <span className="scale-90 origin-right">Authorized Reseller</span>
-                    </div>
+                    <span />
                   </div>
 
-                  <Link href={product.href} className="w-full h-40 my-2 flex items-center justify-center overflow-hidden">
+                  {/* KHUNG ẢNH: TO LÊN, NỀN TRẮNG TINH, KHÔNG VIỀN */}
+                  <Link
+                    href={product.href}
+                    className="w-full h-44 sm:h-48 my-2 flex items-center justify-center bg-white overflow-hidden"
+                  >
                     <img
                       src={product.imageUrl}
                       alt={product.name}
@@ -694,74 +747,90 @@ export default function DynamicMacBookPage() {
                         (e.target as HTMLImageElement).src =
                           'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80';
                       }}
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
+                      className="max-h-full max-w-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm"
                     />
                   </Link>
 
+                  {/* TÊN SẢN PHẨM: ĐÃ DỜI DUNG LƯỢNG LÊN TRƯỚC */}
                   <Link
                     href={product.href}
-                    className="font-bold text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors h-[38px] leading-snug"
+                    className="font-bold text-xs sm:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[36px] sm:min-h-[38px] leading-snug"
                   >
                     {product.name}
                   </Link>
 
-                  {/* KHỐI TRẢ GÓP: CÓ GIÁ MỚI HIỆN BẢNG 0% 0Đ 0Đ */}
-                  {product.rawPrice > 0 ? (
-                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1 px-2 text-center relative">
-                      <div className="text-[10px] font-bold text-gray-500 flex items-center justify-around">
-                        <span>Trả Góp</span>
-                        <span>•</span>
-                        <span>Trả Trước</span>
-                        <span>•</span>
-                        <span>Phí</span>
-                      </div>
-                      <div className="text-xs font-black text-[#d70018] tracking-tight flex items-center justify-around mt-0.5">
-                        <span>0%</span>
-                        <span>0đ</span>
-                        <span>0đ</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
-                      <span className="text-[10px] font-bold text-gray-500">
-                        Liên hệ nhận báo giá tốt nhất
-                      </span>
-                    </div>
-                  )}
-
-                  {/* NHÃN TRẠNG THÁI: CÓ GIÁ LÀ SẴN HÀNG, KHÔNG CÓ GIÁ LÀ TẠM HẾT HÀNG */}
-                  <span
-                    className={`mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit ${
-                      product.statusTag === 'Sẵn hàng'
-                        ? 'bg-[#ffe8e8] text-[#d70018]'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {product.statusTag}
-                  </span>
-
-                  {/* MỨC GIÁ: CÓ GIÁ THÌ HIỆN SỐ TIỀN, GIÁ <= 0 THÌ HIỆN CHỮ "LIÊN HỆ" */}
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base sm:text-lg'}`}>
-                      {product.currentPrice}
-                    </span>
-                    {product.rawPrice > 0 && product.originalPrice && (
-                      <span className="text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
-                    )}
-                  </div>
-
-                  <div className="text-[11px] text-gray-600 font-medium mt-0.5">
+                  <div>
+                    {/* KHỐI TRẢ GÓP MỚI: 3 ICON CĂN ĐỀU GIỮA */}
                     {product.rawPrice > 0 ? (
-                      <>Hoặc trả trước <strong className="text-gray-900">{product.downPayment}</strong></>
-                    ) : (
-                      <span className="text-[#d70018] font-bold">Hotline: 056.600.3333</span>
-                    )}
-                  </div>
+                      <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-around text-[#d70018]">
+                        <div className="flex items-center gap-1">
+                          <CreditCard size={12} className="shrink-0" />
+                          <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả góp</span>
+                        </div>
 
-                  <div className="flex items-center gap-0.5 mt-2 text-amber-400 h-3">
-                    {[...Array(product.rating || 5)].map((_, i) => (
-                      <Star key={i} size={11} className="fill-amber-400" />
-                    ))}
+                        <span className="text-gray-300 font-normal">|</span>
+
+                        <div className="flex items-center gap-1">
+                          <Wallet size={12} className="shrink-0" />
+                          <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả trước</span>
+                        </div>
+
+                        <span className="text-gray-300 font-normal">|</span>
+
+                        <div className="flex items-center gap-1">
+                          <Percent size={11} className="shrink-0" />
+                          <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Phí</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
+                        <span className="text-[10px] font-bold text-gray-500">
+                          Liên hệ nhận báo giá tốt nhất
+                        </span>
+                      </div>
+                    )}
+
+                    {/* NHÃN TRẠNG THÁI */}
+                    <span
+                      className={`mt-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit block ${
+                        product.statusTag === 'Sẵn hàng'
+                          ? 'bg-[#ffe8e8] text-[#d70018]'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {product.statusTag}
+                    </span>
+
+                    {/* GIÁ BÁN */}
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base'}`}>
+                        {product.currentPrice}
+                      </span>
+                      {product.rawPrice > 0 && product.originalPrice && (
+                        <span className="text-[10px] sm:text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
+                      )}
+                    </div>
+
+                    {/* NÚT THÊM GIỎ HÀNG */}
+                    <div className="mt-2.5">
+                      {product.rawPrice > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleAddToCartQuick(e, product)}
+                          className="w-full py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98"
+                        >
+                          <ShoppingCart size={13} />
+                          <span>Thêm Giỏ Hàng</span>
+                        </button>
+                      ) : (
+                        <a
+                          href="tel:0566003333"
+                          className="w-full py-2 border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] rounded-md text-xs font-bold uppercase flex items-center justify-center transition-colors"
+                        >
+                          Liên Hệ Báo Giá
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
