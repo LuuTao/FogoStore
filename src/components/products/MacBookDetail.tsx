@@ -222,62 +222,62 @@ export default function MacBookDetail({
           <Navbar />
         </div>
 
-        {/* BREADCRUMB - CỠ CHỮ TO HƠN 2 SIZE */}
-        <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-3 px-4 text-sm text-gray-600">
-          <div className="max-w-7xl mx-auto flex items-center gap-2 truncate">
+        {/* BREADCRUMB - CỠ CHỮ GỌN GÀNG NHƯ CŨ */}
+        <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-2 px-4 text-[11px] text-gray-600">
+          <div className="max-w-7xl mx-auto flex items-center gap-1.5 truncate">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
             <span>/</span>
             <Link href="/macbook" className="hover:text-[#d70018]">MacBook</Link>
             <span>/</span>
-            <span className="text-gray-900 font-bold">{cleanProductName} {selectedStorage}</span>
+            <span className="text-gray-900 font-semibold">{cleanProductName} {selectedStorage}</span>
           </div>
         </div>
 
-        <main className="max-w-7xl mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* ========================================================================= */}
-            {/* CỘT 1: HÌNH TO HƠN 2 SIZE, DỜI QUA PHẢI CÂN ĐỐI (lg:col-span-5 + lg:pl-6)  */}
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM                                                 */}
             {/* ========================================================================= */}
-            <div className="lg:col-span-5 flex flex-col items-center lg:pl-6">
-              <div className="relative w-full aspect-square max-w-[550px] border border-gray-100 rounded-2xl p-6 flex items-center justify-center bg-white shadow-xs">
+            <div className="lg:col-span-5 flex flex-col items-center">
+              <div className="relative w-full aspect-square border border-gray-200 rounded-sm p-4 flex items-center justify-center bg-white shadow-2xs">
                 <img
                   src={displayImage}
                   alt={product.name}
-                  className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-300 hover:scale-105"
+                  className="max-h-full max-w-full object-contain pointer-events-none transition-transform duration-200 hover:scale-105"
                 />
                 {imagesList.length > 1 && (
                   <>
                     <button
                       onClick={() => setCurrentImageIndex((p) => (p - 1 + imagesList.length) % imagesList.length)}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
                       aria-label="Ảnh trước"
                     >
-                      <ChevronLeft size={20} />
+                      <ChevronLeft size={18} />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((p) => (p + 1) % imagesList.length)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
                       aria-label="Ảnh sau"
                     >
-                      <ChevronRight size={20} />
+                      <ChevronRight size={18} />
                     </button>
                   </>
                 )}
               </div>
 
               {/* Thumbnails */}
-              <div className="flex items-center gap-3 mt-4 overflow-x-auto max-w-full pb-1">
-                <div className="w-16 h-16 border border-red-500 rounded-xl p-1 flex flex-col items-center justify-center bg-red-50/50 text-[11px] text-[#d70018] shrink-0 cursor-pointer">
-                  <Video size={18} />
-                  <span className="font-bold">Video</span>
+              <div className="flex items-center gap-2 mt-3 overflow-x-auto max-w-full pb-1">
+                <div className="w-14 h-14 border border-red-500 rounded-sm p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
+                  <Video size={16} />
+                  <span className="font-bold scale-90">Video</span>
                 </div>
                 {imagesList.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`w-16 h-16 border rounded-xl p-1 bg-white shrink-0 cursor-pointer transition-all ${
-                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
+                    className={`w-14 h-14 border rounded-sm p-1 bg-white shrink-0 cursor-pointer transition-all ${
+                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <img src={formatImg(img)} alt="" className="w-full h-full object-contain" />
@@ -287,38 +287,38 @@ export default function MacBookDetail({
             </div>
 
             {/* ========================================================================= */}
-            {/* CỘT 2: THÔNG TIN SẢN PHẨM & MUA HÀNG - TO TOÀN DIỆN THÊM 2 SIZE           */}
+            {/* CỘT 2: THÔNG TIN CHI TIẾT & TÁC VỤ MUA HÀNG (CỠ CHỮ CHUẨN GỌN NHƯ CŨ)     */}
             {/* ========================================================================= */}
-            <div className="lg:col-span-4 space-y-5">
+            <div className="lg:col-span-4 space-y-3.5 text-xs">
               <div>
-                <span className="text-xs font-black tracking-widest text-gray-400 uppercase">
+                <span className="text-[10px] font-bold text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded-xs uppercase">
                    Authorized Reseller
                 </span>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-snug mt-1">
+                <h1 className="text-xl md:text-2xl font-black text-gray-900 leading-snug mt-1">
                   {cleanProductName} {selectedStorage} - Chính hãng Apple VN
                 </h1>
-                <div className="flex items-center gap-1.5 text-amber-400 text-base mt-1.5">
+                <div className="flex items-center gap-1 text-amber-400 text-sm mt-1">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={18} className="fill-amber-400" />
+                    <Star key={i} size={15} className="fill-amber-400" />
                   ))}
-                  <span className="text-gray-500 text-sm ml-2 font-medium">(Đánh giá 5 sao chuẩn Apple VN/A)</span>
+                  <span className="text-gray-500 text-xs ml-1 font-medium">(Đánh giá 5 sao chuẩn Apple VN/A)</span>
                 </div>
               </div>
 
               {/* Mức giá */}
-              <div className="pt-1">
-                <span className="text-gray-500 block text-xs font-bold uppercase tracking-wider">Giá bán ưu đãi:</span>
-                <div className="flex items-baseline gap-4 mt-1">
-                  <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#d70018]">
+              <div className="pt-2 border-t border-gray-100">
+                <span className="text-gray-500 block text-[11px]">Giá bán:</span>
+                <div className="flex items-baseline gap-2.5 mt-0.5">
+                  <span className="text-2xl md:text-3xl font-black text-[#d70018]">
                     {formatVnd(currentPrice)}
                   </span>
                   {currentOriginalPrice > currentPrice && (
-                    <span className="text-lg text-gray-400 line-through font-semibold">
+                    <span className="text-xs text-gray-400 line-through">
                       {formatVnd(currentOriginalPrice)}
                     </span>
                   )}
                   {isOutOfStock && (
-                    <span className="bg-red-50 text-[#d70018] border border-red-200 text-xs font-bold px-2.5 py-1 rounded">
+                    <span className="bg-red-50 text-[#d70018] border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-xs ml-2">
                       Tạm hết hàng
                     </span>
                   )}
@@ -327,24 +327,29 @@ export default function MacBookDetail({
 
               {/* CHỌN DUNG LƯỢNG SSD - ĐỔI URL CHUẨN */}
               {storageList.length > 0 && (
-                <div className="pt-2">
-                  <label className="block text-base font-black text-gray-900 mb-2.5">
+                <div className="pt-1">
+                  <label className="block font-bold text-gray-800 mb-1.5">
                     Bộ nhớ lưu trữ (SSD):
                   </label>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {storageList.map((st) => {
                       const isSelected = selectedStorage.toLowerCase() === st.toLowerCase();
                       return (
                         <button
                           key={st}
                           onClick={() => handleSelectStorage(st)}
-                          className={`px-5 py-2.5 text-base font-bold rounded-lg border cursor-pointer transition-all ${
-                            isSelected
-                              ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/40 shadow-xs'
-                              : 'border-gray-300 text-gray-800 hover:border-[#d70018]/60 bg-white'
+                          className={`relative p-2 border rounded-sm text-center transition-all cursor-pointer ${
+                            isSelected ? 'border-2 border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
                           }`}
                         >
-                          {st}
+                          <span className={`block font-black text-xs ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
+                            {st}
+                          </span>
+                          {isSelected && (
+                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
+                              ✓
+                            </div>
+                          )}
                         </button>
                       );
                     })}
@@ -352,13 +357,11 @@ export default function MacBookDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC - ĐỔI TRỰC TIẾP TẠI TRANG (KHÔNG ĐỔI URL) */}
+              {/* CHỌN MÀU SẮC - ĐỔI TRỰC TIẾP TẠI TRANG */}
               {colorList.length > 0 && (
-                <div className="pt-2">
-                  <label className="block text-base font-black text-gray-900 mb-2.5">
-                    Màu sắc:
-                  </label>
-                  <div className="flex flex-wrap gap-2.5">
+                <div className="pt-1">
+                  <label className="block font-bold text-gray-800 mb-1.5">Màu sắc:</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {colorList.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
@@ -367,16 +370,23 @@ export default function MacBookDetail({
                         <button
                           key={color}
                           onClick={() => handleSelectColor(color)}
-                          className={`relative px-3.5 py-2 rounded-lg border flex items-center gap-2 transition-all cursor-pointer ${
-                            isSelected
-                              ? 'border-2 border-[#d70018] text-[#d70018] font-bold bg-red-50/40 shadow-xs'
-                              : 'border-gray-300 text-gray-800 hover:border-gray-400 bg-white'
+                          className={`relative p-1.5 border rounded-sm flex items-center gap-2 transition-all cursor-pointer ${
+                            isSelected ? 'border-2 border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
                           }`}
                         >
-                          <div className="w-6 h-6 rounded-full overflow-hidden p-0.5 border border-gray-200">
+                          <div className="w-7 h-7 shrink-0 border border-gray-100 rounded-xs p-0.5 bg-gray-50 flex items-center justify-center">
                             <img src={formatImg(thumb)} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <span className="text-sm font-bold">{color}</span>
+                          <div className="text-left overflow-hidden min-w-0">
+                            <span className={`block font-bold text-[11px] truncate ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
+                              {color}
+                            </span>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
+                              ✓
+                            </div>
+                          )}
                         </button>
                       );
                     })}
@@ -386,107 +396,106 @@ export default function MacBookDetail({
 
               {/* Số lượng */}
               {!isOutOfStock && (
-                <div className="pt-2 flex items-center gap-4">
-                  <span className="text-base font-black text-gray-900">Số lượng:</span>
-                  <div className="flex items-center border border-gray-300 rounded-lg">
+                <div className="flex items-center gap-3 pt-1">
+                  <span className="font-semibold text-gray-700">Số lượng:</span>
+                  <div className="flex items-center border border-gray-300 rounded-xs overflow-hidden">
                     <button
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="w-9 h-9 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
                     >
-                      <Minus size={15} />
+                      <Minus size={13} />
                     </button>
-                    <span className="w-12 text-center text-base font-black text-gray-900">{quantity}</span>
+                    <span className="w-10 h-8 flex items-center justify-center text-xs font-bold text-gray-900 border-x border-gray-300">
+                      {quantity}
+                    </span>
                     <button
                       onClick={() => setQuantity((q) => Math.min(Number(currentVariant?.stock || 99), q + 1))}
-                      className="w-9 h-9 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
                     >
-                      <Plus size={15} />
+                      <Plus size={13} />
                     </button>
                   </div>
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium">
-                    (Còn {currentVariant?.stock || 15} máy trong kho)
-                  </span>
+                  <span className="text-[11px] text-gray-500">(Còn {currentVariant?.stock || 15} máy trong kho)</span>
                 </div>
               )}
 
-              {/* Banner ưu đãi */}
-              <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-lg p-3.5 flex items-center justify-between text-xs sm:text-sm font-semibold text-[#d70018]">
-                <span>Giảm thêm 500.000đ khi mua kèm Chuột Magic Mouse & Hub chuyển đổi USB-C</span>
-                <span className="bg-[#d70018] text-white text-xs font-black px-2.5 py-1 rounded shrink-0 ml-2">Ưu đãi</span>
+              {/* Banner Ưu đãi MacBook */}
+              <div className="bg-[#1d1d1f] text-white p-3 rounded-sm flex items-center justify-between mt-2">
+                <span className="font-bold text-xs">Giảm thêm 500.000đ khi mua kèm Magic Mouse & Hub Type-C</span>
+                <span className="bg-[#ffea00] text-gray-900 font-black px-2 py-0.5 rounded-xs text-[11px]">
+                  Ưu đãi
+                </span>
               </div>
 
-              {/* Nút Mua hàng & Thêm giỏ hàng */}
+              {/* Nút mua hàng */}
               {isOutOfStock ? (
-                <div className="pt-2 space-y-2">
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
-                    <p className="text-sm font-bold text-[#d70018]">
-                      Cấu hình {cleanProductName} {selectedStorage} ({selectedColor}) hiện đang tạm hết hàng.
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Quý khách vui lòng liên hệ hotline hoặc Zalo để giữ suất máy đợt tới.
+                <div className="pt-1 space-y-2">
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-sm text-center">
+                    <p className="text-xs font-bold text-[#d70018]">
+                      Cấu hình {cleanProductName} ({selectedColor}) tạm hết hàng.
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <a
                       href="tel:0566003333"
-                      className="w-full py-3.5 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-xs uppercase rounded-lg shadow flex items-center justify-center gap-2 text-center"
+                      className="w-full py-2.5 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-[11px] uppercase rounded-sm shadow flex items-center justify-center gap-1.5 text-center"
                     >
-                      <PhoneCall size={18} />
-                      <span>GỌI 056.600.3333</span>
+                      <PhoneCall size={14} />
+                      <span>GỌI HOTLINE</span>
                     </a>
                     <a
                       href="https://zalo.me"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-3.5 border-2 border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-xs uppercase rounded-lg flex items-center justify-center gap-2 text-center"
+                      className="w-full py-2.5 border border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-[11px] uppercase rounded-sm flex items-center justify-center gap-1.5 text-center"
                     >
-                      <MessageCircle size={18} />
-                      <span>CHAT ZALO TƯ VẤN</span>
+                      <MessageCircle size={14} />
+                      <span>CHAT ZALO</span>
                     </a>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3.5 pt-2">
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
                   <button
                     onClick={() => handleAddToCart(false)}
-                    className="py-3.5 px-3 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 rounded-lg font-black text-sm uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    className="py-2.5 px-2 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 rounded-sm font-bold text-xs uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <ShoppingCart size={18} />
-                    <span>THÊM VÀO GIỎ</span>
+                    <ShoppingCart size={15} />
+                    <span>THÊM GIỎ HÀNG</span>
                   </button>
                   <button
                     onClick={() => handleAddToCart(true)}
-                    className="py-3.5 px-3 bg-[#d70018] hover:bg-[#b50014] text-white rounded-lg font-black text-sm uppercase tracking-wide transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
+                    className="py-2.5 px-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-sm font-black text-xs uppercase tracking-wide transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
                   >
-                    <Zap size={18} />
+                    <Zap size={15} />
                     <span>MUA NGAY</span>
                   </button>
                 </div>
               )}
 
-              {/* Nút MUA NGAY - TRẢ SAU & Nút chia sẻ */}
-              <div className="pt-2 space-y-4">
+              {/* Nút MUA NGAY - TRẢ SAU & Chia sẻ */}
+              <div className="pt-1 space-y-3">
                 <button
                   type="button"
                   onClick={() => setIsInstallmentOpen(true)}
-                  className="w-full py-3.5 bg-[#fde047] hover:bg-[#facc15] text-[#1e3a8a] rounded-lg font-black text-sm uppercase tracking-wider shadow-xs flex items-center justify-center transition-all cursor-pointer"
+                  className="w-full py-2.5 bg-[#fde047] hover:bg-[#facc15] text-[#1e3a8a] rounded-sm font-black text-xs uppercase tracking-wider shadow-xs flex items-center justify-center transition-all cursor-pointer"
                 >
                   MUA NGAY - TRẢ SAU
                 </button>
 
-                <div className="flex items-center gap-3 pt-1 text-sm text-gray-800 font-bold">
+                <div className="flex items-center gap-2 pt-0.5 text-xs text-gray-700 font-bold">
                   <span>Chia sẻ:</span>
-                  <div className="flex items-center gap-2.5">
-                    <a href="https://facebook.com" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-sm font-black hover:opacity-90">f</a>
-                    <a href="https://m.me" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#0084FF] text-white flex items-center justify-center text-sm hover:opacity-90">💬</a>
-                    <a href="https://twitter.com" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center text-sm hover:opacity-90">🐦</a>
+                  <div className="flex items-center gap-2">
+                    <a href="https://facebook.com" target="_blank" rel="noreferrer" className="w-7 h-7 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-xs font-black hover:opacity-90">f</a>
+                    <a href="https://m.me" target="_blank" rel="noreferrer" className="w-7 h-7 rounded-full bg-[#0084FF] text-white flex items-center justify-center text-xs hover:opacity-90">💬</a>
+                    <a href="https://twitter.com" target="_blank" rel="noreferrer" className="w-7 h-7 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center text-xs hover:opacity-90">🐦</a>
                     <button
                       type="button"
                       onClick={handleCopyLink}
-                      className="w-8 h-8 rounded-full bg-[#0ea5e9] text-white flex items-center justify-center hover:opacity-90 cursor-pointer transition-opacity"
+                      className="w-7 h-7 rounded-full bg-[#0ea5e9] text-white flex items-center justify-center hover:opacity-90 cursor-pointer"
                       title="Sao chép liên kết"
                     >
-                      {copied ? <Check size={15} /> : <Copy size={15} />}
+                      {copied ? <Check size={13} /> : <Copy size={13} />}
                     </button>
                   </div>
                 </div>
@@ -497,44 +506,44 @@ export default function MacBookDetail({
             {/* ========================================================================= */}
             {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG & BANNER KREDIVO                               */}
             {/* ========================================================================= */}
-            <div className="lg:col-span-3 space-y-5">
-              <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-xs">
-                <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3 mb-4">
+            <div className="lg:col-span-3 space-y-4">
+              <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-xs">
+                <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2.5 mb-3">
                   Chính sách bán hàng
                 </h3>
-                <div className="space-y-4 text-sm text-gray-800 font-medium">
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                      <Check size={14} strokeWidth={3} />
+                <div className="space-y-3.5 text-xs text-gray-700">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                      <Check size={13} strokeWidth={3} />
                     </span>
                     <span>Cam kết 100% chính hãng Apple</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl shrink-0">💵</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base shrink-0">💵</span>
                     <span>Lên đời trợ giá lên đến 95%</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl shrink-0">🔄</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base shrink-0">🔄</span>
                     <span>Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
                   </div>
                 </div>
 
-                <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3 mt-6 mb-4">
+                <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2.5 mt-5 mb-3">
                   Thông tin thêm
                 </h3>
-                <div className="space-y-4 text-sm text-gray-800 font-medium">
-                  <div className="flex items-center gap-3">
-                    <span className="px-1.5 py-0.5 border border-blue-600 text-blue-700 font-black text-[10px] rounded">
+                <div className="space-y-3.5 text-xs text-gray-700">
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-1.5 py-0.5 border border-blue-600 text-blue-700 font-bold text-[9px] rounded">
                       VISA
                     </span>
                     <span>Trả góp lãi suất 0%, đa dạng hình thức góp</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl shrink-0">🛵</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base shrink-0">🛵</span>
                     <span>Miễn phí giao hàng nội thành TP.HCM</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="px-1.5 py-0.5 bg-red-600 text-white font-black text-[9px] rounded">
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-1.5 py-0.5 bg-red-600 text-white font-bold text-[8px] rounded">
                       HOME
                     </span>
                     <span>Giảm đến 500K khi góp qua Home Pay Later</span>
@@ -545,16 +554,16 @@ export default function MacBookDetail({
               {/* Banner Kredivo click mở Modal trả góp */}
               <div
                 onClick={() => setIsInstallmentOpen(true)}
-                className="block rounded-xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-shadow group cursor-pointer"
+                className="block rounded-lg overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-shadow group cursor-pointer"
               >
-                <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-5 border-b border-orange-100 flex flex-col items-center text-center">
-                  <div className="text-xs font-black text-orange-600 uppercase tracking-widest">Kredivo × Home PayLater</div>
-                  <div className="text-base font-black text-gray-900 mt-1">MUA TRƯỚC TRẢ SAU</div>
-                  <div className="flex items-center gap-3 my-2.5">
+                <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-4 border-b border-orange-100 flex flex-col items-center text-center">
+                  <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Kredivo × Home PayLater</div>
+                  <div className="text-sm font-black text-gray-900 mt-1">MUA TRƯỚC TRẢ SAU</div>
+                  <div className="flex items-center gap-3 my-2">
                     <span className="text-xs font-black text-[#d70018] bg-red-100 px-2.5 py-0.5 rounded">0% Lãi Suất</span>
                     <span className="text-xs font-black text-blue-600 bg-blue-100 px-2.5 py-0.5 rounded">5 Phút Duyệt</span>
                   </div>
-                  <p className="text-xs text-gray-500 font-medium">Đăng ký Online - Không Chứng Minh Thu Nhập</p>
+                  <p className="text-[10px] text-gray-500">Đăng ký Online - Không Chứng Minh Thu Nhập</p>
                 </div>
               </div>
             </div>
@@ -562,10 +571,10 @@ export default function MacBookDetail({
           </div>
 
           {/* ========================================================================= */}
-          {/* TABS CHÍNH SÁCH BÁN HÀNG - MÔ TẢ - BẢNG THÔNG SỐ GRADIENT ĐỎ CHUẨN MẪU     */}
+          {/* TABS CHÍNH SÁCH BÁN HÀNG - MÔ TẢ - BẢNG THÔNG SỐ GRADIENT ĐỎ               */}
           {/* ========================================================================= */}
           <div className="mt-14 border-t border-gray-200 pt-6">
-            <div className="flex items-center gap-8 border-b border-gray-200 text-sm md:text-base font-black uppercase tracking-wide">
+            <div className="flex items-center gap-8 border-b border-gray-200 text-xs md:text-sm font-bold uppercase tracking-wide">
               <button
                 type="button"
                 onClick={() => setActiveTab('policy')}
@@ -595,18 +604,18 @@ export default function MacBookDetail({
               </button>
             </div>
 
-            <div className="py-6 text-sm md:text-base text-gray-800 leading-relaxed">
+            <div className="py-6 text-xs md:text-sm text-gray-700 leading-relaxed">
               {activeTab === 'policy' && (
                 <div className="space-y-4">
-                  <h4 className="font-bold text-[#1e3a8a] text-base">Chính Sách Bảo Hành & Khuyến Mãi:</h4>
-                  <div className="whitespace-pre-line text-sm md:text-base leading-relaxed text-gray-800 bg-gray-50/60 p-5 rounded-xl border border-gray-200 font-medium">
-                    {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 500.000đ khi mua kèm Magic Mouse & Phụ kiện Hub Type-C.\n• Thu cũ lên đời trợ giá đến 90% - giá tốt nhất thị trường.`}
+                  <h4 className="font-bold text-[#1e3a8a] text-sm">Chính Sách Bảo Hành & Khuyến Mãi:</h4>
+                  <div className="whitespace-pre-line text-xs md:text-sm leading-relaxed text-gray-800 bg-gray-50/50 p-4 rounded-lg border border-gray-200">
+                    {product?.salesPolicy || `• Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.\n• Tặng 1 lần thay Pin miễn phí trọn đời máy.\n• Giảm giá 500.000đ khi mua kèm Magic Mouse & Phụ kiện Hub Type-C.\n• Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.`}
                   </div>
                 </div>
               )}
 
               {activeTab === 'desc' && (
-                <div className="space-y-3.5 whitespace-pre-line text-sm md:text-base leading-relaxed text-gray-800 font-medium">
+                <div className="space-y-3 whitespace-pre-line text-xs md:text-sm leading-relaxed text-gray-800">
                   {product?.description ? (
                     <div dangerouslySetInnerHTML={{ __html: product.description }} />
                   ) : (
@@ -617,11 +626,11 @@ export default function MacBookDetail({
                 </div>
               )}
 
-              {/* BẢNG THÔNG SỐ KỸ THUẬT GRADIENT ĐỎ CHUẨN FORM */}
+              {/* BẢNG THÔNG SỐ KỸ THUẬT GRADIENT ĐỎ */}
               {activeTab === 'specs' && (
                 <div className="max-w-4xl overflow-hidden rounded-xl border border-red-500 bg-white shadow-xs">
-                  <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-sm md:text-base uppercase py-4 px-6">
-                    <div className="col-span-4 flex items-center gap-2">
+                  <div className="grid grid-cols-12 bg-gradient-to-r from-[#d70018] to-[#ea580c] text-white font-black text-xs md:text-sm uppercase py-3.5 px-5">
+                    <div className="col-span-4 flex items-center gap-1.5">
                       <span>🔥 ĐẶC ĐIỂM NỔI BẬT</span>
                     </div>
                     <div className="col-span-8">
@@ -629,7 +638,7 @@ export default function MacBookDetail({
                     </div>
                   </div>
 
-                  <div className="divide-y divide-gray-200 text-sm md:text-base">
+                  <div className="divide-y divide-gray-200 text-xs md:text-sm">
                     {(Array.isArray(product?.specifications) && product.specifications.length > 0
                       ? product.specifications
                       : [
@@ -643,7 +652,7 @@ export default function MacBookDetail({
                           { key: 'Màu sắc', value: selectedColor || 'Tiêu chuẩn' },
                         ]
                     ).map((row: any, idx: number) => (
-                      <div key={idx} className="grid grid-cols-12 p-4 md:p-5 hover:bg-gray-50/80 transition-colors">
+                      <div key={idx} className="grid grid-cols-12 p-3.5 md:p-4 hover:bg-gray-50/70 transition-colors">
                         <div className="col-span-4 font-bold text-gray-900 pr-3">{row.key}</div>
                         <div className="col-span-8 text-gray-700 leading-relaxed font-medium">{row.value || 'Đang cập nhật'}</div>
                       </div>
@@ -656,7 +665,7 @@ export default function MacBookDetail({
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-sm font-bold text-gray-500 hover:text-[#d70018] flex items-center gap-1 cursor-pointer transition-colors"
+                  className="text-xs font-bold text-gray-500 hover:text-[#d70018] flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <span>{isExpanded ? '— Rút gọn nội dung' : '+ Xem thêm nội dung'}</span>
                 </button>
@@ -669,7 +678,7 @@ export default function MacBookDetail({
             <div className="mt-14 space-y-12">
               <div>
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-6">
-                  <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-wide">
+                  <h3 className="text-base md:text-lg font-black text-gray-900 uppercase tracking-wide">
                     Các Dòng MacBook Khác Cùng Quan Tâm
                   </h3>
                 </div>
@@ -680,7 +689,7 @@ export default function MacBookDetail({
                     const relPrice = Number(v.price || rel.price || 0);
 
                     return (
-                      <div key={rel.id} className="bg-white rounded-lg border border-gray-200 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all group">
+                      <div key={rel.id} className="bg-white rounded border border-gray-200 p-3 flex flex-col justify-between hover:shadow-lg transition-all group">
                         <Link href={`/san-pham/${rel.slug}`} className="w-full aspect-square flex items-center justify-center overflow-hidden mb-2">
                           <img
                             src={formatImg(v.images?.[0] || rel.imageUrl)}
@@ -689,18 +698,18 @@ export default function MacBookDetail({
                           />
                         </Link>
                         <div>
-                          <span className="text-[10px] font-black text-gray-400 uppercase">APPLE</span>
-                          <Link href={`/san-pham/${rel.slug}`} className="block font-bold text-xs sm:text-sm text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
+                          <span className="text-[9px] font-bold text-gray-400 uppercase">APPLE</span>
+                          <Link href={`/san-pham/${rel.slug}`} className="block font-bold text-xs text-gray-900 hover:text-[#d70018] line-clamp-2 mt-0.5 leading-snug">
                             {rel.name}
                           </Link>
-                          <div className="text-sm sm:text-base font-black text-[#d70018] mt-1.5">{formatVnd(relPrice)}</div>
+                          <div className="text-xs font-black text-[#d70018] mt-1.5">{formatVnd(relPrice)}</div>
                         </div>
                         <button
                           type="button"
                           onClick={() => router.push(`/san-pham/${rel.slug}`)}
-                          className="w-full mt-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                          className="w-full mt-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
                         >
-                          <ShoppingCart size={14} />
+                          <ShoppingCart size={12} />
                           <span>XEM CHI TIẾT</span>
                         </button>
                       </div>
