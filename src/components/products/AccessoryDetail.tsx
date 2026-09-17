@@ -9,17 +9,24 @@ import {
   Minus,
   Plus,
   Video,
-  FileText,
-  Sparkles,
+  Check,
+  ShoppingCart,
+  Zap,
   PhoneCall,
   MessageCircle,
-  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Link2,
+  Banknote,
+  RotateCcw,
+  Truck,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
+import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
 interface Props {
   initialProduct: any;
@@ -27,6 +34,20 @@ interface Props {
   baseSlug: string;
   urlStorage: string; // Đóng vai trò là phân loại / công suất / chiều dài (20W, 1m, 2m,...)
 }
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+const formatImg = (url?: string): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600';
+  }
+  const clean = url.trim();
+  if (clean.startsWith('http') || clean.startsWith('data:')) {
+    if (clean.includes('localhost:')) return clean.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
+    return clean;
+  }
+  return `${API_URL}/${clean.replace(/^\//, '')}`;
+};
 
 export default function AccessoryDetail({
   initialProduct,
@@ -36,198 +57,302 @@ export default function AccessoryDetail({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialProId = searchParams?.get('proid') || '';
 
-  const cartContext = useCart();
-  const { addToCart, setIsCartOpen } = cartContext as any;
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState<any>(initialProduct);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [recentViewed, setRecentViewed] = useState<any[]>([]);
+
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
+  const [isImageTransitioning, setIsImageTransitioning] = useState<boolean>(false);
+
+  const [activeTab, setActiveTab] = useState<'desc' | 'policy' | 'specs'>('desc');
+  const [isDescExpanded, setIsDescExpanded] = useState<boolean>(false);
+  const [isInstallmentOpen, setIsInstallmentOpen] = useState<boolean>(false);
+
   const [toast, setToast] = useState<{ show: boolean; message: string }>({
     show: false,
     message: '',
   });
 
   useEffect(() => {
+    if (initialProduct) {
+      setProduct(initialProduct);
+    }
+  }, [initialProduct]);
+
+  useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
 
-    // Đọc phân loại từ variant (công suất/độ dài/loại cổng)
-    const defaultType =
-      product.variants[0]?.storage ||
-      product.variants[0]?.type ||
-      product.variants[0]?.version ||
-      'Tiêu chuẩn';
+    const firstValidVar = product.variants.find((v: any) => {
+      const st = (v.storage || v.type || v.version || '').trim().toUpperCase();
+      return st && st !== 'TIÊU CHUẨN';
+    }) || product.variants[0];
+
+    const defaultType = firstValidVar?.storage || firstValidVar?.type || firstValidVar?.version || 'Tiêu chuẩn';
     const activeType = (urlStorage || defaultType).toUpperCase();
 
-    let initVar = null;
-    if (initialProId) {
-      initVar = product.variants.find((v: any) => String(v.id) === initialProId);
-    }
-    if (!initVar) {
-      initVar =
-        product.variants.find(
-          (v: any) =>
-            (v.storage || v.type || v.version || 'Tiêu chuẩn').toUpperCase() === activeType &&
-            Number(v.stock || 0) > 0
-        ) ||
-        product.variants.find(
-          (v: any) => (v.storage || v.type || v.version || 'Tiêu chuẩn').toUpperCase() === activeType
-        ) ||
-        product.variants[0];
-    }
-
     setSelectedType(activeType);
-    if (!selectedColor) {
-      setSelectedColor(initVar?.color || product.variants[0]?.color || '');
-    }
+    setSelectedColor(firstValidVar?.color || '');
 
     // Lấy danh sách phụ kiện liên quan từ DB
-    fetch(`https://fogo-store-api.onrender.com/api/products/filter?category=phu-kien`, { cache: 'no-store' })
+    fetch(`${API_URL}/api/products/filter?category=phu-kien`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
-        if (resJson.success && Array.isArray(resJson.data)) {
-          setRelatedProducts(resJson.data.filter((p: any) => p.id !== product.id).slice(0, 5));
+        let items = resJson.success && Array.isArray(resJson.data) ? resJson.data : [];
+        if (items.length === 0) {
+          return fetch(`${API_URL}/api/products`, { cache: 'no-store' })
+            .then((r) => r.json())
+            .then((j) => (j.success && Array.isArray(j.data) ? j.data : []));
         }
+        return items;
       })
-      .catch(() => setRelatedProducts([]));
-  }, [product, urlStorage, baseSlug, initialProId]);
+      .then((allItems: any[]) => {
+        const filtered = allItems.filter((p: any) => p.id !== product.id);
+        const mapped = filtered.map((p: any) => {
+          const vars: any[] = Array.isArray(p.variants) ? p.variants : [];
+          const bestVar = vars.find((v: any) => Number(v.price) > 0 && Array.isArray(v.images) && v.images.length > 0) || vars[0] || {};
 
-  // Danh sách các tùy chọn phân loại (Ví dụ: 20W, 35W hoặc 1m, 2m)
+          const realPrice = Number(bestVar.price || p.price || 0);
+          const realImage = formatImg(bestVar.images?.[0] || p.images?.[0] || p.imageUrl || p.image);
+
+          return {
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            realPrice,
+            priceDisplay: realPrice > 0 ? realPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+            imageUrl: realImage,
+            href: `/san-pham/${p.slug}`,
+          };
+        });
+
+        const validList = mapped.filter((p: any) => p.realPrice > 0);
+        setRelatedProducts(validList.length >= 5 ? validList.slice(0, 5) : mapped.slice(0, 5));
+      })
+      .catch((err) => {
+        console.error('Lỗi khi fetch sản phẩm liên quan:', err);
+        setRelatedProducts([]);
+      });
+
+    // Cập nhật sản phẩm đã xem vào localStorage
+    try {
+      const saved = localStorage.getItem('fogo_recent_viewed');
+      let viewedList: any[] = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(viewedList)) viewedList = [];
+
+      const currentItem = {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        imageUrl: formatImg(product.images?.[0] || product.imageUrl || product.variants?.[0]?.images?.[0]),
+        currentPrice: product.price ? Number(product.price).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+        href: `/san-pham/${currentSlug || product.slug}`,
+      };
+
+      const updatedViewed = [currentItem, ...viewedList.filter((it: any) => it.id !== product.id)].slice(0, 10);
+      localStorage.setItem('fogo_recent_viewed', JSON.stringify(updatedViewed));
+      setRecentViewed(updatedViewed.filter((it: any) => it.id !== product.id));
+    } catch (e) {
+      console.warn('Lỗi đọc recent viewed:', e);
+    }
+  }, [product, urlStorage, currentSlug]);
+
   const typeList = useMemo(() => {
     if (!product?.variants) return [];
     const list = product.variants
       .map((v: any) => (v.storage || v.type || v.version || '').trim())
-      .filter(Boolean);
+      .filter((s: string) => s && s.toUpperCase() !== 'TIÊU CHUẨN');
     return Array.from(new Set(list));
   }, [product]);
 
-  // Danh sách màu sắc
-  const allColorOptions = useMemo(() => {
-    if (!product?.variants) return [];
+  const currentColorOptions = useMemo(() => {
+    if (!product?.variants || product.variants.length === 0) return [];
+
+    const scopedVariants = selectedType
+      ? product.variants.filter((v: any) => (v.storage || v.type || v.version || 'Tiêu chuẩn').toUpperCase() === selectedType.toUpperCase())
+      : product.variants;
+
+    const targetList = scopedVariants.length > 0 ? scopedVariants : product.variants;
     const map = new Map<string, any>();
-    product.variants.forEach((v: any) => {
-      if (v.color && !map.has(v.color.trim())) {
-        map.set(v.color.trim(), v);
+
+    targetList.forEach((v: any) => {
+      const c = (v.color || '').trim();
+      if (c && !map.has(c)) {
+        map.set(c, v);
       }
     });
+
     return Array.from(map.entries()).map(([colorName, sampleVariant]) => ({
       color: colorName,
       sampleVariant,
     }));
-  }, [product]);
+  }, [product, selectedType]);
 
-  // Biến thể khớp Phân loại & Màu
   const currentVariant = useMemo(() => {
-    if (!product?.variants) return null;
-    const exact = product.variants.find(
-      (v: any) =>
-        (v.storage || v.type || v.version || 'Tiêu chuẩn').toUpperCase() === selectedType.toUpperCase() &&
-        (v.color || '').toLowerCase() === selectedColor.toLowerCase()
-    );
-    if (exact) return exact;
+    if (!product?.variants || product.variants.length === 0) return null;
+
+    if (selectedType) {
+      const exact = product.variants.find(
+        (v: any) =>
+          (v.storage || v.type || v.version || 'Tiêu chuẩn').toUpperCase() === selectedType.toUpperCase() &&
+          (v.color || '').toLowerCase() === selectedColor.toLowerCase()
+      );
+      if (exact) return exact;
+    }
 
     const sample = product.variants.find(
       (v: any) => (v.color || '').toLowerCase() === selectedColor.toLowerCase()
     );
+
+    const samplePrice = sample?.price || product.variants[0]?.price || 0;
+
     return {
-      id: `out-of-stock-${selectedType.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
+      id: sample?.id || `out-of-stock-${selectedType.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
       storage: selectedType,
       color: selectedColor,
-      price: sample?.price || product.variants[0]?.price || 0,
+      price: samplePrice,
       originalPrice: sample?.originalPrice || product.variants[0]?.originalPrice || 0,
-      stock: 0,
+      stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
       images: sample?.images || product.variants[0]?.images || [],
     };
   }, [product, selectedType, selectedColor]);
 
+  const imagesList: string[] = useMemo(() => {
+    const list: string[] = [];
+
+    if (currentVariant?.images && Array.isArray(currentVariant.images)) {
+      currentVariant.images.forEach((img: string) => {
+        if (img && !list.includes(img)) list.push(img);
+      });
+    }
+
+    if (product?.variants && Array.isArray(product.variants)) {
+      product.variants.forEach((v: any) => {
+        if (Array.isArray(v.images)) {
+          v.images.forEach((img: string) => {
+            if (img && !list.includes(img)) list.push(img);
+          });
+        }
+      });
+    }
+
+    if (product?.images && Array.isArray(product.images)) {
+      product.images.forEach((img: string) => {
+        if (img && !list.includes(img)) list.push(img);
+      });
+    } else if (product?.imageUrl && !list.includes(product.imageUrl)) {
+      list.push(product.imageUrl);
+    }
+
+    return list.length > 0 ? list : ['https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600'];
+  }, [currentVariant, product]);
+
+  const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
+
   const isOutOfStock = useMemo(() => {
-    return !currentVariant || Number(currentVariant.stock || 0) <= 0;
+    if (!currentVariant) return true;
+    const price = Number(currentVariant.price || 0);
+    return price <= 0;
   }, [currentVariant]);
 
   const handleSelectType = (tp: string) => {
     if (selectedType.toUpperCase() === tp.toUpperCase()) return;
-    const matched = product.variants.find(
+
+    const matched = product?.variants?.find(
       (v: any) =>
         (v.storage || v.type || v.version || 'Tiêu chuẩn').toUpperCase() === tp.toUpperCase() &&
         (v.color || '').toLowerCase() === selectedColor.toLowerCase()
-    ) || product.variants.find((v: any) => (v.storage || v.type || v.version || '').toUpperCase() === tp.toUpperCase());
+    ) || product?.variants?.find((v: any) => (v.storage || v.type || v.version || '').toUpperCase() === tp.toUpperCase());
 
+    const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
+    const targetType = tp.toLowerCase().replace(/\//g, '-');
     const proidParam = matched ? `?proid=${matched.id}` : '';
-    router.push(`/san-pham/${baseSlug}-${tp.toLowerCase()}${proidParam}`);
+
+    router.replace(`/san-pham/${cleanBase}-${targetType}${proidParam}`);
   };
 
   const handleSelectColor = (colorName: string) => {
-    setSelectedColor(colorName);
-    setCurrentImageIndex(0);
+    if (selectedColor.toLowerCase() === colorName.toLowerCase()) return;
 
-    const matched = product.variants.find(
-      (v: any) =>
-        (v.storage || v.type || v.version || 'Tiêu chuẩn').toUpperCase() === selectedType.toUpperCase() &&
-        (v.color || '').toLowerCase() === colorName.toLowerCase()
+    setIsImageTransitioning(true);
+    setSelectedColor(colorName);
+
+    const matched = product?.variants?.find(
+      (v: any) => (v.color || '').toLowerCase() === colorName.toLowerCase()
     );
+    if (matched && matched.images && matched.images.length > 0) {
+      const idx = imagesList.findIndex((img) => img === matched.images[0]);
+      setCurrentImageIndex(idx !== -1 ? idx : 0);
+    } else {
+      setCurrentImageIndex(0);
+    }
+
+    setTimeout(() => {
+      setIsImageTransitioning(false);
+    }, 150);
 
     const nextId = matched ? matched.id : `mock-${selectedType.toLowerCase()}-${encodeURIComponent(colorName)}`;
 
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `/san-pham/${baseSlug}-${selectedType.toLowerCase()}?proid=${nextId}`);
+      const tpPath = selectedType ? `-${selectedType.toLowerCase()}` : '';
+      window.history.replaceState(null, '', `/san-pham/${baseSlug}${tpPath}?proid=${nextId}`);
     }
   };
 
-  const imagesList: string[] = useMemo(() => {
-    if (currentVariant?.images && currentVariant.images.length > 0) return currentVariant.images;
-    return product?.variants?.[0]?.images || ['https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600'];
-  }, [currentVariant, product]);
-
-  const formatVnd = (num: number) => (!num || num <= 0 ? '0đ' : num.toLocaleString('vi-VN') + 'đ');
-
-  // Thêm vào giỏ hàng thông thường
-  const handleAddToCartOnly = () => {
-    if (!currentVariant || Number(currentVariant.stock || 0) <= 0) return;
-
-    addToCart({
-      id: currentVariant.id,
-      name: `${product.name} ${typeList.length > 1 ? selectedType : ''}`.trim(),
-      modelSlug: baseSlug,
-      price: currentVariant.price,
-      originalPrice: currentVariant.originalPrice || currentVariant.price,
-      storage: selectedType,
-      color: selectedColor,
-      imageUrl: imagesList[currentImageIndex] || imagesList[0],
-      quantity: quantity,
-    });
-
-    setToast({
-      show: true,
-      message: `Đã thêm ${product.name} vào giỏ hàng thành công!`,
-    });
+  const formatVnd = (num: any) => {
+    const parsedNum = Number(num);
+    if (!parsedNum || parsedNum <= 0 || isNaN(parsedNum)) {
+      return 'Liên hệ';
+    }
+    return parsedNum.toLocaleString('vi-VN') + 'đ';
   };
 
-  // Mua ngay: Thêm vào giỏ hàng, đóng Cart Drawer và nhảy thẳng tới /thanh-toan
-  const handleBuyNowDirect = () => {
-    if (!currentVariant || Number(currentVariant.stock || 0) <= 0) return;
+  const cleanProductName = product?.name || 'Phụ kiện';
+  const currentPrice = currentVariant?.price ?? product?.price ?? 0;
+  const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
 
-    // Chặn Drawer mở lên gây nháy giỏ hàng
-    if (typeof setIsCartOpen === 'function') {
-      setIsCartOpen(false);
-    }
+  const formattedDescription = useMemo(() => {
+    if (!product?.description) return '';
+    return String(product.description)
+      .replace(/src="\/\//g, 'src="https://')
+      .replace(/src='\/\//g, "src='https://");
+  }, [product?.description]);
+
+  const handleAddToCart = (redirectCart = false) => {
+    if (isOutOfStock) return;
 
     addToCart({
       id: currentVariant.id,
-      name: `${product.name} ${typeList.length > 1 ? selectedType : ''}`.trim(),
+      name: `${cleanProductName} ${selectedType !== 'TIÊU CHUẨN' ? selectedType : ''}`.trim(),
       modelSlug: baseSlug,
-      price: currentVariant.price,
-      originalPrice: currentVariant.originalPrice || currentVariant.price,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice || currentPrice,
       storage: selectedType,
       color: selectedColor,
-      imageUrl: imagesList[currentImageIndex] || imagesList[0],
+      imageUrl: displayImage,
       quantity: quantity,
     });
 
-    router.push('/thanh-toan');
+    if (redirectCart) {
+      router.push('/gio-hang');
+    } else {
+      setToast({
+        show: true,
+        message: `Đã thêm ${cleanProductName} vào giỏ hàng!`,
+      });
+    }
+  };
+
+  const handleCopyUrl = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href);
+      setToast({ show: true, message: 'Đã sao chép liên kết sản phẩm!' });
+    }
   };
 
   return (
@@ -244,39 +369,42 @@ export default function AccessoryDetail({
           <Navbar />
         </div>
 
-        {/* Breadcrumb */}
-        <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-2 px-4 text-[11px] text-gray-600">
-          <div className="max-w-7xl mx-auto flex items-center gap-1.5 truncate">
+        {/* BREADCRUMB */}
+        <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-3 px-4 text-xs text-gray-600">
+          <div className="max-w-7xl mx-auto flex items-center gap-2 truncate">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
             <span>/</span>
             <Link href="/phu-kien" className="hover:text-[#d70018]">Phụ kiện chính hãng</Link>
             <span>/</span>
-            <span className="text-gray-900 font-semibold">{product.name}</span>
+            <span className="text-gray-900 font-bold">{cleanProductName} {selectedType !== 'TIÊU CHUẨN' ? selectedType : ''}</span>
           </div>
         </div>
 
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Gallery ảnh Phụ kiện */}
-            <div className="lg:col-span-5 flex flex-col items-center">
-              <div className="relative w-full aspect-square border border-gray-200 rounded-sm p-4 flex items-center justify-center bg-white">
+        {/* MAIN CONTAINER */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (4/12 cột) */}
+            <div className="lg:col-span-4 flex flex-col items-center w-full">
+              <div className="relative w-full aspect-square max-w-[480px] border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
                 <img
-                  src={imagesList[currentImageIndex] || imagesList[0]}
+                  src={displayImage}
                   alt={product.name}
-                  className="max-h-full max-w-full object-contain drop-shadow-sm transition-all duration-200"
+                  className={`w-full h-full object-contain pointer-events-none transition-all duration-300 ease-out ${
+                    isImageTransitioning ? 'opacity-20 scale-95' : 'opacity-100 scale-100'
+                  }`}
                 />
                 {imagesList.length > 1 && (
                   <>
                     <button
                       onClick={() => setCurrentImageIndex((p) => (p - 1 + imagesList.length) % imagesList.length)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
                       <ChevronLeft size={18} />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((p) => (p + 1) % imagesList.length)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow border border-gray-200 flex items-center justify-center text-gray-600 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
                       <ChevronRight size={18} />
                     </button>
@@ -284,85 +412,82 @@ export default function AccessoryDetail({
                 )}
               </div>
 
-              <div className="flex items-center gap-2 mt-4 overflow-x-auto max-w-full pb-1">
-                <div className="w-14 h-14 border border-red-500 rounded-sm p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
+              {/* Thumbnails */}
+              <div className="flex items-center gap-2 mt-3.5 overflow-x-auto max-w-full pb-1">
+                <div className="w-14 h-14 border border-red-500 rounded-xl p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
                   <Video size={16} />
-                  <span className="font-bold scale-90">Video</span>
+                  <span className="font-bold">Video</span>
                 </div>
                 {imagesList.map((img, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setCurrentImageIndex(idx)}
-                    className={`w-14 h-14 border p-1 rounded-sm bg-white shrink-0 cursor-pointer transition-all ${
-                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs' : 'border-gray-200 hover:border-gray-300'
+                    onClick={() => {
+                      setIsImageTransitioning(true);
+                      setCurrentImageIndex(idx);
+                      setTimeout(() => setIsImageTransitioning(false), 150);
+                    }}
+                    className={`w-14 h-14 border rounded-xl p-0.5 bg-white shrink-0 cursor-pointer transition-all ${
+                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-contain" />
+                    <img src={formatImg(img)} alt="" className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Chi tiết thông tin Phụ kiện */}
-            <div className="lg:col-span-7 space-y-4 text-xs">
+            {/* CỘT 2: THÔNG TIN MUA HÀNG (5/12 cột) */}
+            <div className="lg:col-span-5 space-y-4 w-full">
               <div>
-                <span className="text-[10px] font-bold text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded-xs">
-                   Phụ Kiện Apple Chính Hãng
-                </span>
-                <h1 className="text-xl md:text-2xl font-black text-gray-900 leading-snug mt-1">
-                  {product.name}
+                <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
+                  {cleanProductName} {selectedType !== 'TIÊU CHUẨN' ? selectedType : ''} - Chính hãng Apple VN
                 </h1>
-                <div className="flex items-center gap-1 text-amber-400 mt-1">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i}>★</span>
-                  ))}
-                  <span className="text-[11px] text-gray-500 ml-1">Bảo hành chính hãng 12 tháng 1 đổi 1</span>
-                </div>
               </div>
 
-              {/* Khung Giá bán */}
-              <div className="pt-2 border-t border-gray-100">
-                <span className="text-gray-500 block text-[11px]">Giá bán ưu đãi</span>
-                <div className="flex items-baseline gap-2.5 mt-0.5">
-                  <span className="text-2xl md:text-3xl font-black text-[#d70018]">
-                    {formatVnd(currentVariant?.price || 0)}
+              {/* Mức giá */}
+              <div className="pt-0.5">
+                <span className="text-gray-500 block text-xs font-bold uppercase tracking-wider">Giá bán ưu đãi:</span>
+                <div className="flex items-baseline gap-3 mt-1 flex-wrap">
+                  <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#d70018]">
+                    {formatVnd(currentPrice)}
                   </span>
-                  {currentVariant?.originalPrice > currentVariant?.price && (
-                    <span className="text-xs text-gray-400 line-through">
-                      {formatVnd(currentVariant.originalPrice)}
+                  {currentOriginalPrice > currentPrice && currentPrice > 0 && (
+                    <span className="text-sm sm:text-base text-gray-400 line-through font-semibold">
+                      {formatVnd(currentOriginalPrice)}
                     </span>
                   )}
-                  {isOutOfStock && (
-                    <span className="bg-red-50 text-[#d70018] border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-xs ml-2">
+                  {isOutOfStock ? (
+                    <span className="bg-red-50 text-[#d70018] border border-red-200 text-xs font-bold px-2 py-0.5 rounded">
                       Tạm hết hàng
                     </span>
+                  ) : (
+                    <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-bold px-2 py-0.5 rounded">
+                      Sẵn hàng
+                    </span>
                   )}
                 </div>
               </div>
 
-              {/* Phân loại tùy chọn (nếu có hơn 1 phiên bản) */}
-              {typeList.length > 1 && (
-                <div className="space-y-1.5 pt-2">
-                  <span className="font-semibold text-gray-700">Chọn phiên bản / Công suất:</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {/* CHỌN PHÂN LOẠI / CÔNG SUẤT (TO LÊN 2 SIZE, NẰM HÀNG NGANG) */}
+              {typeList.length > 0 && (
+                <div>
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
+                    Chọn phiên bản / Công suất:
+                  </label>
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
                     {typeList.map((tp) => {
-                      const isSelected = selectedType.toUpperCase() === tp.toUpperCase();
+                      const isSelected = selectedType.toLowerCase() === tp.toLowerCase();
                       return (
                         <button
                           key={tp}
                           onClick={() => handleSelectType(tp)}
-                          className={`relative p-2 border rounded-sm text-center transition-all cursor-pointer ${
-                            isSelected ? 'border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
+                          className={`min-w-[76px] px-4 py-2.5 text-sm sm:text-base font-black rounded-xl border-2 text-center shrink-0 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-[#d70018] text-[#d70018] bg-white shadow-xs'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
                           }`}
                         >
-                          <span className={`block font-black text-xs ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
-                            {tp}
-                          </span>
-                          {isSelected && (
-                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
-                              ✓
-                            </div>
-                          )}
+                          {tp}
                         </button>
                       );
                     })}
@@ -370,36 +495,31 @@ export default function AccessoryDetail({
                 </div>
               )}
 
-              {/* Tùy chọn màu sắc (nếu có) */}
-              {allColorOptions.length > 0 && allColorOptions[0]?.color && (
-                <div className="space-y-1.5 pt-2">
-                  <span className="font-semibold text-gray-700">Màu sắc:</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {allColorOptions.map(({ color, sampleVariant }) => {
+              {/* CHỌN MÀU SẮC (TO LÊN 2 SIZE, NẰM HÀNG NGANG) */}
+              {currentColorOptions.length > 0 && currentColorOptions[0]?.color && (
+                <div>
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
+                    Màu sắc:
+                  </label>
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                    {currentColorOptions.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
-                      const displayImg = sampleVariant?.images?.[0] || imagesList[0];
+                      const thumb = sampleVariant?.images?.[0] || imagesList[0];
 
                       return (
                         <button
                           key={color}
                           onClick={() => handleSelectColor(color)}
-                          className={`relative p-1.5 border rounded-sm flex items-center gap-2 transition-all cursor-pointer ${
-                            isSelected ? 'border-[#d70018] bg-white shadow-2xs' : 'border-gray-200 hover:border-gray-300 bg-white'
+                          className={`px-4 py-2 rounded-xl border-2 flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-[#d70018] text-[#d70018] font-black bg-white shadow-xs'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
                           }`}
                         >
-                          <div className="w-9 h-9 shrink-0 border border-gray-100 rounded-xs p-0.5 bg-gray-50 flex items-center justify-center">
-                            <img src={displayImg} alt={color} className="w-full h-full object-contain" />
+                          <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
+                            <img src={formatImg(thumb)} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <div className="text-left overflow-hidden">
-                            <span className={`block font-bold text-[11px] truncate ${isSelected ? 'text-[#d70018]' : 'text-gray-800'}`}>
-                              {color}
-                            </span>
-                          </div>
-                          {isSelected && (
-                            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[#d70018] text-white flex items-center justify-center text-[9px] font-bold">
-                              ✓
-                            </div>
-                          )}
+                          <span className="text-sm sm:text-base font-bold whitespace-nowrap">{color}</span>
                         </button>
                       );
                     })}
@@ -407,138 +527,423 @@ export default function AccessoryDetail({
                 </div>
               )}
 
-              {/* Chọn số lượng */}
-              {!isOutOfStock && currentVariant && Number(currentVariant.stock || 0) > 0 && (
-                <div className="flex items-center gap-3 pt-2">
-                  <span className="font-semibold text-gray-700">Số lượng:</span>
-                  <div className="flex items-center border border-gray-300 rounded-xs overflow-hidden">
+              {/* SỐ LƯỢNG */}
+              {!isOutOfStock && (
+                <div className="pt-1 flex items-center gap-3">
+                  <span className="text-sm sm:text-base font-black text-gray-900">Số lượng:</span>
+                  <div className="flex items-center border border-gray-300 rounded-xl px-1">
                     <button
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
-                      <Minus size={13} />
+                      <Minus size={15} />
                     </button>
-                    <span className="w-10 h-8 flex items-center justify-center text-xs font-bold text-gray-900 border-x border-gray-300">
-                      {quantity}
-                    </span>
+                    <span className="w-10 text-center text-sm sm:text-base font-black text-gray-900">{quantity}</span>
                     <button
-                      onClick={() => setQuantity((q) => Math.min(Number(currentVariant.stock), q + 1))}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
+                      onClick={() => setQuantity((q) => Math.min(Number(currentVariant?.stock || 99), q + 1))}
+                      className="w-8 h-8 flex items-center justify-center text-base font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
-                      <Plus size={13} />
+                      <Plus size={15} />
                     </button>
                   </div>
-                  <span className="text-[11px] text-gray-500">(Còn {currentVariant.stock} sản phẩm sẵn có)</span>
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">
+                    (Còn sẵn hàng)
+                  </span>
                 </div>
               )}
 
-              {/* Banner Cam kết phụ kiện */}
-              <div className="bg-[#f8f9fa] border border-gray-200 p-3 rounded-sm flex items-center justify-between mt-2">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck size={20} className="text-[#00a859]" />
-                  <span className="font-bold text-xs text-gray-800">Cam kết 100% chính hãng Apple • Lỗi 1 đổi 1 ngay lập tức</span>
-                </div>
-                <span className="bg-[#00a859] text-white font-bold px-2 py-0.5 rounded-xs text-[10px]">
-                  Bảo hành 12T
-                </span>
-              </div>
-
-              {/* Cụm nút mua hàng */}
+              {/* NÚT MUA HÀNG */}
               {isOutOfStock ? (
                 <div className="pt-2 space-y-2">
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-sm text-center">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
                     <p className="text-xs font-bold text-[#d70018]">
-                      Phụ kiện {product.name} hiện đang tạm hết hàng.
+                      Phụ kiện {cleanProductName} hiện đang tạm hết hàng.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <a
                       href="tel:0566003333"
-                      className="w-full py-3 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-xs uppercase rounded-sm shadow flex items-center justify-center gap-2 text-center"
+                      className="w-full py-2.5 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-xs uppercase rounded-lg shadow flex items-center justify-center gap-2 text-center"
                     >
                       <PhoneCall size={16} />
-                      <span>GỌI HOTLINE (056.600.3333)</span>
+                      <span>GỌI 056.600.3333</span>
                     </a>
                     <a
                       href="https://zalo.me"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-3 border-2 border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-xs uppercase rounded-sm flex items-center justify-center gap-2 text-center"
+                      className="w-full py-2.5 border-2 border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-xs uppercase rounded-lg flex items-center justify-center gap-2 text-center"
                     >
                       <MessageCircle size={16} />
-                      <span>CHAT ZALO TƯ VẤN</span>
+                      <span>CHAT ZALO</span>
                     </a>
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button
-                    type="button"
-                    onClick={handleAddToCartOnly}
-                    className="w-full py-3 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 font-bold text-xs uppercase rounded-sm transition-colors text-center cursor-pointer"
+                    onClick={() => handleAddToCart(false)}
+                    className="py-3 px-3 border-2 border-[#d70018] text-[#d70018] hover:bg-red-50 rounded-lg font-black text-xs uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    THÊM VÀO GIỎ
+                    <ShoppingCart size={16} />
+                    <span>THÊM VÀO GIỎ</span>
                   </button>
                   <button
-                    type="button"
-                    onClick={handleBuyNowDirect}
-                    className="w-full py-3 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-xs uppercase rounded-sm shadow text-center cursor-pointer"
+                    onClick={() => handleAddToCart(true)}
+                    className="py-3 px-3 bg-[#d70018] hover:bg-[#b50014] text-white rounded-lg font-black text-xs uppercase tracking-wide transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
                   >
-                    MUA NGAY
+                    <Zap size={16} />
+                    <span>MUA NGAY</span>
                   </button>
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Mô tả phụ kiện */}
-          <div className="mt-12 bg-white p-6 rounded-sm border border-gray-200">
-            <h2 className="text-base font-black text-gray-900 uppercase tracking-wide mb-4 pb-2 border-b border-gray-200 flex items-center gap-2">
-              <FileText size={18} className="text-[#d70018]" />
-              <span>Đặc Điểm Nổi Bật Của {product.name}</span>
-            </h2>
-            <div className="text-xs text-gray-700 leading-relaxed space-y-3 max-w-4xl">
-              <p>
-                <strong className="text-gray-900">{product.name}</strong> được sản xuất theo quy chuẩn khắt khe từ Apple, đảm bảo hiệu suất truyền tải tối ưu, công nghệ sạc thông minh bảo vệ tuổi thọ pin thiết bị và độ bền bỉ vượt trội qua thời gian.
-              </p>
-            </div>
-          </div>
+              {/* BỘ NÚT KREDIVO TRẢ SAU & ƯU ĐÃI BAOKIM */}
+              <div className="pt-2 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsInstallmentOpen(true)}
+                  className="w-full py-3 bg-[#fcee21] hover:bg-[#ebd800] rounded-xl flex flex-col items-center justify-center text-[#1e3a8a] shadow-xs cursor-pointer transition-all active:scale-98 border border-yellow-300"
+                >
+                  <span className="font-black text-xs sm:text-sm tracking-wide uppercase">
+                    MUA NGAY - TRẢ SAU
+                  </span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="font-bold text-[11px] text-gray-800">qua</span>
+                    <span className="font-black text-xs text-[#ea580c] tracking-tight">Kredivo</span>
+                  </div>
+                </button>
 
-          {/* Phụ kiện khác cùng danh mục */}
-          {relatedProducts.length > 0 && (
-            <div className="mt-12">
-              <h3 className="text-base font-black text-gray-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <Sparkles size={18} className="text-[#d70018]" />
-                <span>Phụ Kiện Khác Thường Được Mua Kèm</span>
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
-                {relatedProducts.map((rel) => {
-                  const v = rel.variants?.[0] || {};
-                  return (
-                    <div key={rel.id} className="bg-white rounded-sm p-3 flex flex-col justify-between shadow-xs border border-gray-200">
-                      <Link href={`/san-pham/${rel.slug}`} className="w-full h-36 flex items-center justify-center p-2">
-                        <img
-                          src={v.images?.[0] || 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=300'}
-                          alt={rel.name}
-                          className="max-h-full max-w-full object-contain hover:scale-105 transition-transform"
-                        />
-                      </Link>
-                      <div>
-                        <Link href={`/san-pham/${rel.slug}`} className="font-bold text-xs text-gray-800 hover:text-[#d70018] line-clamp-2">
-                          {rel.name}
-                        </Link>
-                        <span className="text-sm font-black text-[#d70018] mt-2 block">
-                          {(v.price || 0).toLocaleString('vi-VN')} đ
+                <div className="w-full border border-gray-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+                  <div className="bg-[#e5e7eb] py-2 px-3 text-center border-b border-gray-200">
+                    <h4 className="text-xs font-black text-gray-800 flex items-center justify-center gap-1.5 flex-wrap">
+                      <span>ƯU ĐÃI KHI THANH TOÁN</span>
+                      <span className="text-[#ea580c]">Kredivo</span>
+                    </h4>
+                    <p className="text-[10px] text-gray-600 font-medium mt-0.5">
+                      (SỬ DỤNG KHI XÁC NHẬN KHOẢN VAY TRÊN TRANG CỦA TỔ CHỨC TÀI CHÍNH)
+                    </p>
+                  </div>
+                  <div className="p-3 flex items-center justify-between text-[11px] text-gray-500">
+                    <span>Hỗ trợ trả góp linh hoạt 3 - 6 - 12 tháng</span>
+                    <div className="flex items-center gap-1 text-[10px] font-bold">
+                      <span className="text-gray-400">Powered by</span>
+                      <span className="text-emerald-600 font-black">baokim</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs font-bold text-gray-700">Chia sẻ:</span>
+                  <a
+                    href="https://facebook.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#1877f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    f
+                  </a>
+                  <a
+                    href="https://messenger.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#0084ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+                  >
+                    <MessageCircle size={13} />
+                  </a>
+                  <a
+                    href="https://twitter.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#1da1f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    t
+                  </a>
+                  <a
+                    href="https://pinterest.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#bd081c] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    p
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className="w-7 h-7 rounded-full bg-[#0099ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                    title="Sao chép liên kết"
+                  >
+                    <Link2 size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (3/12 cột - THẲNG TRỤC 100%, ICON & CHỮ LỚN HƠN 3PX) */}
+            <div className="lg:col-span-3 space-y-4 w-full">
+              <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
+                <div>
+                  <h3 className="font-black text-base text-gray-900 mb-4">
+                    Chính sách bán hàng
+                  </h3>
+                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                        <Check size={15} strokeWidth={3} />
+                      </div>
+                      <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Banknote size={17} />
+                      </div>
+                      <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <RotateCcw size={16} />
+                      </div>
+                      <span className="leading-snug">Ưu đãi lỗi đổi mới 100% trong 12 tháng</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-100 pt-4">
+                  <h3 className="font-black text-base text-gray-900 mb-4">
+                    Thông tin thêm
+                  </h3>
+                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                        <span className="px-1 py-0.5 border border-blue-600 text-blue-600 font-black rounded text-[10px] leading-none">
+                          VISA
                         </span>
                       </div>
+                      <span className="leading-snug">Trả góp lãi suất 0%, đa dạng hình thức góp</span>
                     </div>
-                  );
-                })}
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                        <Truck size={17} />
+                      </div>
+                      <span className="leading-snug">Miễn phí giao hàng nội thành TP.HCM</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                        <span className="px-1 py-0.5 bg-red-600 text-white font-black rounded text-[9px] leading-none">
+                          HOME
+                        </span>
+                      </div>
+                      <span className="leading-snug">Giảm đến 500K khi góp qua Home Pay Later</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* BANNER KREDIVO BẰNG LINK ẢNH */}
+              <div
+                onClick={() => setIsInstallmentOpen(true)}
+                className="w-full rounded-2xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-all cursor-pointer group"
+              >
+                <img
+                  src="https://theme.hstatic.net/200000768357/1001357594/14/product_banner.jpg?v=417"
+                  alt="Kredivo x Home PayLater - Mua trước trả sau"
+                  className="w-full h-auto object-cover group-hover:scale-102 transition-transform duration-300 pointer-events-none"
+                />
+              </div>
+            </div>
+
+          </div>
+
+          {/* KHỐI 3 TAB LỚN ĐƯỢC TĂNG 2 SIZE */}
+          <div className="mt-14 pt-8 border-t border-gray-200">
+            <div className="flex items-center gap-8 sm:gap-12 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
+              <button
+                onClick={() => setActiveTab('desc')}
+                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
+                  activeTab === 'desc'
+                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Mô tả sản phẩm
+              </button>
+              <button
+                onClick={() => setActiveTab('policy')}
+                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
+                  activeTab === 'policy'
+                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Chính sách bán hàng
+              </button>
+              <button
+                onClick={() => setActiveTab('specs')}
+                className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
+                  activeTab === 'specs'
+                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Thông số kỹ thuật
+              </button>
+            </div>
+
+            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
+            {activeTab === 'desc' && (
+              <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
+                <div
+                  className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
+                    isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
+                  }`}
+                >
+                  {formattedDescription ? (
+                    <div
+                      className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
+                                 [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
+                                 [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
+                      dangerouslySetInnerHTML={{ __html: formattedDescription }}
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
+                  )}
+
+                  {!isDescExpanded && (
+                    <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+                  )}
+                </div>
+
+                <div className="flex justify-center mt-4 border-t border-gray-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsDescExpanded(!isDescExpanded)}
+                    className="px-8 py-2.5 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-2xs"
+                  >
+                    {isDescExpanded ? (
+                      <>
+                        <span>— Rút gọn nội dung</span>
+                        <ChevronUp size={14} />
+                      </>
+                    ) : (
+                      <>
+                        <span>— Xem thêm nội dung</span>
+                        <ChevronDown size={14} />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
+            {activeTab === 'policy' && (
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
+                <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
+                  Chính Sách Bảo Hành & Khuyến Mãi:
+                </h3>
+                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                  <li>Lỗi 1 đổi 1 trong 12 tháng nếu có lỗi phần cứng từ NSX.</li>
+                  <li>Cam kết 100% phụ kiện chính hãng Apple chuẩn zin.</li>
+                  <li>Thu cũ đổi mới phụ kiện trợ giá tốt nhất thị trường.</li>
+                  <li>Giao hàng hỏa tốc trong nội thành TP.HCM.</li>
+                </ul>
+              </div>
+            )}
+
+            {/* TAB THÔNG SỐ KỸ THUẬT */}
+            {activeTab === 'specs' && (
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+                <p>Thông số kỹ thuật chuẩn Apple VN/A.</p>
+              </div>
+            )}
+          </div>
+
+          {/* CÁC PHỤ KIỆN KHÁC CÙNG QUAN TÂM */}
+          {relatedProducts.length > 0 && (
+            <div className="mt-14 pt-8 border-t border-gray-200">
+              <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-5 bg-[#d70018] inline-block" />
+                <span>PHỤ KIỆN KHÁC CÙNG QUAN TÂM</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+                {relatedProducts.map((rel) => (
+                  <Link
+                    key={rel.id}
+                    href={`/san-pham/${rel.slug || rel.id}`}
+                    className="bg-white rounded-xl p-3 border border-gray-200 hover:border-[#d70018] hover:shadow-md transition-all group flex flex-col justify-between"
+                  >
+                    <div className="w-full aspect-square flex items-center justify-center p-2">
+                      <img
+                        src={rel.imageUrl}
+                        alt={rel.name}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
+                        {rel.name}
+                      </h4>
+                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-1.5 block">
+                        {rel.priceDisplay}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           )}
+
+          {/* SẢN PHẨM BẠN VỪA XEM */}
+          {recentViewed.length > 0 && (
+            <div className="mt-12 pt-8 border-t border-gray-200">
+              <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-5 bg-[#d70018] inline-block" />
+                <span>SẢN PHẨM BẠN VỪA XEM</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+                {recentViewed.slice(0, 5).map((viewed) => (
+                  <Link
+                    key={viewed.id}
+                    href={viewed.href || `/san-pham/${viewed.slug || viewed.id}`}
+                    className="bg-white rounded-xl p-3 border border-gray-200 hover:border-[#d70018] hover:shadow-md transition-all group flex flex-col justify-between"
+                  >
+                    <div className="w-full aspect-square flex items-center justify-center p-2">
+                      <img
+                        src={viewed.imageUrl}
+                        alt={viewed.name}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
+                        {viewed.name}
+                      </h4>
+                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-2 block">
+                        {viewed.currentPrice}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
+
+      <InstallmentModal
+        isOpen={isInstallmentOpen}
+        onClose={() => setIsInstallmentOpen(false)}
+        productName={`${cleanProductName} ${selectedType !== 'TIÊU CHUẨN' ? selectedType : ''}`.trim()}
+        productImage={displayImage}
+        productPrice={currentPrice}
+        initialQuantity={quantity}
+      />
+
       <Footer />
     </div>
   );
