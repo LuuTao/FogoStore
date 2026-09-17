@@ -63,7 +63,7 @@ export const Footer: React.FC = () => {
                   className="inline-block hover:opacity-90 transition-opacity"
                 >
                   <img
-                    src="https://theme.hstatic.net/200000768357/1001357594/14/logo_bocongthuong.png?v=417"
+                    src="/logoCongThuong.jpg"
                     alt="Đã thông báo Bộ Công Thương"
                     className="w-32 md:w-36 h-auto object-contain block"
                     onError={(e) => {

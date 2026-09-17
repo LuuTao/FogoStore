@@ -352,7 +352,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
         </div>
 
         {/* ================= 2. LƯỚI SẢN PHẨM ================= */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5">
           {displayedItems.map((product) => (
             <div
               key={product.id}
