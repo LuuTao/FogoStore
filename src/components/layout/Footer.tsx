@@ -23,18 +23,17 @@ export const Footer: React.FC = () => {
 
   return (
     <footer className="w-full bg-white mt-16 border-t-4 border-[#d70018] select-none text-gray-700 text-sm md:text-base">
-      <div className="max-w-7xl mx-auto px-4 py-6 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-0 md:gap-10">
+      <div className="max-w-7xl mx-auto px-4 py-6 md:py-14">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-0 md:gap-8 lg:gap-10">
           
           {/* ========================================================= */}
-          {/* CỘT 1: VỀ FOGO STORE                                      */}
+          {/* CỘT 1: VỀ FOGO STORE (LOGO NHỎ GỌN, SÁT LÊN TRÊN)         */}
           {/* ========================================================= */}
           <div className="border-b border-dashed border-gray-200 md:border-none py-3.5 md:py-0">
-            {/* Tiêu đề: Nút bấm accordion trên Mobile, Text tĩnh trên Desktop */}
             <button
               type="button"
               onClick={() => toggleSection('about')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Về Fogo Store</span>
               <ChevronDown
@@ -47,33 +46,43 @@ export const Footer: React.FC = () => {
 
             {/* Nội dung xổ xuống */}
             <div
-              className={`pt-3 md:pt-4 space-y-4 ${
+              className={`pt-2.5 md:pt-3 space-y-2.5 ${
                 openSections.about ? 'block' : 'hidden md:block'
               }`}
             >
-              <p className="leading-relaxed text-gray-600 text-xs md:text-sm">
+              <p className="leading-relaxed text-gray-600 text-xs md:text-[13px]">
                 Sự hài lòng của khách hàng chính là sản phẩm của Fogo
               </p>
 
-              {/* Logo Đã thông báo Bộ Công Thương */}
-              <div>
-                <img
-                  src="/logoCongThuong.jpg"
-                  alt="Đã thông báo Bộ Công Thương"
-                  className="w-40 md:w-56 h-auto border border-blue-200 rounded p-1 object-contain shadow-xs"
-                />
+              {/* Logo Đã thông báo Bộ Công Thương: nhỏ gọn, bỏ viền khung to, kéo sát lên */}
+              <div className="pt-0.5">
+                <a
+                  href="http://online.gov.vn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block hover:opacity-90 transition-opacity"
+                >
+                  <img
+                    src="https://theme.hstatic.net/200000768357/1001357594/14/logo_bocongthuong.png?v=417"
+                    alt="Đã thông báo Bộ Công Thương"
+                    className="w-32 md:w-36 h-auto object-contain block"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'http://online.gov.vn/Content/EndUser/img/dathongbao.png';
+                    }}
+                  />
+                </a>
               </div>
 
               {/* Mạng xã hội */}
-              <div className="flex items-center gap-2.5 pt-1">
+              <div className="flex items-center gap-2 pt-1">
                 <a
                   href="https://www.facebook.com/fogostorehcm"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Facebook Fogo Store"
-                  className="w-9 h-9 md:w-10 md:h-10 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:text-[#d70018] hover:border-[#d70018] transition-colors shadow-xs"
+                  className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:text-[#d70018] hover:border-[#d70018] transition-colors shadow-2xs"
                 >
-                  <svg className="w-4 h-4 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.374 14.5 5 15.643 5H18V0h-3.808C10.597 0 9 1.583 9 4.615V8z" />
                   </svg>
                 </a>
@@ -83,9 +92,9 @@ export const Footer: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Instagram Fogo Store"
-                  className="w-9 h-9 md:w-10 md:h-10 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:text-[#d70018] hover:border-[#d70018] transition-colors shadow-xs"
+                  className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:text-[#d70018] hover:border-[#d70018] transition-colors shadow-2xs"
                 >
-                  <svg className="w-4 h-4 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
                   </svg>
                 </a>
@@ -95,9 +104,9 @@ export const Footer: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="TikTok Fogo Store"
-                  className="w-9 h-9 md:w-10 md:h-10 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:text-[#d70018] hover:border-[#d70018] transition-colors shadow-xs"
+                  className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:text-[#d70018] hover:border-[#d70018] transition-colors shadow-2xs"
                 >
-                  <svg className="w-4 h-4 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
                   </svg>
                 </a>
@@ -112,7 +121,7 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => toggleSection('contact')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Thông tin liên hệ</span>
               <ChevronDown
@@ -124,33 +133,37 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-3 md:pt-4 space-y-3 md:space-y-4 leading-relaxed text-xs md:text-sm ${
+              className={`pt-2.5 md:pt-3 space-y-2.5 md:space-y-3 leading-relaxed text-xs md:text-[13px] ${
                 openSections.contact ? 'block' : 'hidden md:block'
               }`}
             >
-              <li className="flex items-start gap-2.5">
-                <MapPin size={18} className="text-gray-900 shrink-0 mt-0.5" />
+              <li className="flex items-start gap-2">
+                <MapPin size={16} className="text-gray-900 shrink-0 mt-0.5" />
                 <span>298 Trần Hưng Đạo, phường Nguyễn Cư Trinh, Quận 1, TP.HCM</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Phone size={17} className="text-gray-900 shrink-0" />
-                <span className="font-bold text-gray-900">(+84)566003333</span>
+              <li className="flex items-center gap-2">
+                <Phone size={15} className="text-gray-900 shrink-0" />
+                <a href="tel:0566003333" className="font-bold text-gray-900 hover:text-[#d70018] transition-colors">
+                  (+84)566003333
+                </a>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Mail size={17} className="text-gray-900 shrink-0" />
-                <span>fogostore9393@gmail.com</span>
+              <li className="flex items-center gap-2">
+                <Mail size={15} className="text-gray-900 shrink-0" />
+                <a href="mailto:fogostore9393@gmail.com" className="hover:text-[#d70018] transition-colors truncate">
+                  fogostore9393@gmail.com
+                </a>
               </li>
             </ul>
           </div>
 
           {/* ========================================================= */}
-          {/* CỘT 3: HỖ TRỢ KHÁCH HÀNG                                   */}
+          {/* CỘT 3: HỖ TRỢ KHÁCH HÀNG                                  */}
           {/* ========================================================= */}
           <div className="border-b border-dashed border-gray-200 md:border-none py-3.5 md:py-0">
             <button
               type="button"
               onClick={() => toggleSection('support')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Hỗ trợ khách hàng</span>
               <ChevronDown
@@ -162,23 +175,23 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-3 md:pt-4 space-y-2.5 md:space-y-3 text-xs md:text-sm ${
+              className={`pt-2.5 md:pt-3 space-y-2 text-xs md:text-[13px] ${
                 openSections.support ? 'block' : 'hidden md:block'
               }`}
             >
               <li>
-                <Link href="/tim-kiem" className="hover:text-[#d70018] transition-colors font-medium">
-                  • Tìm kiếm
+                <Link href="/tim-kiem" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400">•</span> Tìm kiếm
                 </Link>
               </li>
               <li>
-                <Link href="/gioi-thieu" className="hover:text-[#d70018] transition-colors font-medium">
-                  • Giới thiệu
+                <Link href="/gioi-thieu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400">•</span> Giới thiệu
                 </Link>
               </li>
               <li>
-                <Link href="/lien-he" className="hover:text-[#d70018] transition-colors font-medium">
-                  • Liên hệ
+                <Link href="/lien-he" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400">•</span> Liên hệ
                 </Link>
               </li>
             </ul>
@@ -191,7 +204,7 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => toggleSection('links')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Liên kết</span>
               <ChevronDown
@@ -203,18 +216,20 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-3 md:pt-4 space-y-2 md:space-y-2.5 text-xs md:text-sm ${
+              className={`pt-2.5 md:pt-3 space-y-1.5 text-xs md:text-[13px] ${
                 openSections.links ? 'block' : 'hidden md:block'
               }`}
             >
-              <li><Link href="/iphone" className="hover:text-[#d70018] transition-colors font-medium">• iPhone</Link></li>
-              <li><Link href="/ipad" className="hover:text-[#d70018] transition-colors font-medium">• iPad</Link></li>
-              <li><Link href="/macbook" className="hover:text-[#d70018] transition-colors font-medium">• Macbook</Link></li>
-              <li><Link href="/hang-cu/iphone-cu" className="hover:text-[#d70018] transition-colors font-medium">• iPhone Cũ</Link></li>
-              <li><Link href="/hang-cu/ipad-cu" className="hover:text-[#d70018] transition-colors font-medium">• iPad Cũ</Link></li>
-              <li><Link href="/hang-cu/macbook-cu" className="hover:text-[#d70018] transition-colors font-medium">• Macbook Cũ</Link></li>
-              <li><Link href="/watch" className="hover:text-[#d70018] transition-colors font-medium">• Watch</Link></li>
-              <li><Link href="/phu-kien" className="hover:text-[#d70018] transition-colors font-medium">• Phụ Kiện</Link></li>
+              <li><Link href="/iphone" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPhone</Link></li>
+              <li><Link href="/ipad" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPad</Link></li>
+              <li><Link href="/macbook" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Macbook</Link></li>
+              <li><Link href="/hang-cu/iphone-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPhone Cũ</Link></li>
+              <li><Link href="/hang-cu/ipad-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPad Cũ</Link></li>
+              <li><Link href="/hang-cu/macbook-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Macbook Cũ</Link></li>
+              <li><Link href="/watch" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Watch</Link></li>
+              <li><Link href="/phu-kien" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Phụ Kiện</Link></li>
+              <li><Link href="/khuyen-mai" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Sản phẩm khuyến mãi</Link></li>
+              <li><Link href="/noi-bat" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Sản phẩm nổi bật</Link></li>
             </ul>
           </div>
 
@@ -225,7 +240,7 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => toggleSection('policy')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Chính sách</span>
               <ChevronDown
@@ -237,23 +252,26 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-3 md:pt-4 space-y-2.5 md:space-y-3 leading-snug text-xs md:text-sm ${
+              className={`pt-2.5 md:pt-3 space-y-2 leading-relaxed text-xs md:text-[13px] ${
                 openSections.policy ? 'block' : 'hidden md:block'
               }`}
             >
               <li>
-                <Link href="/chinh-sach-bao-hanh" className="hover:text-[#d70018] transition-colors font-medium block">
-                  • Chính sách bảo hành
+                <Link href="/chinh-sach-bao-hanh" className="hover:text-[#d70018] transition-colors font-medium flex items-start gap-1.5">
+                  <span className="text-[10px] text-gray-400 mt-0.5">•</span>
+                  <span>Chính sách bảo hành</span>
                 </Link>
               </li>
               <li>
-                <Link href="/chinh-sach-bao-hanh-linh-kien-sua-chua-macbook" className="hover:text-[#d70018] transition-colors font-medium block">
-                  • Chính Sách Bảo Hành Linh Kiện Sửa Chữa Macbook
+                <Link href="/chinh-sach-bao-hanh-linh-kien-sua-chua-macbook" className="hover:text-[#d70018] transition-colors font-medium flex items-start gap-1.5">
+                  <span className="text-[10px] text-gray-400 mt-0.5">•</span>
+                  <span>Chính Sách Bảo Hành Linh Kiện Sửa Chữa Macbook</span>
                 </Link>
               </li>
               <li>
-                <Link href="/chinh-sach-bao-hanh-fogo-care" className="hover:text-[#d70018] transition-colors font-medium block">
-                  • Chính sách bảo hành Fogo Care
+                <Link href="/chinh-sach-bao-hanh-fogo-care" className="hover:text-[#d70018] transition-colors font-medium flex items-start gap-1.5">
+                  <span className="text-[10px] text-gray-400 mt-0.5">•</span>
+                  <span>Chính sách bảo hành Fogo Care</span>
                 </Link>
               </li>
             </ul>
@@ -263,13 +281,12 @@ export const Footer: React.FC = () => {
       </div>
 
       {/* Dải bản quyền dưới cùng */}
-      <div className="border-t border-gray-200 py-4 md:py-5 text-center text-xs md:text-sm text-gray-600 bg-gray-50 font-medium px-4">
+      <div className="border-t border-gray-100 py-3.5 text-center text-xs text-gray-500 bg-gray-50 font-medium px-4">
         Copyright © 2026 Fogo Store - Apple Chính Hãng Giá Rẻ Vô Địch. Powered by Haravan
       </div>
 
       {/* Widget chat góc phải (Zalo & Facebook Messenger) */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col gap-2.5 sm:gap-3">
-        {/* Nút Zalo */}
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col gap-2.5">
         <a
           href="https://zalo.me/0566003333"
           target="_blank"
@@ -280,7 +297,6 @@ export const Footer: React.FC = () => {
           Zalo
         </a>
 
-        {/* Nút Facebook Messenger */}
         <a
           href="https://m.me/fogostorehcm"
           target="_blank"

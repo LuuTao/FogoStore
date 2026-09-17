@@ -96,9 +96,8 @@ export default function IPhoneDetail({
       setSelectedStorage(activeSt);
     }
 
-    setSelectedColor(firstValidVar?.color || 'Titan Tự Nhiên');
+    setSelectedColor(firstValidVar?.color || 'Black');
 
-    // Fetch sản phẩm liên quan từ DB: Lấy dữ liệu thật, ảnh thật từ variants và có giá > 0
     fetch(`${API_URL}/api/products/filter?category=iphone`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
@@ -111,14 +110,11 @@ export default function IPhoneDetail({
         return items;
       })
       .then((allItems: any[]) => {
-        // Lọc các sản phẩm thật khác với sản phẩm hiện tại
         const filtered = allItems.filter((p: any) => p.id !== product.id && (p.name || '').toLowerCase().includes('iphone'));
-
-        // Chuẩn hóa từng sản phẩm liên quan để lấy đúng ảnh thật và mức giá thật
         const mapped = filtered.map((p: any) => {
           const vars: any[] = Array.isArray(p.variants) ? p.variants : [];
           const bestVar = vars.find((v: any) => Number(v.price) > 0 && Array.isArray(v.images) && v.images.length > 0) || vars[0] || {};
-          
+
           const realPrice = Number(bestVar.price || p.price || 0);
           const realImage = formatImg(bestVar.images?.[0] || p.images?.[0] || p.imageUrl || p.image);
 
@@ -133,8 +129,7 @@ export default function IPhoneDetail({
           };
         });
 
-        // Ưu tiên các sản phẩm có giá > 0 và có ảnh chuẩn
-        const validList = mapped.filter((p: any) => p.realPrice > 0 && !p.imageUrl.includes('photo-15'));
+        const validList = mapped.filter((p: any) => p.realPrice > 0);
         setRelatedProducts(validList.length >= 5 ? validList.slice(0, 5) : mapped.slice(0, 5));
       })
       .catch((err) => {
@@ -142,7 +137,6 @@ export default function IPhoneDetail({
         setRelatedProducts([]);
       });
 
-    // Quản lý sản phẩm vừa xem
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
       let viewedList: any[] = saved ? JSON.parse(saved) : [];
@@ -237,7 +231,6 @@ export default function IPhoneDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
-  // Gom ảnh thật của sản phẩm và các biến thể
   const imagesList: string[] = useMemo(() => {
     const list: string[] = [];
 
@@ -403,9 +396,9 @@ export default function IPhoneDetail({
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (Chiếm 4/12 cột) */}
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (4/12 cột) */}
             <div className="lg:col-span-4 flex flex-col items-center w-full">
-              <div className="relative w-full aspect-square border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
+              <div className="relative w-full aspect-square max-w-[480px] border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
                 <img
                   src={displayImage}
                   alt={product.name}
@@ -433,7 +426,7 @@ export default function IPhoneDetail({
 
               {/* Thumbnails */}
               <div className="flex items-center gap-2 mt-3.5 overflow-x-auto max-w-full pb-1">
-                <div className="w-13 h-13 border border-red-500 rounded-xl p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
+                <div className="w-14 h-14 border border-red-500 rounded-xl p-1 flex flex-col items-center justify-center bg-red-50/50 text-[10px] text-[#d70018] shrink-0 cursor-pointer">
                   <Video size={16} />
                   <span className="font-bold">Video</span>
                 </div>
@@ -445,7 +438,7 @@ export default function IPhoneDetail({
                       setCurrentImageIndex(idx);
                       setTimeout(() => setIsImageTransitioning(false), 150);
                     }}
-                    className={`w-13 h-13 border rounded-xl p-0.5 bg-white shrink-0 cursor-pointer transition-all ${
+                    className={`w-14 h-14 border rounded-xl p-0.5 bg-white shrink-0 cursor-pointer transition-all ${
                       currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -455,7 +448,7 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG (Chiếm 5/12 cột) */}
+            {/* CỘT 2: THÔNG TIN MUA HÀNG (5/12 cột - CĂN KHỚP VỚI NÚT MUA VÀ NÚT CHAT ZALO) */}
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
@@ -487,20 +480,20 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG: NẰM THẲNG HÀNG NGANG KHÔNG XUỐNG DÒNG */}
+              {/* CHỌN DUNG LƯỢNG */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Chọn dung lượng:
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2.5">
                     {storageList.map((st) => {
                       const isSelected = selectedStorage.toLowerCase() === st.toLowerCase();
                       return (
                         <button
                           key={st}
                           onClick={() => handleSelectStorage(st)}
-                          className={`min-w-[76px] px-3.5 py-2 text-sm sm:text-base font-black rounded-xl border-2 text-center shrink-0 cursor-pointer transition-all ${
+                          className={`px-5 py-2.5 text-sm sm:text-base font-black rounded-xl border-2 text-center shrink-0 cursor-pointer transition-all ${
                             isSelected
                               ? 'border-[#d70018] text-[#d70018] bg-white shadow-xs'
                               : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
@@ -514,13 +507,13 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC: NẰM THẲNG 1 HÀNG NGANG */}
+              {/* CHỌN MÀU SẮC: TỚI ĐÚNG VIỀN NÚT ZALO, QUÁ DÀI TỰ ĐỘNG XUỐNG DÒNG KHÔNG BỊ CẮT CHỮ */}
               {currentColorOptions.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Màu sắc:
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full">
                     {currentColorOptions.map(({ color, sampleVariant }) => {
                       const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
@@ -529,7 +522,7 @@ export default function IPhoneDetail({
                         <button
                           key={color}
                           onClick={() => handleSelectColor(color)}
-                          className={`px-3.5 py-2 rounded-xl border-2 flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer ${
+                          className={`px-3.5 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer ${
                             isSelected
                               ? 'border-[#d70018] text-[#d70018] font-black bg-white shadow-xs'
                               : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
@@ -538,7 +531,7 @@ export default function IPhoneDetail({
                           <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
                             <img src={formatImg(thumb)} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <span className="text-xs sm:text-sm font-bold whitespace-nowrap">{color}</span>
+                          <span className="text-sm sm:text-base font-bold whitespace-nowrap">{color}</span>
                         </button>
                       );
                     })}
@@ -571,7 +564,7 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* NÚT MUA HÀNG */}
+              {/* NÚT MUA HÀNG HOẶC LIÊN HỆ */}
               {isOutOfStock ? (
                 <div className="pt-2 space-y-2">
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
@@ -698,7 +691,7 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (CĂN THẲNG TRỤC TUYỆT ĐỐI) */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
@@ -777,7 +770,7 @@ export default function IPhoneDetail({
 
           </div>
 
-          {/* KHỐI 3 TAB LỚN ĐƯỢC TĂNG 2 SIZE */}
+          {/* KHỐI 3 TAB LỚN */}
           <div className="mt-14 pt-8 border-t border-gray-200">
             <div className="flex items-center gap-8 sm:gap-12 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
               <button
@@ -812,12 +805,12 @@ export default function IPhoneDetail({
               </button>
             </div>
 
-            {/* TAB MÔ TẢ: KHUNG RỘNG RÃI CĂN CHUẨN ĐỀU THEO ẢNH 1 */}
+            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
             {activeTab === 'desc' && (
-              <div className="w-full bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 lg:p-12 shadow-xs relative">
+              <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
                 <div
-                  className={`relative overflow-hidden transition-all duration-300 ${
-                    isDescExpanded ? 'max-h-full pb-8' : 'max-h-[480px]'
+                  className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
+                    isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
                   }`}
                 >
                   {formattedDescription ? (
@@ -832,7 +825,7 @@ export default function IPhoneDetail({
                   )}
 
                   {!isDescExpanded && (
-                    <div className="absolute bottom-0 left-0 w-full h-36 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
                   )}
                 </div>
 
@@ -860,7 +853,7 @@ export default function IPhoneDetail({
 
             {/* TAB CHÍNH SÁCH BÁN HÀNG */}
             {activeTab === 'policy' && (
-              <div className="w-full bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
@@ -875,13 +868,13 @@ export default function IPhoneDetail({
 
             {/* TAB THÔNG SỐ KỸ THUẬT */}
             {activeTab === 'specs' && (
-              <div className="w-full bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
                 <p>Thông số kỹ thuật chi tiết chuẩn Apple VN/A.</p>
               </div>
             )}
           </div>
 
-          {/* CÁC DÒNG IPHONE KHÁC CÙNG QUAN TÂM (DỮ LIỆU THẬT & ẢNH THẬT TỪ DB) */}
+          {/* CÁC DÒNG IPHONE KHÁC CÙNG QUAN TÂM */}
           {relatedProducts.length > 0 && (
             <div className="mt-14 pt-8 border-t border-gray-200">
               <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
@@ -892,7 +885,7 @@ export default function IPhoneDetail({
                 {relatedProducts.map((rel) => (
                   <Link
                     key={rel.id}
-                    href={rel.href}
+                    href={`/san-pham/${rel.slug || rel.id}`}
                     className="bg-white rounded-xl p-3 border border-gray-200 hover:border-[#d70018] hover:shadow-md transition-all group flex flex-col justify-between"
                   >
                     <div className="w-full aspect-square flex items-center justify-center p-2">
@@ -941,7 +934,7 @@ export default function IPhoneDetail({
                       <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
                         {viewed.name}
                       </h4>
-                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-1.5 block">
+                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-2 block">
                         {viewed.currentPrice}
                       </span>
                     </div>
