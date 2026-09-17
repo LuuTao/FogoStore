@@ -5,21 +5,28 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Grid, ShoppingBag, Flame, PhoneCall, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { MENU_DATA } from '@/data/navigation';
+
+// Danh mục chuẩn đồng bộ toàn hệ thống
+const BOTTOM_NAV_CATEGORIES = [
+  { id: 'iphone', title: 'iPhone', href: '/iphone', badge: 'HOT' },
+  { id: 'ipad', title: 'iPad', href: '/ipad', badge: 'NEW' },
+  { id: 'macbook', title: 'MacBook', href: '/macbook', badge: 'NEW' },
+  { id: 'hang-cu', title: 'Hàng Cũ', href: '/hang-cu' },
+  { id: 'watch', title: 'Apple Watch', href: '/watch' },
+  { id: 'phu-kien', title: 'Phụ Kiện', href: '/phu-kien' },
+];
 
 export const MobileBottomNav: React.FC = () => {
   const pathname = usePathname();
   const { totalQuantity } = useCart();
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
-  // Ẩn thanh điều hướng dưới cùng khi ở trang Quản trị Admin
   if (pathname?.startsWith('/admin')) {
     return null;
   }
 
   return (
     <>
-      {/* 1. THANH ĐIỀU HƯỚNG DƯỚI CÙNG CHO MOBILE/IPAD (ẨN TRÊN PC >= 1024px) */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg lg:hidden select-none">
         <div className="grid grid-cols-5 h-14 items-center max-w-md mx-auto">
           {/* Trang chủ */}
@@ -43,7 +50,7 @@ export const MobileBottomNav: React.FC = () => {
             <span className="mt-0.5">Danh mục</span>
           </button>
 
-          {/* Khuyến mãi Hot */}
+          {/* Giá sốc */}
           <Link
             href="/hang-cu"
             className={`flex flex-col items-center justify-center py-1 text-[11px] font-medium transition-colors ${
@@ -83,30 +90,32 @@ export const MobileBottomNav: React.FC = () => {
         </div>
       </nav>
 
-      {/* 2. POPUP MENU DANH MỤC NHANH KHI BẤM NÚT DANH MỤC TRÊN MOBILE */}
+      {/* POPUP MENU DANH MỤC TRÊN MOBILE */}
       {isCategoryOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end lg:hidden">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end lg:hidden select-none">
           <div className="bg-white rounded-t-2xl p-4 max-h-[75vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="font-bold text-gray-900 text-base">Danh mục sản phẩm</h3>
+              <h3 className="font-black text-gray-900 text-base uppercase">Danh mục sản phẩm</h3>
               <button
                 type="button"
                 onClick={() => setIsCategoryOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 cursor-pointer hover:bg-gray-200 transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 py-4">
-              {MENU_DATA.map((item) => (
+            <div className="grid grid-cols-3 gap-2.5 py-4">
+              {BOTTOM_NAV_CATEGORIES.map((item) => (
                 <Link
                   key={item.id}
                   href={item.href}
                   onClick={() => setIsCategoryOpen(false)}
-                  className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-red-50 text-center transition-colors border border-gray-100"
+                  className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-red-50 text-center transition-colors border border-gray-100 group"
                 >
-                  <span className="text-xs font-bold text-gray-800">{item.title}</span>
+                  <span className="text-xs font-bold text-gray-800 group-hover:text-[#d70018] transition-colors">
+                    {item.title}
+                  </span>
                   {item.badge && (
                     <span className="mt-1 bg-[#d70018] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded">
                       {item.badge}
@@ -121,3 +130,5 @@ export const MobileBottomNav: React.FC = () => {
     </>
   );
 };
+
+export default MobileBottomNav;

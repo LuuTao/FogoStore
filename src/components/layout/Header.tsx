@@ -19,9 +19,197 @@ import {
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { MENU_DATA } from '@/data/navigation';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+// Dữ liệu danh mục chuẩn cho toàn bộ Mobile Menu
+const OFFICIAL_MENU_DATA = [
+  {
+    id: 'iphone',
+    title: 'iPhone',
+    badge: 'HOT',
+    href: '/iphone',
+    groups: [
+      {
+        groupTitle: 'iPhone 18 Series',
+        href: '/iphone?series=18',
+        items: [
+          { name: 'iPhone 18 Pro Max', href: '/iphone?series=18' },
+          { name: 'iPhone 18 Pro', href: '/iphone?series=18' },
+          { name: 'iPhone 18 Plus', href: '/iphone?series=18' },
+          { name: 'iPhone 18', href: '/iphone?series=18' },
+        ],
+      },
+      {
+        groupTitle: 'iPhone Duo Series',
+        href: '/iphone?series=duo',
+        items: [
+          { name: 'iPhone Duo Fold', href: '/iphone?series=duo' },
+          { name: 'iPhone Duo Flip', href: '/iphone?series=duo' },
+        ],
+      },
+      {
+        groupTitle: 'iPhone 17 Series',
+        href: '/iphone?series=17',
+        items: [
+          { name: 'iPhone 17 Pro Max', href: '/iphone?series=17' },
+          { name: 'iPhone 17 Pro', href: '/iphone?series=17' },
+          { name: 'iPhone 17 Plus', href: '/iphone?series=17' },
+          { name: 'iPhone 17 Slim / Air', href: '/iphone?series=17' },
+          { name: 'iPhone 17', href: '/iphone?series=17' },
+        ],
+      },
+      {
+        groupTitle: 'iPhone 16 Series',
+        href: '/iphone?series=16',
+        items: [
+          { name: 'iPhone 16 Pro Max', href: '/iphone?series=16' },
+          { name: 'iPhone 16 Pro', href: '/iphone?series=16' },
+          { name: 'iPhone 16 Plus', href: '/iphone?series=16' },
+          { name: 'iPhone 16', href: '/iphone?series=16' },
+        ],
+      },
+      {
+        groupTitle: 'iPhone 15 Series',
+        href: '/iphone?series=15',
+        items: [
+          { name: 'iPhone 15 Pro Max', href: '/iphone?series=15' },
+          { name: 'iPhone 15 Pro', href: '/iphone?series=15' },
+          { name: 'iPhone 15', href: '/iphone?series=15' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'ipad',
+    title: 'iPad',
+    badge: 'NEW',
+    href: '/ipad',
+    groups: [
+      {
+        groupTitle: 'iPad Pro',
+        href: '/ipad?series=pro',
+        items: [
+          { name: 'iPad Pro M5', href: '/ipad?series=pro-m5' },
+          { name: 'iPad Pro M4', href: '/ipad?series=pro-m4' },
+          { name: 'iPad Pro M2', href: '/ipad?series=pro-m2' },
+        ],
+      },
+      {
+        groupTitle: 'iPad Air',
+        href: '/ipad?series=air',
+        items: [
+          { name: 'iPad Air 7 (M4)', href: '/ipad?series=air-7' },
+          { name: 'iPad Air 6 (M2)', href: '/ipad?series=air-6' },
+          { name: 'iPad Air 5', href: '/ipad?series=air-5' },
+        ],
+      },
+      {
+        groupTitle: 'iPad Gen & Mini',
+        href: '/ipad?series=gen',
+        items: [
+          { name: 'iPad Gen 11', href: '/ipad?series=gen-11' },
+          { name: 'iPad Gen 10', href: '/ipad?series=gen-10' },
+          { name: 'iPad Mini 7', href: '/ipad?series=mini-7' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'macbook',
+    title: 'MacBook',
+    badge: 'NEW',
+    href: '/macbook',
+    groups: [
+      {
+        groupTitle: 'MacBook Pro',
+        href: '/macbook?series=pro',
+        items: [
+          { name: 'MacBook Pro M5', href: '/macbook?series=pro-m5' },
+          { name: 'MacBook Pro M4', href: '/macbook?series=pro-m4' },
+          { name: 'MacBook Pro M3', href: '/macbook?series=pro-m3' },
+        ],
+      },
+      {
+        groupTitle: 'MacBook Air',
+        href: '/macbook?series=air',
+        items: [
+          { name: 'MacBook Air M5', href: '/macbook?series=air-m5' },
+          { name: 'MacBook Air M4', href: '/macbook?series=air-m4' },
+          { name: 'MacBook Air M3', href: '/macbook?series=air-m3' },
+        ],
+      },
+      {
+        groupTitle: 'MacBook Neo',
+        href: '/macbook?series=neo',
+        items: [
+          { name: 'MacBook NEO (2026)', href: '/macbook?series=neo-2026' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'hang-cu',
+    title: 'Hàng Cũ',
+    href: '/hang-cu',
+    groups: [
+      {
+        groupTitle: 'iPhone Cũ Like New 99%',
+        href: '/hang-cu/iphone-cu',
+        items: [
+          { name: 'iPhone 17 Series Cũ', href: '/hang-cu/iphone-17-series-cu' },
+          { name: 'iPhone 16 Series Cũ', href: '/hang-cu/iphone-16-series-cu' },
+          { name: 'iPhone 15 Series Cũ', href: '/hang-cu/iphone-15-series-cu' },
+          { name: 'iPhone 14 Series Cũ', href: '/hang-cu/iphone-14-series-cu' },
+        ],
+      },
+      {
+        groupTitle: 'iPad & MacBook Cũ Zin',
+        href: '/hang-cu/ipad-cu',
+        items: [
+          { name: 'iPad Pro Cũ 99%', href: '/hang-cu/ipad-pro-cu' },
+          { name: 'iPad Air Cũ 99%', href: '/hang-cu/ipad-air-cu' },
+          { name: 'MacBook Pro Cũ Zin', href: '/hang-cu/macbook-pro-cu' },
+          { name: 'MacBook Air Cũ Zin', href: '/hang-cu/macbook-air-cu' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'watch',
+    title: 'Watch',
+    href: '/watch',
+    groups: [
+      {
+        groupTitle: 'Dòng Apple Watch',
+        href: '/watch',
+        items: [
+          { name: 'Apple Watch Ultra 2', href: '/watch?series=ultra-2' },
+          { name: 'Apple Watch Series 10', href: '/watch?series=series-10' },
+          { name: 'Apple Watch Series 9', href: '/watch?series=series-9' },
+          { name: 'Apple Watch SE 2', href: '/watch?series=se-2' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'phu-kien',
+    title: 'Phụ Kiện',
+    href: '/phu-kien',
+    groups: [
+      {
+        groupTitle: 'Phụ kiện chính hãng Apple',
+        href: '/phu-kien',
+        items: [
+          { name: 'Củ Sạc Nhanh 20W / 35W', href: '/phu-kien?series=sac-cap' },
+          { name: 'Cáp Sạc Type-C Chuẩn Apple', href: '/phu-kien?series=sac-cap' },
+          { name: 'Tai Nghe AirPods 4 / Pro 2', href: '/phu-kien?series=tai-nghe' },
+          { name: 'Apple Pencil Pro & Magic Keyboard', href: '/phu-kien?series=phu-kien-mac' },
+        ],
+      },
+    ],
+  },
+];
 
 interface SearchItem {
   id: string;
@@ -37,12 +225,10 @@ export const Header: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [expandedMenuId, setExpandedMenuId] = useState<string | null>(null);
+  const [expandedMenuId, setExpandedMenuId] = useState<string | null>('iphone');
 
-  // Đồng bộ Menu động cho Mobile (khắc phục menu tĩnh lỗi thời)
-  const [menuList, setMenuList] = useState(MENU_DATA);
+  const [menuList, setMenuList] = useState(OFFICIAL_MENU_DATA);
 
-  // States tìm kiếm gợi ý tức thì
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -58,47 +244,28 @@ export const Header: React.FC = () => {
     setExpandedMenuId(expandedMenuId === id ? null : id);
   };
 
-  // 1. Đồng bộ menu từ cache LocalStorage và API
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem('fogo_menu_config');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMenuList(parsed);
-        }
-      }
-    } catch (e) {
-      console.warn('Lỗi đọc cache menu:', e);
-    }
-
     const fetchMenuData = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`);
         if (res.ok) {
           const json = await res.json();
           const data = json.data || json;
           if (Array.isArray(data) && data.length > 0) {
             setMenuList(data);
-            localStorage.setItem('fogo_menu_config', JSON.stringify(data));
           }
         }
       } catch (err) {
-        // Giữ menu dự phòng nếu mất kết nối
+        // Dự phòng fallback
       }
     };
-
     fetchMenuData();
-    const handleSync = () => fetchMenuData();
-    window.addEventListener('fogo_menu_updated', handleSync);
-    return () => window.removeEventListener('fogo_menu_updated', handleSync);
   }, []);
 
-  // 2. Tải trước danh mục sản phẩm phục vụ tìm kiếm nhanh
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
+        const res = await fetch(`${API_URL}/api/products`);
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
           setProductsCache(json.data);
@@ -110,7 +277,6 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
-  // 3. Lọc sản phẩm theo từ khóa (Debounce 200ms)
   useEffect(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) {
@@ -150,7 +316,6 @@ export const Header: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, productsCache]);
 
-  // 4. Đóng dropdown khi nhấn ra ngoài
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
@@ -173,14 +338,12 @@ export const Header: React.FC = () => {
   return (
     <>
       <header className="w-full bg-white select-none relative z-40 border-b border-gray-100 shadow-xs">
-        {/* SLOGAN */}
         <div className="w-full pt-2 sm:pt-3 pb-1 bg-white flex items-center justify-center px-3">
           <h1 className="text-xs sm:text-base md:text-2xl lg:text-[32px] font-black uppercase tracking-wider text-[#d70018] leading-tight text-center drop-shadow-xs truncate">
             THE BEST APPLE RETAIL STORE IN HCM
           </h1>
         </div>
 
-        {/* HÀNG HEADER CHÍNH */}
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
@@ -201,7 +364,6 @@ export const Header: React.FC = () => {
             </Link>
           </div>
 
-          {/* Thanh tìm kiếm PC */}
           <div ref={searchContainerRef} className="flex-1 max-w-lg relative hidden sm:block">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
@@ -238,7 +400,6 @@ export const Header: React.FC = () => {
               </button>
             </form>
 
-            {/* Dropdown gợi ý PC */}
             {showDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
@@ -299,9 +460,7 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Cụm tiện ích */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4 text-xs md:text-sm font-semibold shrink-0">
-            {/* Hotline */}
             <a
               href="tel:0566003333"
               className="flex items-center gap-1.5 hover:opacity-80 transition-opacity py-1 shrink-0 text-[#d70018]"
@@ -315,7 +474,6 @@ export const Header: React.FC = () => {
               </div>
             </a>
 
-            {/* Giỏ hàng */}
             <Link
               href="/gio-hang"
               className="flex items-center gap-1.5 sm:gap-2 hover:opacity-90 transition-opacity cursor-pointer text-gray-700"
@@ -336,7 +494,6 @@ export const Header: React.FC = () => {
               </div>
             </Link>
 
-            {/* Tra cứu đơn hàng */}
             <Link
               href="/tra-cuu-don-hang"
               className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity py-1 shrink-0 text-[#d70018]"
@@ -350,7 +507,6 @@ export const Header: React.FC = () => {
               </div>
             </Link>
 
-            {/* Tài khoản */}
             {user ? (
               <div className="relative shrink-0">
                 <button
@@ -448,7 +604,6 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Tìm kiếm Mobile */}
         <div className="block sm:hidden px-3 pb-2.5 pt-0.5 relative">
           <form onSubmit={handleSearchSubmit} className="relative w-full">
             <input
@@ -512,7 +667,7 @@ export const Header: React.FC = () => {
         </div>
       </header>
 
-      {/* DRAWER MENU MOBILE (ĐÃ ĐỒNG BỘ DỮ LIỆU & LỌC TRÙNG SERIES) */}
+      {/* DRAWER MENU MOBILE CHUẨN ĐỒNG BỘ */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
@@ -521,7 +676,7 @@ export const Header: React.FC = () => {
           />
 
           <div className="relative w-[300px] sm:w-[340px] max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-300">
-            <div className="flex items-center justify-between px-4 py-3.5 bg-[#d70018] text-white">
+            <div className="flex items-center justify-between px-4 py-3.5 bg-[#d70018] text-white shadow-xs">
               <span className="font-extrabold text-base tracking-wide uppercase">Danh Mục Sản Phẩm</span>
               <button
                 type="button"
@@ -532,11 +687,9 @@ export const Header: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {menuList.map((item) => {
                 const isExpanded = expandedMenuId === item.id;
-                
-                // Lọc loại bỏ các nhóm/series trùng tên (ví dụ ngăn iPhone 15 Series lặp 2 lần)
                 const rawGroups = item.groups || [];
                 const uniqueGroups = rawGroups.filter(
                   (group, gIdx, self) =>
@@ -545,12 +698,12 @@ export const Header: React.FC = () => {
                 const hasSub = uniqueGroups.length > 0;
 
                 return (
-                  <div key={item.id} className="py-1">
-                    <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                  <div key={item.id} className="py-0.5">
+                    <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                       <Link
                         href={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-800 hover:text-[#d70018] transition-colors flex-1"
+                        className="flex items-center gap-2 text-[13px] font-bold text-gray-800 hover:text-[#d70018] transition-colors flex-1"
                       >
                         <span>{item.title}</span>
                         {item.badge && (
@@ -575,9 +728,8 @@ export const Header: React.FC = () => {
                     </div>
 
                     {hasSub && isExpanded && (
-                      <div className="bg-gray-50 px-6 py-2 space-y-2 border-t border-gray-100">
+                      <div className="bg-[#fafafb] px-5 py-2.5 space-y-3.5 border-t border-gray-100/80">
                         {uniqueGroups.map((group, gIdx) => {
-                          // Lọc bỏ sản phẩm trùng lặp trong từng group
                           const rawItems = group.items || [];
                           const uniqueItems = rawItems.filter(
                             (sub, sIdx, self) =>
@@ -585,23 +737,23 @@ export const Header: React.FC = () => {
                           );
 
                           return (
-                            <div key={gIdx} className="py-1">
+                            <div key={gIdx} className="space-y-1.5">
                               <Link
                                 href={group.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className="text-xs font-bold text-gray-700 hover:text-[#d70018] block"
+                                className="block font-black text-gray-800 text-[11.5px] uppercase tracking-wide hover:text-[#d70018]"
                               >
                                 {group.groupTitle}
                               </Link>
 
                               {uniqueItems.length > 0 && (
-                                <div className="pl-3 mt-1 space-y-1.5 border-l-2 border-red-200">
+                                <div className="space-y-1 pl-2.5 border-l-2 border-red-200">
                                   {uniqueItems.map((sub, sIdx) => (
                                     <Link
                                       key={sIdx}
                                       href={sub.href}
                                       onClick={() => setIsMobileMenuOpen(false)}
-                                      className="text-xs text-gray-500 hover:text-[#d70018] block py-0.5"
+                                      className="block py-0.5 text-gray-600 hover:text-[#d70018] font-medium text-[11px] transition-colors"
                                     >
                                       {sub.name}
                                     </Link>
@@ -628,7 +780,6 @@ export const Header: React.FC = () => {
         </div>
       )}
 
-      {/* Modal đăng nhập */}
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </>
   );

@@ -314,24 +314,26 @@ export const IPadShowcaseSection: React.FC = () => {
           })}
         </div>
 
-        {/* 2. LƯỚI CARD SẢN PHẨM */}
+        {/* 2. LƯỚI CARD SẢN PHẨM RESPONSIVE CHUẨN MỌI MÀN HÌNH */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5">
           {displayedItems.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-lg p-2.5 sm:p-3 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group border border-gray-200/80 min-h-[410px]"
+              className="bg-white rounded-lg p-2 sm:p-3 flex flex-col justify-between hover:shadow-lg transition-all duration-200 group border border-gray-200/90 w-full overflow-hidden"
             >
               <div>
-                <div className="flex items-center justify-between h-5">
-                  <span className="bg-[#d70018] text-white text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-sm">
+                {/* Badge giảm giá */}
+                <div className="flex items-center justify-between h-4 sm:h-5">
+                  <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
                     -{product.discountPercent}%
                   </span>
                   <span />
                 </div>
 
+                {/* Khung ảnh vuông tự co giãn */}
                 <Link
                   href={product.href}
-                  className="w-full h-44 sm:h-48 my-2 flex items-center justify-center bg-white overflow-hidden"
+                  className="w-full aspect-square my-1.5 sm:my-2 flex items-center justify-center bg-white overflow-hidden"
                 >
                   <img
                     src={product.imageUrl}
@@ -340,70 +342,80 @@ export const IPadShowcaseSection: React.FC = () => {
                       (e.target as HTMLImageElement).src =
                         'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500';
                     }}
-                    className="max-h-full max-w-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm"
+                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200 drop-shadow-xs pointer-events-none"
                   />
                 </Link>
 
+                {/* Tên sản phẩm cố định 2 dòng */}
                 <Link
                   href={product.href}
-                  className="font-bold text-xs sm:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[36px] sm:min-h-[38px] leading-snug"
+                  className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
                 >
                   {product.name}
                 </Link>
               </div>
 
-              <div>
-                {/* Khối trả góp chia đều 3 icon */}
-                <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-around text-[#d70018]">
-                  <div className="flex items-center gap-1">
-                    <CreditCard size={12} className="shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả góp</span>
+              <div className="mt-1.5">
+                {/* Khối trả góp co giãn linh hoạt */}
+                <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
+                  <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                    <CreditCard size={10} className="shrink-0 sm:w-3 sm:h-3" />
+                    <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                      Trả góp
+                    </span>
                   </div>
 
-                  <span className="text-gray-300 font-normal">|</span>
+                  <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
 
-                  <div className="flex items-center gap-1">
-                    <Wallet size={12} className="shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả trước</span>
+                  <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                    <Wallet size={10} className="shrink-0 sm:w-3 sm:h-3" />
+                    <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                      Trả trước
+                    </span>
                   </div>
 
-                  <span className="text-gray-300 font-normal">|</span>
+                  <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
 
-                  <div className="flex items-center gap-1">
-                    <Percent size={11} className="shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Phí</span>
+                  <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                    <Percent size={9} className="shrink-0 sm:w-2.5 sm:h-2.5" />
+                    <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                      Phí
+                    </span>
                   </div>
                 </div>
 
-                <span className="mt-1.5 bg-[#ffe8e8] text-[#d70018] text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit block">
-                  {product.statusTag}
+                {/* Nhãn trạng thái */}
+                <span className="mt-1 bg-[#ffe8e8] text-[#d70018] text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block">
+                  {product.statusTag || 'Sẵn hàng'}
                 </span>
 
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="font-black text-[#d70018] text-sm sm:text-base">
+                {/* Mức giá */}
+                <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
+                  <span className="font-black text-[#d70018] text-xs sm:text-sm md:text-base leading-none">
                     {product.currentPrice}
                   </span>
                   {product.originalPrice && (
-                    <span className="text-[10px] sm:text-[11px] text-gray-400 line-through">
+                    <span className="text-[9px] sm:text-[10px] text-gray-400 line-through leading-none">
                       {product.originalPrice}
                     </span>
                   )}
                 </div>
 
-                <div className="mt-2.5">
+                {/* Nút thêm giỏ hàng */}
+                <div className="mt-2">
                   <button
                     type="button"
                     onClick={(e) => handleAddToCartQuick(e, product)}
-                    className="w-full py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98"
+                    className="w-full py-1.5 sm:py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-[10px] sm:text-[11px] md:text-xs font-bold uppercase flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-2xs active:scale-95"
                   >
-                    <ShoppingCart size={13} />
-                    <span>Thêm Giỏ Hàng</span>
+                    <ShoppingCart size={11} className="sm:w-3.5 sm:h-3.5 shrink-0" />
+                    <span className="whitespace-nowrap">Thêm Giỏ Hàng</span>
                   </button>
                 </div>
               </div>
             </div>
           ))}
-        </>
+        </div>
 
         {/* 3. NÚT XEM TẤT CẢ */}
         <div className="flex justify-center items-center mt-6 sm:mt-8">
