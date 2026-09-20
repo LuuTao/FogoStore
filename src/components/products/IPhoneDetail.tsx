@@ -80,7 +80,7 @@ export default function IPhoneDetail({
     show: false,
     message: '',
   });
-// ĐỒNG BỘ DỮ LIỆU THÔNG SỐ VÀ MÔ TẢ TỪ ADMIN (LOCALSTORAGE)
+  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE / API)
   useEffect(() => {
     if (!product?.id) return;
     try {
@@ -95,7 +95,7 @@ export default function IPhoneDetail({
         }));
       }
     } catch (e) {
-      console.warn('Lỗi đọc specs từ local storage:', e);
+      console.warn('Lỗi đồng bộ dữ liệu sản phẩm từ Admin:', e);
     }
   }, [product?.id]);
   
@@ -828,51 +828,54 @@ export default function IPhoneDetail({
               </button>
             </div>
 
-            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
             {activeTab === 'desc' && (
-              <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
-                <div
-                  className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
-                    isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
-                  }`}
-                >
-                  {formattedDescription ? (
-                    <div
-                      className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
-                                 [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
-                                 [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
-                      dangerouslySetInnerHTML={{ __html: formattedDescription }}
-                    />
-                  ) : (
-                    <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
-                  )}
+  <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
+    <div
+      className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
+        isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
+      }`}
+    >
+      {product?.description ? (
+        <div
+          className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
+                     [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
+                     [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
+          dangerouslySetInnerHTML={{
+            __html: String(product.description)
+              .replace(/src="\/\//g, 'src="https://')
+              .replace(/src='\/\//g, "src='https://"),
+          }}
+        />
+      ) : (
+        <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
+      )}
 
-                  {!isDescExpanded && (
-                    <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
-                  )}
-                </div>
+      {!isDescExpanded && (
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+      )}
+    </div>
 
-                <div className="flex justify-center mt-4 border-t border-gray-100 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsDescExpanded(!isDescExpanded)}
-                    className="px-8 py-2.5 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-2xs"
-                  >
-                    {isDescExpanded ? (
-                      <>
-                        <span>— Rút gọn nội dung</span>
-                        <ChevronUp size={14} />
-                      </>
-                    ) : (
-                      <>
-                        <span>— Xem thêm nội dung</span>
-                        <ChevronDown size={14} />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
+    <div className="flex justify-center mt-4 border-t border-gray-100 pt-4">
+      <button
+        type="button"
+        onClick={() => setIsDescExpanded(!isDescExpanded)}
+        className="px-8 py-2.5 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-2xs"
+      >
+        {isDescExpanded ? (
+          <>
+            <span>— Rút gọn nội dung</span>
+            <ChevronUp size={14} />
+          </>
+        ) : (
+          <>
+            <span>— Xem thêm nội dung</span>
+            <ChevronDown size={14} />
+          </>
+        )}
+      </button>
+    </div>
+  </div>
+)}
 
             {/* TAB CHÍNH SÁCH BÁN HÀNG */}
             {activeTab === 'policy' && (
