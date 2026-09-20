@@ -237,36 +237,44 @@ export default function MacBookDetail({
       images: sample?.images || product.variants[0]?.images || [],
     };
   }, [product, selectedStorage, selectedColor]);
-
+  // CHUẨN XÁC: Lấy đầy đủ tất cả ảnh của riêng màu đang chọn, không lặp màu, không bị dính màu khác
   const imagesList: string[] = useMemo(() => {
-    const list: string[] = [];
+    let list: string[] = [];
 
-    if (currentVariant?.images && Array.isArray(currentVariant.images)) {
-      currentVariant.images.forEach((img: string) => {
-        if (img && !list.includes(img)) list.push(img);
-      });
+    // Tìm chính xác biến thể theo màu sắc đang chọn
+    const exactVariant = product?.variants?.find(
+      (v: any) => 
+        (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
+        (!selectedStorage || (v.storage || '').trim().toUpperCase() === selectedStorage.toUpperCase())
+    ) || product?.variants?.find(
+      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
+    );
+
+    // Nếu biến thể có mảng ảnh -> Lấy toàn bộ ảnh của biến thể đó
+    if (exactVariant) {
+      if (Array.isArray(exactVariant.images)) {
+        exactVariant.images.forEach((img: string) => {
+          if (img && !list.includes(img)) list.push(img);
+        });
+      }
+      if (exactVariant.imageUrl && !list.includes(exactVariant.imageUrl)) {
+        list.push(exactVariant.imageUrl);
+      }
     }
 
-    if (product?.variants && Array.isArray(product.variants)) {
-      product.variants.forEach((v: any) => {
-        if (Array.isArray(v.images)) {
-          v.images.forEach((img: string) => {
-            if (img && !list.includes(img)) list.push(img);
-          });
-        }
-      });
-    }
-
-    if (product?.images && Array.isArray(product.images)) {
-      product.images.forEach((img: string) => {
-        if (img && !list.includes(img)) list.push(img);
-      });
-    } else if (product?.imageUrl && !list.includes(product.imageUrl)) {
-      list.push(product.imageUrl);
+    // Nếu biến thể đó không có ảnh riêng, fallback về ảnh chung của sản phẩm
+    if (list.length === 0) {
+      if (product?.images && Array.isArray(product.images)) {
+        product.images.forEach((img: string) => {
+          if (img && !list.includes(img)) list.push(img);
+        });
+      } else if (product?.imageUrl && !list.includes(product.imageUrl)) {
+        list.push(product.imageUrl);
+      }
     }
 
     return list.length > 0 ? list : ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600'];
-  }, [currentVariant, product]);
+  }, [product, selectedColor, selectedStorage]);
 
   const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
 
@@ -297,20 +305,15 @@ export default function MacBookDetail({
 
     setIsImageTransitioning(true);
     setSelectedColor(colorName);
-
-    const matched = product?.variants?.find(
-      (v: any) => v.color.toLowerCase() === colorName.toLowerCase()
-    );
-    if (matched && matched.images && matched.images.length > 0) {
-      const idx = imagesList.findIndex((img) => img === matched.images[0]);
-      setCurrentImageIndex(idx !== -1 ? idx : 0);
-    } else {
-      setCurrentImageIndex(0);
-    }
+    setCurrentImageIndex(0); // Luôn đưa về ảnh đầu tiên của màu vừa chọn
 
     setTimeout(() => {
       setIsImageTransitioning(false);
     }, 150);
+
+    const matched = product?.variants?.find(
+      (v: any) => v.color.toLowerCase() === colorName.toLowerCase()
+    );
 
     const nextId = matched ? matched.id : `mock-${selectedStorage.toLowerCase()}-${encodeURIComponent(colorName)}`;
 
