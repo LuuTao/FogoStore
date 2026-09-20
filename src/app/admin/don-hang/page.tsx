@@ -9,7 +9,11 @@ import {
   Loader2,
   RefreshCw,
   Eye,
-  MapPin
+  MapPin,
+  Trash2,
+  CheckSquare,
+  Square,
+  AlertTriangle
 } from 'lucide-react';
 
 const API_URL = 'https://fogo-store-api.onrender.com';
@@ -59,6 +63,10 @@ export default function AdminOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  
+  // State quản lý chọn nhiều đơn hàng để xóa
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -85,27 +93,44 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
+  // Cập nhật trạng thái đơn: Nếu chọn COMPLETED (Hoàn tất) -> Tự động ép paymentStatus thành PAID
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
+      const payload: { orderStatus: string; paymentStatus?: string } = {
+        orderStatus: newStatus,
+      };
+
+      if (newStatus === 'COMPLETED') {
+        payload.paymentStatus = 'PAID';
+      }
+
       let res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderStatus: newStatus }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         res = await fetch(`${API_URL}/api/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderStatus: newStatus }),
+          body: JSON.stringify(payload),
         });
       }
 
       const data = await res.json();
       if (res.ok && data.success) {
         setOrders((prev) =>
-          prev.map((ord) => (ord.id === orderId ? { ...ord, orderStatus: newStatus } : ord))
+          prev.map((ord) => 
+            ord.id === orderId 
+              ? { 
+                  ...ord, 
+                  orderStatus: newStatus, 
+                  paymentStatus: newStatus === 'COMPLETED' ? 'PAID' : ord.paymentStatus 
+                } 
+              : ord
+          )
         );
       } else {
         alert('Cập nhật thất bại: ' + (data.error || 'Lỗi server'));
@@ -114,6 +139,53 @@ export default function AdminOrdersPage() {
       alert('Không thể kết nối máy chủ!');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  // Xóa 1 đơn hàng đơn lẻ
+  const handleDeleteSingle = async (orderId: string, orderCode: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${orderCode}?`)) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setSelectedIds((prev) => prev.filter((id) => id !== orderId));
+        setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Xóa đơn hàng thất bại');
+      }
+    } catch {
+      alert('Không thể kết nối máy chủ khi xóa đơn!');
+    }
+  };
+
+  // Xóa hàng loạt nhiều đơn hàng đã chọn
+  const handleDeleteBulk = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} đơn hàng đã chọn? Hành động này không thể hoàn tác!`)) return;
+
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`${API_URL}/api/admin/orders/bulk-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+
+      if (res.ok) {
+        setOrders((prev) => prev.filter((ord) => !selectedIds.includes(ord.id)));
+        setSelectedIds([]);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Xóa hàng loạt thất bại');
+      }
+    } catch {
+      alert('Lỗi kết nối khi xóa hàng loạt đơn hàng!');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -144,8 +216,24 @@ export default function AdminOrdersPage() {
     return matchStatus && matchKeyword;
   });
 
+  const isAllSelected = filteredOrders.length > 0 && selectedIds.length === filteredOrders.length;
+  
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredOrders.map((o) => o.id));
+    }
+  };
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   return (
-    <div className="space-y-6 max-w-full overflow-hidden">
+    <div className="space-y-6 max-w-full overflow-hidden select-none">
       {/* Tiêu đề & Bộ lọc */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -203,12 +291,41 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
+      {/* Thanh thao tác nổi khi chọn nhiều đơn */}
+      {selectedIds.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center justify-between text-xs animate-in fade-in duration-150">
+          <div className="flex items-center gap-2 text-red-800 font-bold">
+            <CheckSquare size={16} className="text-[#d70018]" />
+            <span>Đã chọn {selectedIds.length} đơn hàng</span>
+          </div>
+
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={handleDeleteBulk}
+            className="bg-[#d70018] hover:bg-[#b50014] text-white px-3.5 py-1.5 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
+          >
+            <Trash2 size={13} />
+            <span>{isDeleting ? 'Đang xóa...' : 'Xóa các đơn đã chọn'}</span>
+          </button>
+        </div>
+      )}
+
       {/* Bảng đơn hàng */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 uppercase font-black tracking-wider text-[11px]">
+                <th className="py-3.5 px-3 w-10 text-center">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                  >
+                    {isAllSelected ? <CheckSquare size={16} className="text-[#d70018]" /> : <Square size={16} />}
+                  </button>
+                </th>
                 <th className="py-3.5 px-4">MÃ ĐƠN & NGÀY ĐẶT</th>
                 <th className="py-3.5 px-4">KHÁCH HÀNG</th>
                 <th className="py-3.5 px-4">CHI TIẾT SẢN PHẨM</th>
@@ -222,15 +339,16 @@ export default function AdminOrdersPage() {
             <tbody className="divide-y divide-gray-100 font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-500">
+                  <td colSpan={9} className="py-12 text-center text-gray-500">
                     <Loader2 size={24} className="animate-spin text-[#d70018] mx-auto mb-2" />
-                    <span>Đang nạp dữ liệu đơn hàng từ Neon DB...</span>
+                    <span>Đang nạp dữ liệu đơn hàng từ cơ sở dữ liệu...</span>
                   </td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-500 font-semibold">
-                    Không có đơn hàng nào
+                  <td colSpan={9} className="py-12 text-center text-gray-500 font-semibold">
+                    <AlertTriangle size={24} className="mx-auto text-gray-300 mb-2" />
+                    <span>Không có đơn hàng nào</span>
                   </td>
                 </tr>
               ) : (
@@ -241,9 +359,21 @@ export default function AdminOrdersPage() {
                     text: 'text-gray-700',
                     border: 'border-gray-200',
                   };
+                  const isSelected = selectedIds.includes(ord.id);
+                  const isPaid = ord.paymentStatus === 'PAID';
 
                   return (
-                    <tr key={ord.id} className="hover:bg-gray-50/70 transition-colors">
+                    <tr key={ord.id} className={`hover:bg-gray-50/70 transition-colors ${isSelected ? 'bg-red-50/30' : ''}`}>
+                      <td className="py-3.5 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectItem(ord.id)}
+                          className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                        >
+                          {isSelected ? <CheckSquare size={16} className="text-[#d70018]" /> : <Square size={16} />}
+                        </button>
+                      </td>
+
                       <td className="py-3.5 px-4">
                         <Link
                           href={`/don-hang/${ord.orderCode}`}
@@ -306,12 +436,12 @@ export default function AdminOrdersPage() {
                         </span>
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 inline-block ${
-                            ord.paymentStatus === 'PAID'
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-amber-50 text-amber-700'
+                            isPaid
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}
                         >
-                          {ord.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                          {isPaid ? 'Đã chuyển tiền' : 'Chưa thanh toán'}
                         </span>
                       </td>
 
@@ -338,14 +468,24 @@ export default function AdminOrdersPage() {
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
-                        <Link
-                          href={`/don-hang/${ord.orderCode}`}
-                          target="_blank"
-                          className="p-1.5 bg-gray-100 hover:bg-[#d70018] hover:text-white rounded text-gray-600 inline-flex items-center justify-center transition-colors"
-                          title="Xem hóa đơn chi tiết"
-                        >
-                          <Eye size={14} />
-                        </Link>
+                        <div className="flex items-center justify-center gap-1">
+                          <Link
+                            href={`/don-hang/${ord.orderCode}`}
+                            target="_blank"
+                            className="p-1.5 bg-gray-100 hover:bg-[#d70018] hover:text-white rounded text-gray-600 inline-flex items-center justify-center transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={14} />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSingle(ord.id, ord.orderCode)}
+                            className="p-1.5 bg-gray-100 hover:bg-red-600 hover:text-white rounded text-gray-600 inline-flex items-center justify-center transition-colors cursor-pointer"
+                            title="Xóa đơn hàng"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
