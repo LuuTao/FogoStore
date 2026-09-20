@@ -79,7 +79,8 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
     { name: 'iPhone 16', tag: '16-standard', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
   ],
   'duo': [
-    { name: 'iPhone Duo Series', tag: 'duo', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
+    { name: 'iPhone Duo Fold', tag: 'duo-fold', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
+    { name: 'iPhone Duo Flip', tag: 'duo-flip', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
   ],
 };
 
@@ -130,7 +131,6 @@ const formatProductImageUrl = (url?: string | null): string => {
   return `${API_URL}${path}`;
 };
 
-// Hàm định dạng tên sản phẩm: dời dung lượng lên trước hậu tố (Chính Hãng, New Seal, ...)
 const buildProductNameWithStorage = (originalName: string, storage: string): string => {
   if (!storage) return originalName;
   const upperStorage = storage.toUpperCase();
@@ -185,6 +185,7 @@ export default function DynamicIPhonePage() {
     }
   }, []);
 
+  // Gộp thông minh: Cập nhật hình ảnh/tên tab mà không ghi đè mất danh sách mặc định
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -198,21 +199,15 @@ export default function DynamicIPhonePage() {
             (it: any) => it.group === 'sub_iphone' && it.name.toLowerCase() !== 'tất cả'
           );
           if (adminSubs.length > 0) {
-            const mapped: SeriesTabItem[] = [
-              DEFAULT_IPHONE_SERIES[0],
-              ...adminSubs.map((it: any) => {
-                const numMatch = it.name.match(/\d+/);
-                const isDuo = it.name.toLowerCase().includes('duo');
-                const fallbackSlug = it.name.toLowerCase().replace(/\s+/g, '-');
-                return {
-                  name: it.name,
-                  slug: isDuo ? 'iphone-duo' : numMatch ? `iphone-${numMatch[0]}` : fallbackSlug,
-                  imageUrl: it.imageUrl,
-                  queryTag: isDuo ? 'duo' : numMatch ? numMatch[0] : it.name.toLowerCase(),
-                };
-              }),
-            ];
-            setSeriesTabs(mapped);
+            const merged = DEFAULT_IPHONE_SERIES.map((tab) => {
+              if (!tab.queryTag) return tab;
+              const match = adminSubs.find((s: any) => {
+                const sName = (s.name || '').toLowerCase();
+                return sName.includes(tab.queryTag!);
+              });
+              return match ? { ...tab, name: match.name, imageUrl: match.imageUrl || tab.imageUrl } : tab;
+            });
+            setSeriesTabs(merged);
           }
         }
       }
@@ -254,7 +249,6 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
-  // Tách từng dung lượng và dời GB lên vị trí chuẩn
   const expandedProducts = useMemo(() => {
     const result: any[] = [];
 
@@ -295,7 +289,6 @@ export default function DynamicIPhonePage() {
           discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
           statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-          // CHỈ TÌM KIẾM TRÊN TÊN SẢN PHẨM ĐỂ TRÁNH TRÙNG LẶP SỐ SERIES TRONG DESCRIPTION
           searchIndex: `${prod.name} ${stKey}`.toLowerCase(),
         });
       } else {
@@ -331,7 +324,6 @@ export default function DynamicIPhonePage() {
     return result;
   }, [rawDbProducts]);
 
-  // Bộ lọc chuẩn: Khớp chính xác số Series theo ranh giới từ, loại bỏ hoàn toàn các máy không liên quan
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -341,7 +333,6 @@ export default function DynamicIPhonePage() {
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
-        // KHÓA CHẶT: Tên sản phẩm bắt buộc phải có đúng số series (VD: \b18\b, không dính 14, 16, 17)
         const seriesRegex = new RegExp(`\\b${targetNumber}\\b`, 'i');
         items = items.filter((i) => seriesRegex.test(i.name));
 
@@ -521,9 +512,9 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* 2. ICON SERIES CHA */}
-          <div className="my-6 py-2 overflow-x-auto scrollbar-none">
-            <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
+          {/* 2. ICON SERIES CHA: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP) */}
+          <div className="my-6 py-2 w-full">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
@@ -536,10 +527,10 @@ export default function DynamicIPhonePage() {
                   <Link
                     key={series.slug || idx}
                     href={isAllButton ? '/iphone' : `/iphone?series=${series.queryTag}`}
-                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
+                    className="group flex flex-col items-center gap-2 cursor-pointer w-[76px] sm:w-[90px] md:w-[105px] transition-transform active:scale-95 shrink-0"
                   >
                     <div
-                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
+                      className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                         isSelected
                           ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
                           : 'border-2 border-transparent hover:border-gray-200 bg-[#f8f9fa] shadow-2xs'
@@ -552,7 +543,7 @@ export default function DynamicIPhonePage() {
                       />
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
+                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-1 w-full ${
                         isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                       }`}
                     >
@@ -564,10 +555,10 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* 3. SUBMODELS CON */}
+          {/* 3. SUBMODELS CON: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP) */}
           {subModels.length > 0 && (
-            <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
-              <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
+            <div className="mb-8 pt-3 pb-3 border-t border-dashed border-gray-200 w-full">
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 md:gap-6 w-full px-2">
                 {subModels.map((model) => {
                   const isSubSelected = currentFilter === model.tag;
 
@@ -575,10 +566,10 @@ export default function DynamicIPhonePage() {
                     <Link
                       key={model.tag}
                       href={`/iphone?series=${model.tag}`}
-                      className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
+                      className="group flex flex-col items-center gap-1.5 cursor-pointer w-[72px] sm:w-[84px] md:w-[96px] transition-transform active:scale-95 shrink-0"
                     >
                       <div
-                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-1.5 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
+                        className={`w-12 h-12 sm:w-14 sm:h-14 md:w-15 md:h-15 rounded-full p-1.5 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                           isSubSelected
                             ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 scale-105 ring-2 ring-red-100/50'
                             : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
@@ -592,7 +583,7 @@ export default function DynamicIPhonePage() {
                       </div>
 
                       <span
-                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
+                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight w-full break-words ${
                           isSubSelected
                             ? 'text-[#d70018] font-bold'
                             : 'text-gray-700 group-hover:text-[#d70018]'
@@ -624,136 +615,146 @@ export default function DynamicIPhonePage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM: ẢNH TO, NỀN TRẮNG TINH, KHÔNG VIỀN */}
+          {/* LƯỚI SẢN PHẨM: CO GIÃN CHUẨN TỶ LỆ */}
           {loadingDb ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-14">
-              {Array.from({ length: 5 }).map((_, index) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5 mb-14">
+              {Array.from({ length: 10 }).map((_, index) => (
                 <div
                   key={index}
-                  className="bg-white p-3 flex flex-col justify-between min-h-[420px] animate-pulse"
+                  className="bg-white p-3 flex flex-col justify-between min-h-[360px] animate-pulse rounded-lg border border-gray-100"
                 >
                   <div className="w-10 h-4 bg-gray-100 mb-2" />
-                  <div className="w-full h-48 bg-gray-50 my-2 rounded" />
+                  <div className="w-full aspect-square bg-gray-50 my-2 rounded" />
                   <div className="w-full h-4 bg-gray-100 mt-2" />
                   <div className="w-3/4 h-4 bg-gray-100 mt-2" />
                 </div>
               ))}
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-14">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5 mb-14">
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white p-2.5 sm:p-3 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group min-h-[420px]"
+                  className="bg-white rounded-lg p-2 sm:p-3 flex flex-col justify-between hover:shadow-lg transition-all duration-200 group border border-gray-200/90 w-full overflow-hidden"
                 >
-                  {/* TAG GIẢM GIÁ */}
-                  <div className="flex items-center justify-between h-5">
-                    {product.rawPrice > 0 ? (
-                      <span className="bg-[#d70018] text-white text-[11px] font-black px-1.5 py-0.5 rounded-sm">
-                        -{product.discountPercent}%
-                      </span>
-                    ) : (
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
-                        Hot
-                      </span>
-                    )}
-                    <span />
+                  <div>
+                    {/* TAG GIẢM GIÁ */}
+                    <div className="flex items-center justify-between h-4 sm:h-5">
+                      {product.rawPrice > 0 ? (
+                        <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
+                          -{product.discountPercent}%
+                        </span>
+                      ) : (
+                        <span className="bg-gray-100 text-gray-600 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-xs">
+                          Hot
+                        </span>
+                      )}
+                      <span />
+                    </div>
+
+                    {/* KHUNG ẢNH VUÔNG TỰ CO GIÃN */}
+                    <Link
+                      href={product.href}
+                      className="w-full aspect-square my-1.5 sm:my-2 flex items-center justify-center bg-white overflow-hidden"
+                    >
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80';
+                        }}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200 drop-shadow-xs pointer-events-none"
+                      />
+                    </Link>
+
+                    {/* TÊN SẢN PHẨM CỐ ĐỊNH 2 DÒNG */}
+                    <Link
+                      href={product.href}
+                      className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
+                    >
+                      {product.name}
+                    </Link>
                   </div>
 
-                  {/* KHUNG ẢNH: TO LÊN, NỀN TRẮNG TINH, KHÔNG VIỀN */}
-                  <Link href={product.href} className="w-full h-48 sm:h-52 my-2 flex items-center justify-center bg-white overflow-hidden">
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80';
-                      }}
-                      className="max-h-full max-w-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm"
-                    />
-                  </Link>
+                  <div className="mt-1.5">
+                    {/* KHỐI TRẢ GÓP CO GIÃN LINH HOẠT */}
+                    {product.rawPrice > 0 ? (
+                      <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
+                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                          <CreditCard size={10} className="shrink-0 sm:w-3 sm:h-3" />
+                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                            Trả góp
+                          </span>
+                        </div>
 
-                  {/* TÊN SẢN PHẨM: ĐÃ DỜI DUNG LƯỢNG LÊN TRƯỚC */}
-                  <Link
-                    href={product.href}
-                    className="font-bold text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[38px] leading-snug"
-                  >
-                    {product.name}
-                  </Link>
+                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
 
-                  {/* KHỐI TRẢ GÓP MỚI: TỪNG MỤC ĐỀU CÓ ICON VÀ CĂN ĐỀU GIỮA */}
-                  {product.rawPrice > 0 ? (
-                    <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-around text-[#d70018]">
-                      {/* Mục 1: Trả góp */}
-                      <div className="flex items-center gap-1">
-                        <CreditCard size={12} className="shrink-0" />
-                        <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả góp</span>
+                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                          <Wallet size={10} className="shrink-0 sm:w-3 sm:h-3" />
+                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                            Trả trước
+                          </span>
+                        </div>
+
+                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
+
+                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                          <Percent size={9} className="shrink-0 sm:w-2.5 sm:h-2.5" />
+                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                            Phí
+                          </span>
+                        </div>
                       </div>
-                      
-                      <span className="text-gray-300 font-normal">|</span>
-
-                      {/* Mục 2: Trả trước */}
-                      <div className="flex items-center gap-1">
-                        <Wallet size={12} className="shrink-0" />
-                        <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả trước</span>
+                    ) : (
+                      <div className="bg-gray-50 border border-gray-200 rounded-xs py-1 px-1.5 text-center">
+                        <span className="text-[9px] font-bold text-gray-500 truncate block">
+                          Liên hệ báo giá
+                        </span>
                       </div>
+                    )}
 
-                      <span className="text-gray-300 font-normal">|</span>
-
-                      {/* Mục 3: Phí */}
-                      <div className="flex items-center gap-1">
-                        <Percent size={11} className="shrink-0" />
-                        <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Phí</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
-                      <span className="text-[10px] font-bold text-gray-500">
-                        Liên hệ nhận báo giá tốt nhất
-                      </span>
-                    </div>
-                  )}
-
-                  {/* NHÃN TRẠNG THÁI */}
-                  <span
-                    className={`mt-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit ${
-                      product.statusTag === 'Sẵn hàng'
-                        ? 'bg-[#ffe8e8] text-[#d70018]'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {product.statusTag}
-                  </span>
-
-                  {/* MỨC GIÁ */}
-                  <div className="mt-1 flex items-baseline gap-1.5">
-                    <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base'}`}>
-                      {product.currentPrice}
+                    {/* NHÃN TRẠNG THÁI */}
+                    <span
+                      className={`mt-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
+                        product.statusTag === 'Sẵn hàng'
+                          ? 'bg-[#ffe8e8] text-[#d70018]'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {product.statusTag}
                     </span>
-                    {product.rawPrice > 0 && product.originalPrice && (
-                      <span className="text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
-                    )}
-                  </div>
 
-                  {/* NÚT THÊM GIỎ HÀNG */}
-                  <div className="mt-3">
-                    {product.rawPrice > 0 ? (
-                      <button
-                        type="button"
-                        onClick={(e) => handleAddToCartQuick(e, product)}
-                        className="w-full py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98"
-                      >
-                        <ShoppingCart size={14} />
-                        <span>Thêm Giỏ Hàng</span>
-                      </button>
-                    ) : (
-                      <a
-                        href="tel:0566003333"
-                        className="w-full py-2 border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] rounded-md text-xs font-bold uppercase flex items-center justify-center transition-colors"
-                      >
-                        Liên Hệ Báo Giá
-                      </a>
-                    )}
+                    {/* MỨC GIÁ */}
+                    <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
+                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-xs sm:text-sm md:text-base leading-none' : 'text-xs sm:text-sm'}`}>
+                        {product.currentPrice}
+                      </span>
+                      {product.rawPrice > 0 && product.originalPrice && (
+                        <span className="text-[9px] sm:text-[10px] text-gray-400 line-through leading-none">{product.originalPrice}</span>
+                      )}
+                    </div>
+
+                    {/* NÚT THÊM GIỎ HÀNG */}
+                    <div className="mt-2">
+                      {product.rawPrice > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleAddToCartQuick(e, product)}
+                          className="w-full py-1.5 sm:py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-[10px] sm:text-[11px] md:text-xs font-bold uppercase flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          <ShoppingCart size={11} className="sm:w-3.5 sm:h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">Thêm Giỏ Hàng</span>
+                        </button>
+                      ) : (
+                        <a
+                          href="tel:0566003333"
+                          className="w-full py-1.5 sm:py-2 border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] rounded-md text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center transition-colors"
+                        >
+                          Liên Hệ Báo Giá
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

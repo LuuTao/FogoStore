@@ -193,7 +193,7 @@ export default function DynamicWatchPage() {
     '';
   const currentFilter = (rawParam || '').toLowerCase().trim();
 
-  // 1. Nạp Banner đôi & Danh mục Submodel từ Admin
+  // 1. Nạp Banner đôi & Danh mục Submodel an toàn (không ghi đè mất tab)
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -207,23 +207,15 @@ export default function DynamicWatchPage() {
             (it: any) => it.group === 'sub_watch' && it.name.toLowerCase() !== 'tất cả'
           );
           if (adminSubs.length > 0) {
-            const mapped: SeriesTabItem[] = [
-              DEFAULT_WATCH_SERIES[0],
-              ...adminSubs.map((it: any) => {
-                const lower = it.name.toLowerCase();
-                let queryTag = 'series';
-                if (lower.includes('ultra')) queryTag = 'ultra';
-                else if (lower.includes('se')) queryTag = 'se';
-
-                return {
-                  name: it.name,
-                  slug: `watch-${queryTag}`,
-                  imageUrl: it.imageUrl,
-                  queryTag,
-                };
-              }),
-            ];
-            setSeriesTabs(mapped);
+            const merged = DEFAULT_WATCH_SERIES.map((tab) => {
+              if (!tab.queryTag) return tab;
+              const match = adminSubs.find((s: any) => {
+                const sName = (s.name || '').toLowerCase();
+                return sName.includes(tab.queryTag!);
+              });
+              return match ? { ...tab, name: match.name, imageUrl: match.imageUrl || tab.imageUrl } : tab;
+            });
+            setSeriesTabs(merged);
           }
         }
       }
@@ -286,7 +278,7 @@ export default function DynamicWatchPage() {
     fetchWatchFromDB();
   }, []);
 
-  // 5. TỰ ĐỘNG PHÂN TÁCH BIẾN THỂ THÀNH TỪNG CARD SẢN PHẨM RIÊNG BIỆT
+  // 5. Tự động phân tách từng kích thước/phiên bản thành card riêng biệt
   const expandedProducts = useMemo(() => {
     const result: any[] = [];
 
@@ -569,7 +561,7 @@ export default function DynamicWatchPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* 1. BANNER ĐÔI THUẦN ẢNH CHUẨN 600x200px */}
+          {/* 1. BANNER ĐÔI THUẦN ẢNH */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link
@@ -596,9 +588,9 @@ export default function DynamicWatchPage() {
             </div>
           </div>
 
-          {/* 2. HÀNG SERIES CHA: ICON TRÒN TO CHUẨN 80PX */}
-          <div className="my-6 py-2 overflow-x-auto scrollbar-none">
-            <div className="flex items-center justify-center gap-6 sm:gap-9 min-w-max px-2">
+          {/* 2. HÀNG SERIES CHA: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP), KHÔNG BỊ CẮT CHỮ */}
+          <div className="my-6 py-2 w-full">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
@@ -611,12 +603,12 @@ export default function DynamicWatchPage() {
                   <Link
                     key={series.slug || idx}
                     href={isAllButton ? '/watch' : `/watch?series=${series.queryTag}`}
-                    className="group flex flex-col items-center gap-2 cursor-pointer max-w-[95px] sm:max-w-[110px] transition-transform active:scale-95"
+                    className="group flex flex-col items-center gap-2 cursor-pointer w-[76px] sm:w-[90px] md:w-[105px] transition-transform active:scale-95 shrink-0"
                   >
                     <div
-                      className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                      className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2.5 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                         isSelected
-                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105'
+                          ? 'border-2 border-[#d70018] shadow-md shadow-red-100 bg-white scale-105 ring-2 ring-red-100/50'
                           : 'border-2 border-transparent bg-[#f0f2f5] hover:bg-gray-200 group-hover:scale-105'
                       }`}
                     >
@@ -627,7 +619,7 @@ export default function DynamicWatchPage() {
                       />
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-2 ${
+                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-1 w-full ${
                         isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                       }`}
                     >
@@ -639,10 +631,10 @@ export default function DynamicWatchPage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON */}
+          {/* 3. HÀNG SUBMODEL CON: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP) */}
           {activeSubmodels.length > 0 && (
-            <div className="mb-8 pt-2 pb-3 border-t border-dashed border-gray-100 overflow-x-auto scrollbar-none">
-              <div className="flex items-center justify-center gap-5 sm:gap-7 min-w-max px-2">
+            <div className="mb-8 pt-3 pb-3 border-t border-dashed border-gray-200 w-full">
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 md:gap-6 w-full px-2">
                 {activeSubmodels.map((model) => {
                   const isSubSelected = currentFilter === model.tag;
 
@@ -650,12 +642,12 @@ export default function DynamicWatchPage() {
                     <Link
                       key={model.tag}
                       href={`/watch?series=${model.tag}`}
-                      className="group flex flex-col items-center gap-1.5 cursor-pointer max-w-[85px] sm:max-w-[95px] transition-transform active:scale-95"
+                      className="group flex flex-col items-center gap-1.5 cursor-pointer w-[72px] sm:w-[84px] md:w-[96px] transition-transform active:scale-95 shrink-0"
                     >
                       <div
-                        className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                        className={`w-12 h-12 sm:w-14 sm:h-14 md:w-15 md:h-15 rounded-full p-2 flex items-center justify-center transition-all duration-200 overflow-hidden ${
                           isSubSelected
-                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105'
+                            ? 'border-2 border-[#d70018] shadow-sm shadow-red-100 bg-white scale-105 ring-2 ring-red-100/50'
                             : 'border border-gray-200 bg-[#f8f9fa] hover:border-[#d70018]/60 group-hover:scale-105'
                         }`}
                       >
@@ -667,7 +659,7 @@ export default function DynamicWatchPage() {
                       </div>
 
                       <span
-                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight ${
+                        className={`text-[11px] sm:text-xs font-medium text-center transition-colors line-clamp-2 leading-tight w-full break-words ${
                           isSubSelected
                             ? 'text-[#d70018] font-bold'
                             : 'text-gray-700 group-hover:text-[#d70018]'
@@ -699,100 +691,108 @@ export default function DynamicWatchPage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM: ẢNH TO, NỀN TRẮNG TINH, KHÔNG VIỀN KHUNG */}
+          {/* LƯỚI SẢN PHẨM: CO GIÃN CHUẨN TỶ LỆ */}
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={index}
-                  className="bg-white p-3 flex flex-col justify-between min-h-[420px] animate-pulse"
+                  className="bg-white p-3 flex flex-col justify-between min-h-[360px] animate-pulse rounded-lg border border-gray-100"
                 >
                   <div className="w-10 h-4 bg-gray-100 mb-2" />
-                  <div className="w-full h-44 bg-gray-50 my-2 rounded" />
+                  <div className="w-full aspect-square bg-gray-50 my-2 rounded" />
                   <div className="w-full h-4 bg-gray-100 mt-2" />
                   <div className="w-3/4 h-4 bg-gray-100 mt-2" />
                 </div>
               ))}
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 mb-14">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5 mb-14">
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white p-2.5 sm:p-3 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group border border-gray-200/80 rounded-lg min-h-[420px]"
+                  className="bg-white rounded-lg p-2 sm:p-3 flex flex-col justify-between hover:shadow-lg transition-all duration-200 group border border-gray-200/90 w-full overflow-hidden"
                 >
-                  {/* TAG GIẢM GIÁ (ĐÃ BỎ AUTHORIZED RESELLER) */}
-                  <div className="flex items-center justify-between h-5">
-                    {product.rawPrice > 0 ? (
-                      <span className="bg-[#d70018] text-white text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-sm">
-                        -{product.discountPercent}%
-                      </span>
-                    ) : (
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
-                        Hot
-                      </span>
-                    )}
-                    <span />
+                  <div>
+                    {/* TAG GIẢM GIÁ */}
+                    <div className="flex items-center justify-between h-4 sm:h-5">
+                      {product.rawPrice > 0 ? (
+                        <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
+                          -{product.discountPercent}%
+                        </span>
+                      ) : (
+                        <span className="bg-gray-100 text-gray-600 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-xs">
+                          Hot
+                        </span>
+                      )}
+                      <span />
+                    </div>
+
+                    {/* KHUNG ẢNH VUÔNG TỰ CO GIÃN */}
+                    <Link
+                      href={product.href}
+                      className="w-full aspect-square my-1.5 sm:my-2 flex items-center justify-center bg-white overflow-hidden"
+                    >
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80';
+                        }}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200 drop-shadow-xs pointer-events-none"
+                      />
+                    </Link>
+
+                    {/* TÊN SẢN PHẨM CỐ ĐỊNH 2 DÒNG */}
+                    <Link
+                      href={product.href}
+                      className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
+                    >
+                      {product.name}
+                    </Link>
                   </div>
 
-                  {/* KHUNG ẢNH: TO LÊN, NỀN TRẮNG TINH, KHÔNG VIỀN */}
-                  <Link
-                    href={product.href}
-                    className="w-full h-44 sm:h-48 my-2 flex items-center justify-center bg-white overflow-hidden"
-                  >
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=400&q=80';
-                      }}
-                      className="max-h-full max-w-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm"
-                    />
-                  </Link>
-
-                  {/* TÊN SẢN PHẨM: ĐÃ DỜI DUNG LƯỢNG/SIZE LÊN TRƯỚC */}
-                  <Link
-                    href={product.href}
-                    className="font-bold text-xs sm:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[36px] sm:min-h-[38px] leading-snug"
-                  >
-                    {product.name}
-                  </Link>
-
-                  <div>
-                    {/* KHỐI TRẢ GÓP MỚI: 3 ICON CĂN ĐỀU GIỮA */}
+                  <div className="mt-1.5">
+                    {/* KHỐI TRẢ GÓP CO GIÃN LINH HOẠT */}
                     {product.rawPrice > 0 ? (
-                      <div className="mt-2 bg-[#fff1f2] border border-[#ffccd2] rounded-sm py-1.5 px-2 flex items-center justify-around text-[#d70018]">
-                        <div className="flex items-center gap-1">
-                          <CreditCard size={12} className="shrink-0" />
-                          <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả góp</span>
+                      <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
+                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                          <CreditCard size={10} className="shrink-0 sm:w-3 sm:h-3" />
+                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                            Trả góp
+                          </span>
                         </div>
 
-                        <span className="text-gray-300 font-normal">|</span>
+                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
 
-                        <div className="flex items-center gap-1">
-                          <Wallet size={12} className="shrink-0" />
-                          <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Trả trước</span>
+                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                          <Wallet size={10} className="shrink-0 sm:w-3 sm:h-3" />
+                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                            Trả trước
+                          </span>
                         </div>
 
-                        <span className="text-gray-300 font-normal">|</span>
+                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
 
-                        <div className="flex items-center gap-1">
-                          <Percent size={11} className="shrink-0" />
-                          <span className="text-[10px] sm:text-[11px] font-black tracking-tight whitespace-nowrap">Phí</span>
+                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+                          <Percent size={9} className="shrink-0 sm:w-2.5 sm:h-2.5" />
+                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
+                            Phí
+                          </span>
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-2 bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 text-center">
-                        <span className="text-[10px] font-bold text-gray-500">
-                          Liên hệ nhận báo giá tốt nhất
+                      <div className="bg-gray-50 border border-gray-200 rounded-xs py-1 px-1.5 text-center">
+                        <span className="text-[9px] font-bold text-gray-500 truncate block">
+                          Liên hệ báo giá
                         </span>
                       </div>
                     )}
 
                     {/* NHÃN TRẠNG THÁI */}
                     <span
-                      className={`mt-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-sm w-fit block ${
+                      className={`mt-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
                         product.statusTag === 'Sẵn hàng'
                           ? 'bg-[#ffe8e8] text-[#d70018]'
                           : 'bg-gray-100 text-gray-500'
@@ -801,31 +801,31 @@ export default function DynamicWatchPage() {
                       {product.statusTag}
                     </span>
 
-                    {/* GIÁ BÁN */}
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm md:text-base' : 'text-base'}`}>
+                    {/* MỨC GIÁ */}
+                    <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
+                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-xs sm:text-sm md:text-base leading-none' : 'text-xs sm:text-sm'}`}>
                         {product.currentPrice}
                       </span>
                       {product.rawPrice > 0 && product.originalPrice && (
-                        <span className="text-[10px] sm:text-[11px] text-gray-400 line-through">{product.originalPrice}</span>
+                        <span className="text-[9px] sm:text-[10px] text-gray-400 line-through leading-none">{product.originalPrice}</span>
                       )}
                     </div>
 
                     {/* NÚT THÊM GIỎ HÀNG */}
-                    <div className="mt-2.5">
+                    <div className="mt-2">
                       {product.rawPrice > 0 ? (
                         <button
                           type="button"
                           onClick={(e) => handleAddToCartQuick(e, product)}
-                          className="w-full py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98"
+                          className="w-full py-1.5 sm:py-2 bg-[#d70018] hover:bg-[#b50014] text-white rounded-md text-[10px] sm:text-[11px] md:text-xs font-bold uppercase flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-2xs active:scale-95"
                         >
-                          <ShoppingCart size={13} />
-                          <span>Thêm Giỏ Hàng</span>
+                          <ShoppingCart size={11} className="sm:w-3.5 sm:h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">Thêm Giỏ Hàng</span>
                         </button>
                       ) : (
                         <a
                           href="tel:0566003333"
-                          className="w-full py-2 border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] rounded-md text-xs font-bold uppercase flex items-center justify-center transition-colors"
+                          className="w-full py-1.5 sm:py-2 border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] rounded-md text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center transition-colors"
                         >
                           Liên Hệ Báo Giá
                         </a>
