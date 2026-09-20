@@ -231,15 +231,27 @@ export default function IPhoneDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
+  // ĐÃ SỬA: Lọc bỏ ảnh trùng lặp và ưu tiên gom ảnh chính xác theo màu sắc đang chọn
   const imagesList: string[] = useMemo(() => {
     const list: string[] = [];
 
-    if (currentVariant?.images && Array.isArray(currentVariant.images)) {
-      currentVariant.images.forEach((img: string) => {
-        if (img && !list.includes(img)) list.push(img);
-      });
+    // 1. ƯU TIÊN LẤY ẢNH CỦA BIẾN THỂ MÀU ĐANG CHỌN TRƯỚC (tránh lặp màu / sai màu)
+    if (selectedColor && product?.variants && Array.isArray(product.variants)) {
+      const matchedVariant = product.variants.find(
+        (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
+                    (!selectedStorage || (v.storage || '').trim().toUpperCase() === selectedStorage.toUpperCase())
+      );
+      if (matchedVariant && Array.isArray(matchedVariant.images)) {
+        matchedVariant.images.forEach((img: string) => {
+          if (img && !list.includes(img)) list.push(img);
+        });
+      }
+      if (matchedVariant?.imageUrl && !list.includes(matchedVariant.imageUrl)) {
+        list.push(matchedVariant.imageUrl);
+      }
     }
 
+    // 2. LẤY THÊM TỪ CÁC BIẾN THỂ KHÁC (nếu cần thiết để bổ sung kho ảnh)
     if (product?.variants && Array.isArray(product.variants)) {
       product.variants.forEach((v: any) => {
         if (Array.isArray(v.images)) {
@@ -247,9 +259,13 @@ export default function IPhoneDetail({
             if (img && !list.includes(img)) list.push(img);
           });
         }
+        if (v.imageUrl && !list.includes(v.imageUrl)) {
+          list.push(v.imageUrl);
+        }
       });
     }
 
+    // 3. LẤY THÊM ẢNH GỐC CỦA SẢN PHẨM (nếu có)
     if (product?.images && Array.isArray(product.images)) {
       product.images.forEach((img: string) => {
         if (img && !list.includes(img)) list.push(img);
@@ -258,8 +274,10 @@ export default function IPhoneDetail({
       list.push(product.imageUrl);
     }
 
-    return list.length > 0 ? list : ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600'];
-  }, [currentVariant, product]);
+    // Trả về danh sách đã lọc sạch hoàn toàn URL trùng lặp bằng Set
+    const uniqueList = Array.from(new Set(list));
+    return uniqueList.length > 0 ? uniqueList : ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600'];
+  }, [currentVariant, product, selectedColor, selectedStorage]);
 
   const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
 
