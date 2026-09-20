@@ -54,61 +54,61 @@ const DEFAULT_WATCH_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// 2. Sub-models chi tiết từng dòng
+// 2. Sub-models chi tiết từng dòng (chuẩn hóa tag sang dạng đầy đủ)
 const WATCH_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   ultra: [
     {
       name: 'Tất cả Ultra',
-      tag: 'ultra',
+      tag: 'watch-ultra',
       img: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'Watch Ultra 2',
-      tag: 'ultra-2',
+      tag: 'watch-ultra-2',
       img: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'Watch Ultra 1',
-      tag: 'ultra-1',
+      tag: 'watch-ultra-1',
       img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
     },
   ],
   series: [
     {
       name: 'Tất cả Series',
-      tag: 'series',
+      tag: 'watch-series',
       img: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'Series 10',
-      tag: 'series-10',
+      tag: 'watch-series-10',
       img: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'Series 9',
-      tag: 'series-9',
+      tag: 'watch-series-9',
       img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'Series 8',
-      tag: 'series-8',
+      tag: 'watch-series-8',
       img: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=150&q=80',
     },
   ],
   se: [
     {
       name: 'Tất cả SE',
-      tag: 'se',
+      tag: 'watch-se',
       img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'Watch SE 2',
-      tag: 'se-2',
+      tag: 'watch-se-2',
       img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80',
     },
     {
       name: 'Watch SE 1',
-      tag: 'se-1',
+      tag: 'watch-se-1',
       img: 'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=150&q=80',
     },
   ],
@@ -152,7 +152,6 @@ const formatProductImageUrl = (url?: string | null): string => {
   return `${API_URL}${path}`;
 };
 
-// Hàm định dạng tên sản phẩm đưa kích thước/phiên bản lên trước các hậu tố
 const buildProductNameWithStorage = (originalName: string, storage: string): string => {
   if (!storage) return originalName;
   const upperStorage = storage.toUpperCase();
@@ -186,14 +185,12 @@ export default function DynamicWatchPage() {
   const [seoContent, setSeoContent] = useState<string>(DEFAULT_WATCH_SEO_TEXT);
   const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
 
+  // Đọc chuẩn từ URL phân tầng (/watch/watch-ultra-2) hoặc query (?series=...)
   const slugParam = params?.slug;
-  const rawParam =
-    (Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)) ||
-    searchParams?.get('series') ||
-    '';
-  const currentFilter = (rawParam || '').toLowerCase().trim();
+  const rawSlug = Array.isArray(slugParam) ? slugParam.join('/') : (slugParam as string) || '';
+  const queryParam = searchParams?.get('series') || '';
+  const currentFilter = (rawSlug || queryParam || '').toLowerCase().trim();
 
-  // 1. Nạp Banner đôi & Danh mục Submodel an toàn (không ghi đè mất tab)
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -224,7 +221,6 @@ export default function DynamicWatchPage() {
     }
   }, []);
 
-  // 2. Nạp nội dung SEO Apple Watch
   useEffect(() => {
     try {
       const savedSeo = localStorage.getItem('fogo_seo_watch_seo_desc');
@@ -234,7 +230,6 @@ export default function DynamicWatchPage() {
     }
   }, []);
 
-  // 3. Đọc sản phẩm đã xem
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
@@ -244,7 +239,6 @@ export default function DynamicWatchPage() {
     }
   }, []);
 
-  // 4. Fetch sản phẩm Apple Watch từ Database
   useEffect(() => {
     const fetchWatchFromDB = async () => {
       try {
@@ -278,7 +272,6 @@ export default function DynamicWatchPage() {
     fetchWatchFromDB();
   }, []);
 
-  // 5. Tự động phân tách từng kích thước/phiên bản thành card riêng biệt
   const expandedProducts = useMemo(() => {
     const result: any[] = [];
 
@@ -358,14 +351,14 @@ export default function DynamicWatchPage() {
   const currentSeriesKey = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.includes('ultra')) return 'ultra';
-    if (currentFilter.includes('series')) return 'series';
     if (currentFilter.includes('se')) return 'se';
+    if (currentFilter.includes('series')) return 'series';
     return null;
   }, [currentFilter]);
 
   const activeSubmodels = currentSeriesKey ? WATCH_SUBMODELS_MAP[currentSeriesKey] || [] : [];
 
-  // Lọc sản phẩm Apple Watch chính xác trực tiếp trên tên sản phẩm
+  // Lọc sản phẩm Apple Watch chính xác theo tên và dòng
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -380,9 +373,9 @@ export default function DynamicWatchPage() {
       // 1. Phân loại theo nhóm Watch ULTRA
       if (lowerFilter.includes('ultra')) {
         items = items.filter((i) => i.name.toLowerCase().includes('ultra'));
-        if (lowerFilter.includes('2')) {
+        if (lowerFilter.includes('2') || lowerFilter.includes('ultra-2')) {
           items = items.filter((i) => i.name.toLowerCase().includes('2'));
-        } else if (lowerFilter.includes('1')) {
+        } else if (lowerFilter.includes('1') || lowerFilter.includes('ultra-1')) {
           items = items.filter((i) => !i.name.toLowerCase().includes('2'));
         }
       }
@@ -392,9 +385,9 @@ export default function DynamicWatchPage() {
           const nameLower = i.name.toLowerCase();
           return /\bse\b/.test(nameLower);
         });
-        if (lowerFilter.includes('2')) {
+        if (lowerFilter.includes('2') || lowerFilter.includes('se-2')) {
           items = items.filter((i) => i.name.toLowerCase().includes('2'));
-        } else if (lowerFilter.includes('1')) {
+        } else if (lowerFilter.includes('1') || lowerFilter.includes('se-1')) {
           items = items.filter((i) => !i.name.toLowerCase().includes('2'));
         }
       }
@@ -414,7 +407,6 @@ export default function DynamicWatchPage() {
       }
     }
 
-    // Lọc theo khoảng giá
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = parsePrice(item.rawPrice || item.currentPrice);
@@ -453,46 +445,27 @@ export default function DynamicWatchPage() {
   }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
   const displayTitle = useMemo(() => {
-    switch (currentFilter) {
-      case 'watch-ultra':
-      case 'ultra':
-        return 'Apple Watch Ultra';
-      case 'watch-series':
-      case 'series':
-        return 'Apple Watch Series';
-      case 'watch-se':
-      case 'se':
-        return 'Apple Watch SE';
-      case 'watch-ultra-2':
-      case 'ultra-2':
-        return 'Apple Watch Ultra 2';
-      case 'watch-ultra-1':
-      case 'ultra-1':
-        return 'Apple Watch Ultra 1';
-      case 'watch-series-10':
-      case 'series-10':
-        return 'Apple Watch Series 10';
-      case 'watch-series-9':
-      case 'series-9':
-        return 'Apple Watch Series 9';
-      case 'watch-series-8':
-      case 'series-8':
-        return 'Apple Watch Series 8';
-      case 'watch-se-2':
-      case 'se-2':
-        return 'Apple Watch SE 2 (2024)';
-      case 'watch-se-1':
-      case 'se-1':
-        return 'Apple Watch SE 1';
-      default:
-        return currentFilter
-          ? currentFilter
-              .split('-')
-              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-              .join(' ')
-              .replace('Watch', 'Apple Watch')
-          : 'Tất cả Apple Watch';
-    }
+    const f = currentFilter.toLowerCase();
+    if (f.includes('ultra-2')) return 'Apple Watch Ultra 2';
+    if (f.includes('ultra-1')) return 'Apple Watch Ultra 1';
+    if (f.includes('ultra')) return 'Apple Watch Ultra';
+
+    if (f.includes('series-10')) return 'Apple Watch Series 10';
+    if (f.includes('series-9')) return 'Apple Watch Series 9';
+    if (f.includes('series-8')) return 'Apple Watch Series 8';
+    if (f.includes('series')) return 'Apple Watch Series';
+
+    if (f.includes('se-2')) return 'Apple Watch SE 2';
+    if (f.includes('se-1')) return 'Apple Watch SE 1';
+    if (f.includes('se')) return 'Apple Watch SE';
+
+    return currentFilter
+      ? currentFilter
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+          .replace('Watch', 'Apple Watch')
+      : 'Tất cả Apple Watch';
   }, [currentFilter]);
 
   const handleAddToCartQuick = (e: React.MouseEvent, product: any) => {
@@ -588,21 +561,21 @@ export default function DynamicWatchPage() {
             </div>
           </div>
 
-          {/* 2. HÀNG SERIES CHA: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP), KHÔNG BỊ CẮT CHỮ */}
+          {/* 2. HÀNG SERIES CHA: ĐÃ CHUYỂN SANG DẠNG NESTED PATH /watch/watch-ultra */}
           <div className="my-6 py-2 w-full">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
                   ? !currentFilter
-                  : currentFilter === series.queryTag ||
-                    (series.slug && currentFilter.includes(series.slug)) ||
-                    (series.queryTag && currentFilter.includes(series.queryTag));
+                  : currentFilter === series.slug ||
+                    (series.queryTag && currentFilter.includes(series.queryTag)) ||
+                    (series.slug && currentFilter.includes(series.slug));
 
                 return (
                   <Link
                     key={series.slug || idx}
-                    href={isAllButton ? '/watch' : `/watch?series=${series.queryTag}`}
+                    href={isAllButton ? '/watch' : `/watch/${series.slug || `watch-${series.queryTag}`}`}
                     className="group flex flex-col items-center gap-2 cursor-pointer w-[76px] sm:w-[90px] md:w-[105px] transition-transform active:scale-95 shrink-0"
                   >
                     <div
@@ -631,17 +604,22 @@ export default function DynamicWatchPage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP) */}
+          {/* 3. HÀNG SUBMODEL CON: ĐÃ SỬA DẪN SANG /watch/watch-ultra-2 VÀ ACTIVE VIỀN ĐỎ CHUẨN XÁC */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-3 pb-3 border-t border-dashed border-gray-200 w-full">
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 md:gap-6 w-full px-2">
                 {activeSubmodels.map((model) => {
-                  const isSubSelected = currentFilter === model.tag;
+                  const isSubSelected =
+                    currentFilter === model.tag ||
+                    currentFilter.endsWith(model.tag.replace('watch-', '')) ||
+                    (model.tag === 'watch-ultra' && (currentFilter === 'watch-ultra' || currentFilter === 'ultra')) ||
+                    (model.tag === 'watch-series' && (currentFilter === 'watch-series' || currentFilter === 'series')) ||
+                    (model.tag === 'watch-se' && (currentFilter === 'watch-se' || currentFilter === 'se'));
 
                   return (
                     <Link
                       key={model.tag}
-                      href={`/watch?series=${model.tag}`}
+                      href={`/watch/${model.tag}`}
                       className="group flex flex-col items-center gap-1.5 cursor-pointer w-[72px] sm:w-[84px] md:w-[96px] transition-transform active:scale-95 shrink-0"
                     >
                       <div
@@ -691,7 +669,7 @@ export default function DynamicWatchPage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM: CO GIÃN CHUẨN TỶ LỆ */}
+          {/* LƯỚI SẢN PHẨM */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
@@ -714,7 +692,6 @@ export default function DynamicWatchPage() {
                   className="bg-white rounded-lg p-2 sm:p-3 flex flex-col justify-between hover:shadow-lg transition-all duration-200 group border border-gray-200/90 w-full overflow-hidden"
                 >
                   <div>
-                    {/* TAG GIẢM GIÁ */}
                     <div className="flex items-center justify-between h-4 sm:h-5">
                       {product.rawPrice > 0 ? (
                         <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
@@ -728,7 +705,6 @@ export default function DynamicWatchPage() {
                       <span />
                     </div>
 
-                    {/* KHUNG ẢNH VUÔNG TỰ CO GIÃN */}
                     <Link
                       href={product.href}
                       className="w-full aspect-square my-1.5 sm:my-2 flex items-center justify-center bg-white overflow-hidden"
@@ -744,7 +720,6 @@ export default function DynamicWatchPage() {
                       />
                     </Link>
 
-                    {/* TÊN SẢN PHẨM CỐ ĐỊNH 2 DÒNG */}
                     <Link
                       href={product.href}
                       className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
@@ -754,7 +729,6 @@ export default function DynamicWatchPage() {
                   </div>
 
                   <div className="mt-1.5">
-                    {/* KHỐI TRẢ GÓP CO GIÃN LINH HOẠT */}
                     {product.rawPrice > 0 ? (
                       <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
                         <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
@@ -790,7 +764,6 @@ export default function DynamicWatchPage() {
                       </div>
                     )}
 
-                    {/* NHÃN TRẠNG THÁI */}
                     <span
                       className={`mt-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
                         product.statusTag === 'Sẵn hàng'
@@ -801,7 +774,6 @@ export default function DynamicWatchPage() {
                       {product.statusTag}
                     </span>
 
-                    {/* MỨC GIÁ */}
                     <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
                       <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-xs sm:text-sm md:text-base leading-none' : 'text-xs sm:text-sm'}`}>
                         {product.currentPrice}
@@ -811,7 +783,6 @@ export default function DynamicWatchPage() {
                       )}
                     </div>
 
-                    {/* NÚT THÊM GIỎ HÀNG */}
                     <div className="mt-2">
                       {product.rawPrice > 0 ? (
                         <button

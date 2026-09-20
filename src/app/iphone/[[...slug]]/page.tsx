@@ -57,29 +57,42 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
     imageUrl: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
     queryTag: '16',
   },
+  {
+    name: 'iPhone 15 Series',
+    slug: 'iphone-15',
+    imageUrl: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100',
+    queryTag: '15',
+  },
 ];
 
 const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '18': [
-    { name: '18 Pro Max', tag: '18-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
-    { name: '18 Pro', tag: '18-pro', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
-    { name: '18 Plus', tag: '18-plus', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
-    { name: 'iPhone 18', tag: '18-standard', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
+    { name: '18 Pro Max', tag: 'iphone-18-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
+    { name: '18 Pro', tag: 'iphone-18-pro', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
+    { name: '18 Plus', tag: 'iphone-18-plus', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
+    { name: 'iPhone 18', tag: 'iphone-18', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
   ],
   '17': [
-    { name: '17 Pro Max', tag: '17-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
-    { name: '17 Pro', tag: '17-pro', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
-    { name: '17 Air', tag: '17-air', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
-    { name: 'iPhone 17', tag: '17-standard', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Pro Max', tag: 'iphone-17-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Pro', tag: 'iphone-17-pro', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Plus', tag: 'iphone-17-plus', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Air', tag: 'iphone-17-air', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: 'iPhone 17', tag: 'iphone-17', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
   ],
   '16': [
-    { name: '16 Pro Max', tag: '16-pro-max', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
-    { name: '16 Pro', tag: '16-pro', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
-    { name: '16 Plus', tag: '16-plus', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
-    { name: 'iPhone 16', tag: '16-standard', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: '16 Pro Max', tag: 'iphone-16-pro-max', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: '16 Pro', tag: 'iphone-16-pro', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: '16 Plus', tag: 'iphone-16-plus', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: 'iPhone 16', tag: 'iphone-16', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+  ],
+  '15': [
+    { name: '15 Pro Max', tag: 'iphone-15-pro-max', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: '15 Pro', tag: 'iphone-15-pro', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: '15 Plus', tag: 'iphone-15-plus', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
+    { name: 'iPhone 15', tag: 'iphone-15', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
   ],
   'duo': [
-    { name: 'iPhone Duo Series', tag: 'duo', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
+    { name: 'iPhone Duo Series', tag: 'iphone-duo', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
   ],
 };
 
@@ -159,12 +172,11 @@ export default function DynamicIPhonePage() {
   const [adminBanners, setAdminBanners] = useState<any[]>([]);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
+  // Đọc linh hoạt từ URL phân tầng (/iphone/iphone-18-pro-max) hoặc query (?series=...)
   const slugParam = params?.slug;
-  const rawFilter =
-    (Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)) ||
-    searchParams?.get('series') ||
-    '';
-  const currentFilter = (rawFilter || '').toLowerCase().trim();
+  const rawSlug = Array.isArray(slugParam) ? slugParam.join('/') : (slugParam as string) || '';
+  const queryParam = searchParams?.get('series') || '';
+  const currentFilter = (rawSlug || queryParam || '').toLowerCase().trim();
 
   const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
@@ -184,7 +196,6 @@ export default function DynamicIPhonePage() {
     }
   }, []);
 
-  // Gộp thông minh: Cập nhật hình ảnh/tên tab mà không ghi đè mất danh sách mặc định
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -323,6 +334,7 @@ export default function DynamicIPhonePage() {
     return result;
   }, [rawDbProducts]);
 
+  // Lọc chính xác từng dòng sản phẩm theo slug phân tầng
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -336,25 +348,31 @@ export default function DynamicIPhonePage() {
         items = items.filter((i) => seriesRegex.test(i.name));
 
         if (lowerFilter.includes('pro-max') || lowerFilter.includes('promax')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('pro max') || i.name.toLowerCase().includes('promax'));
-        } else if (lowerFilter.includes('pro') && !lowerFilter.includes('max')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('pro') && !i.name.toLowerCase().includes('max'));
-        } else if (lowerFilter.includes('plus')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('plus'));
-        } else if (lowerFilter.includes('air')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('air'));
-        } else if (lowerFilter.includes('standard') || lowerFilter.includes('thuong')) {
           items = items.filter((i) => {
-            const n = i.name.toLowerCase();
+            const nl = (i.name || '').toLowerCase();
+            return nl.includes('pro max') || nl.includes('promax');
+          });
+        } else if (lowerFilter.includes('pro') && !lowerFilter.includes('max')) {
+          items = items.filter((i) => {
+            const nl = (i.name || '').toLowerCase();
+            return nl.includes('pro') && !nl.includes('max');
+          });
+        } else if (lowerFilter.includes('plus')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('plus'));
+        } else if (lowerFilter.includes('air')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('air'));
+        } else if (lowerFilter.endsWith(`-${targetNumber}`) || lowerFilter.includes('standard') || lowerFilter.includes('thuong')) {
+          items = items.filter((i) => {
+            const n = (i.name || '').toLowerCase();
             return !n.includes('pro') && !n.includes('plus') && !n.includes('air');
           });
         }
       } else if (lowerFilter.includes('duo')) {
-        items = items.filter((i) => i.name.toLowerCase().includes('duo'));
+        items = items.filter((i) => (i.name || '').toLowerCase().includes('duo'));
       } else {
         const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
-          items = items.filter((i) => i.name.toLowerCase().includes(cleanTag));
+          items = items.filter((i) => (i.name || '').toLowerCase().includes(cleanTag));
         }
       }
     }
@@ -401,11 +419,11 @@ export default function DynamicIPhonePage() {
     const numMatch = currentFilter.match(/\d+/);
     if (numMatch) {
       const num = numMatch[0];
-      if (currentFilter.includes('pro-max')) return `iPhone ${num} Pro Max`;
+      if (currentFilter.includes('pro-max') || currentFilter.includes('promax')) return `iPhone ${num} Pro Max`;
       if (currentFilter.includes('pro')) return `iPhone ${num} Pro`;
       if (currentFilter.includes('plus')) return `iPhone ${num} Plus`;
       if (currentFilter.includes('air')) return `iPhone ${num} Air`;
-      if (currentFilter.includes('standard')) return `iPhone ${num}`;
+      if (currentFilter.endsWith(`-${num}`) || currentFilter.includes('standard')) return `iPhone ${num}`;
       return `iPhone ${num} Series`;
     }
 
@@ -511,7 +529,7 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* 2. ICON SERIES CHA: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP) */}
+          {/* 2. ICON SERIES CHA: ĐÃ SỬA ĐƯỜNG DẪN DẠNG /iphone/iphone-18 */}
           <div className="my-6 py-2 w-full">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
               {seriesTabs.map((series, idx) => {
@@ -519,13 +537,13 @@ export default function DynamicIPhonePage() {
                 const isSelected = isAllButton
                   ? !currentFilter
                   : currentFilter === series.slug ||
-                    (series.queryTag && currentFilter === series.queryTag) ||
-                    (series.queryTag && currentFilter.includes(`iphone-${series.queryTag}`));
+                    (series.queryTag && currentFilter.includes(series.queryTag)) ||
+                    (series.slug && currentFilter.includes(series.slug));
 
                 return (
                   <Link
                     key={series.slug || idx}
-                    href={isAllButton ? '/iphone' : `/iphone?series=${series.queryTag}`}
+                    href={isAllButton ? '/iphone' : `/iphone/${series.slug || `iphone-${series.queryTag}`}`}
                     className="group flex flex-col items-center gap-2 cursor-pointer w-[76px] sm:w-[90px] md:w-[105px] transition-transform active:scale-95 shrink-0"
                   >
                     <div
@@ -554,17 +572,17 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* 3. SUBMODELS CON: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP) */}
+          {/* 3. SUBMODELS CON: ĐÃ SỬA TICK ACTIVE CHUẨN XÁC DẠNG /iphone/iphone-18-pro-max */}
           {subModels.length > 0 && (
             <div className="mb-8 pt-3 pb-3 border-t border-dashed border-gray-200 w-full">
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 md:gap-6 w-full px-2">
                 {subModels.map((model) => {
-                  const isSubSelected = currentFilter === model.tag;
+                  const isSubSelected = currentFilter.includes(model.tag) || (model.tag.includes('-') && currentFilter.endsWith(model.tag.replace('iphone-', '')));
 
                   return (
                     <Link
                       key={model.tag}
-                      href={`/iphone?series=${model.tag}`}
+                      href={`/iphone/${model.tag.startsWith('iphone-') ? model.tag : `iphone-${model.tag}`}`}
                       className="group flex flex-col items-center gap-1.5 cursor-pointer w-[72px] sm:w-[84px] md:w-[96px] transition-transform active:scale-95 shrink-0"
                     >
                       <div
@@ -614,7 +632,7 @@ export default function DynamicIPhonePage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM: CO GIÃN CHUẨN TỶ LỆ */}
+          {/* LƯỚI SẢN PHẨM */}
           {loadingDb ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5 mb-14">
               {Array.from({ length: 10 }).map((_, index) => (
@@ -637,7 +655,6 @@ export default function DynamicIPhonePage() {
                   className="bg-white rounded-lg p-2 sm:p-3 flex flex-col justify-between hover:shadow-lg transition-all duration-200 group border border-gray-200/90 w-full overflow-hidden"
                 >
                   <div>
-                    {/* TAG GIẢM GIÁ */}
                     <div className="flex items-center justify-between h-4 sm:h-5">
                       {product.rawPrice > 0 ? (
                         <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
@@ -651,7 +668,6 @@ export default function DynamicIPhonePage() {
                       <span />
                     </div>
 
-                    {/* KHUNG ẢNH VUÔNG TỰ CO GIÃN */}
                     <Link
                       href={product.href}
                       className="w-full aspect-square my-1.5 sm:my-2 flex items-center justify-center bg-white overflow-hidden"
@@ -667,7 +683,6 @@ export default function DynamicIPhonePage() {
                       />
                     </Link>
 
-                    {/* TÊN SẢN PHẨM CỐ ĐỊNH 2 DÒNG */}
                     <Link
                       href={product.href}
                       className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
@@ -677,7 +692,6 @@ export default function DynamicIPhonePage() {
                   </div>
 
                   <div className="mt-1.5">
-                    {/* KHỐI TRẢ GÓP CO GIÃN LINH HOẠT */}
                     {product.rawPrice > 0 ? (
                       <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
                         <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
@@ -713,7 +727,6 @@ export default function DynamicIPhonePage() {
                       </div>
                     )}
 
-                    {/* NHÃN TRẠNG THÁI */}
                     <span
                       className={`mt-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
                         product.statusTag === 'Sẵn hàng'
@@ -724,7 +737,6 @@ export default function DynamicIPhonePage() {
                       {product.statusTag}
                     </span>
 
-                    {/* MỨC GIÁ */}
                     <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
                       <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-xs sm:text-sm md:text-base leading-none' : 'text-xs sm:text-sm'}`}>
                         {product.currentPrice}
@@ -734,7 +746,6 @@ export default function DynamicIPhonePage() {
                       )}
                     </div>
 
-                    {/* NÚT THÊM GIỎ HÀNG */}
                     <div className="mt-2">
                       {product.rawPrice > 0 ? (
                         <button
