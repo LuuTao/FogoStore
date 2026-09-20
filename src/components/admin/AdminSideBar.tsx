@@ -19,6 +19,8 @@ interface Props {
 }
 const MENU_ITEMS = [
   { href: '/admin/thong-ke', label: 'Doanh Thu & Thống Kê', icon: TrendingUp },
+  { href: '/admin/khach-hang', label: 'Quản Lý Khách Hàng', icon: ImageIcon },
+  { href: '/admin/thong-ke-truy-cap', label: 'Quản Lý Truy Cập', icon: ImageIcon },
   { href: '/admin/don-hang', label: 'Quản Lý Đơn Hàng', icon: ShoppingCart },
   { href: '/admin/ton-kho', label: 'Quản Lý Tồn Kho', icon: Layers },
   { href: '/admin/nhap-excel', label: 'Nhập Sản Phẩm Excel', icon: FileSpreadsheet },
@@ -26,6 +28,7 @@ const MENU_ITEMS = [
   { href: '/admin/banner', label: 'Quản Lý Banner', icon: ImageIcon },
   { href: '/admin/menu', label: 'Quản Lý Menu', icon: ImageIcon },
   { href: '/admin/manage-seo', label: 'Quản Lý SEO', icon: ImageIcon },
+  { href: '/admin/manage-specifications', label: 'Quản Lý Thông Số Kỹ Thuật', icon: ImageIcon },
 ];
 
 export default function AdminSidebar({

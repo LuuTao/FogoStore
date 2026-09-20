@@ -74,6 +74,10 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchKeyword, setSearchKeyword] = useState(initialSearch);
+  
+  // State bộ lọc theo ngày/tháng/năm
+  const [filterDate, setFilterDate] = useState<string>('');
+
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   
   // State quản lý chọn nhiều đơn hàng để xóa
@@ -189,7 +193,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Cập nhật trạng thái đơn: Nếu chọn COMPLETED -> paymentStatus = PAID
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
@@ -340,15 +343,25 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // Bộ lọc kết hợp: Trạng thái, từ khóa tìm kiếm và Ngày/Tháng/Năm
   const filteredOrders = orders.filter((ord) => {
     const matchStatus = filterStatus === 'ALL' || ord.orderStatus === filterStatus;
+    
     const kw = searchKeyword.trim().toLowerCase();
     const matchKeyword =
       !kw ||
       ord.orderCode?.toLowerCase().includes(kw) ||
       ord.customerName?.toLowerCase().includes(kw) ||
       ord.customerPhone?.includes(kw);
-    return matchStatus && matchKeyword;
+
+    // Lọc theo ngày/tháng/năm (filterDate định dạng 'YYYY-MM-DD')
+    let matchDate = true;
+    if (filterDate && ord.createdAt) {
+      const orderDateStr = new Date(ord.createdAt).toISOString().split('T')[0];
+      matchDate = orderDateStr === filterDate;
+    }
+
+    return matchStatus && matchKeyword && matchDate;
   });
 
   const isAllSelected = filteredOrders.length > 0 && selectedIds.length === filteredOrders.length;
@@ -404,6 +417,7 @@ export default function AdminOrdersPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Ô TÌM KIẾM TỪ KHÓA */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -411,8 +425,30 @@ export default function AdminOrdersPage() {
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="Tìm mã đơn, tên, SĐT..."
-              className="text-xs pl-8 pr-3 py-1.5 border border-gray-300 rounded-md bg-white focus:outline-none focus:border-[#d70018] w-48"
+              className="text-xs pl-8 pr-3 py-1.5 border border-gray-300 rounded-md bg-white focus:outline-none focus:border-[#d70018] w-44"
             />
+          </div>
+
+          {/* CHỨC NĂNG CHỌN NGÀY / THÁNG / NĂM VỚI ICON LỊCH */}
+          <div className="relative flex items-center bg-white border border-gray-300 rounded-md px-2.5 py-1 text-xs">
+            <Calendar size={14} className="text-[#d70018] mr-1.5 shrink-0" />
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="bg-transparent outline-none text-gray-700 font-medium cursor-pointer"
+              title="Lọc theo ngày đặt hàng"
+            />
+            {filterDate && (
+              <button
+                type="button"
+                onClick={() => setFilterDate('')}
+                className="ml-1 text-gray-400 hover:text-red-600 cursor-pointer"
+                title="Xóa lọc ngày"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 text-xs font-bold">
@@ -506,7 +542,7 @@ export default function AdminOrdersPage() {
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-gray-500 font-semibold">
                     <AlertTriangle size={24} className="mx-auto text-gray-300 mb-2" />
-                    <span>Không có đơn hàng nào</span>
+                    <span>Không có đơn hàng nào khớp với điều kiện tìm kiếm</span>
                   </td>
                 </tr>
               ) : (
@@ -639,7 +675,6 @@ export default function AdminOrdersPage() {
                             <Eye size={14} />
                           </Link>
 
-                          {/* NÚT CHỈNH SỬA ĐƠN HÀNG */}
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(ord)}
