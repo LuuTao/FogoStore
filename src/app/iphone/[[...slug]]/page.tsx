@@ -69,7 +69,7 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '17': [
     { name: '17 Pro Max', tag: '17-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: '17 Pro', tag: '17-pro', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
-    { name: '17 Air', tag: '17-e', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
+    { name: '17 Air', tag: '17-air', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: 'iPhone 17', tag: '17-standard', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
   ],
   '16': [
@@ -79,7 +79,7 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
     { name: 'iPhone 16', tag: '16-standard', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
   ],
   'duo': [
-    { name: 'iPhone Duo Series', tag: 'duo-fold', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
+    { name: 'iPhone Duo Series', tag: 'duo', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
   ],
 };
 

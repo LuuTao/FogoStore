@@ -27,7 +27,6 @@ interface SubModelItem {
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// 1. Giữ chuẩn 100% đầy đủ 5 dòng iPad chính thức
 const DEFAULT_IPAD_SERIES: SeriesTabItem[] = [
   {
     name: 'Tất cả',
@@ -64,63 +63,63 @@ const IPAD_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   pro: [
     {
       name: 'iPad Pro M5',
-      tag: 'pro-m5',
+      tag: 'ipad-pro-m5',
       img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?w=150',
     },
     {
       name: 'iPad Pro M4',
-      tag: 'pro-m4',
+      tag: 'ipad-pro-m4',
       img: 'https://cdn.hstatic.net/products/200000768357/a56e64526860d147af5df6287_large_f538544de8084063b01cb8240d390313_large_17deb5f948f94a1e99117511b49ebcba_master.webp?w=150',
     },
     {
       name: 'iPad Pro M2',
-      tag: 'pro-m2',
+      tag: 'ipad-pro-m2',
       img: 'https://product.hstatic.net/200000768357/product/ipad_pro_m2_-_11_inch__colors__c4189cc924bb40b181351e979df29f64_master.png?w=150',
     },
   ],
   air: [
     {
       name: 'iPad Air M4',
-      tag: 'air',
+      tag: 'ipad-air-m4',
       img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?w=150',
     },
     {
       name: 'iPad Air 7',
-      tag: 'air-7',
+      tag: 'ipad-air-7',
       img: 'https://cdn.hstatic.net/products/200000768357/air7-color_2326bc48c0054009ba361f7de1df2cd8_master.jpg?w=150',
     },
     {
       name: 'iPad Air 6',
-      tag: 'air-6',
+      tag: 'ipad-air-6',
       img: 'https://product.hstatic.net/200000768357/product/ipad_air_5__colors__06251c7b63d5478188404b205b5b5fdb_master.png?w=150',
     },
     {
       name: 'iPad Air 5',
-      tag: 'air-5',
+      tag: 'ipad-air-5',
       img: 'https://product.hstatic.net/200000768357/product/ipad_air_5__colors__06251c7b63d5478188404b205b5b5fdb_master.png?w=150',
     },
   ],
   gen: [
     {
       name: 'iPad Gen 11',
-      tag: 'gen-11',
+      tag: 'ipad-gen-11',
       img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?w=150',
     },
     {
       name: 'iPad Gen 10',
-      tag: 'gen-10',
+      tag: 'ipad-gen-10',
       img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_30_8234a6ff9e3b48fd9cc8571feaf230a7_master.jpeg?w=150',
     },
   ],
   mini: [
     {
       name: 'iPad Mini 7',
-      tag: 'mini-7',
+      tag: 'ipad-mini-7',
       img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?w=150',
     },
     {
       name: 'iPad Mini 6',
-      tag: 'mini-6',
+      tag: 'ipad-mini-6',
       img: 'https://product.hstatic.net/200000768357/product/hinh_anh_12_6ddc1b37c55c4213838c8e5047f59a8c_master.jpeg?w=150',
     },
   ],
@@ -193,20 +192,17 @@ export default function DynamicIPadPage() {
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
   const [adminBanners, setAdminBanners] = useState<any[]>([]);
-  // Giữ nguyên mảng mặc định, không để ghi đè làm mất Gen & Mini
   const [seriesTabs, setSeriesTabs] = useState<SeriesTabItem[]>(DEFAULT_IPAD_SERIES);
 
   const [seoContent, setSeoContent] = useState<string>(DEFAULT_IPAD_SEO_TEXT);
   const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
 
+  // ĐÃ SỬA: Đọc chính xác cả URL phân tầng (/ipad/ipad-pro-m4) lẫn Query (?series=...)
   const slugParam = params?.slug;
-  const rawFilter =
-    (Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)) ||
-    searchParams?.get('series') ||
-    '';
-  const currentFilter = (rawFilter || '').toLowerCase().trim();
+  const rawSlug = Array.isArray(slugParam) ? slugParam.join('/') : (slugParam as string) || '';
+  const queryParam = searchParams?.get('series') || '';
+  const currentFilter = (rawSlug || queryParam || '').toLowerCase().trim();
 
-  // Nạp banner an toàn và gộp với danh sách tab có sẵn
   useEffect(() => {
     try {
       const raw = localStorage.getItem('fogo_banners_config');
@@ -363,56 +359,87 @@ export default function DynamicIPadPage() {
     return result;
   }, [rawDbProducts]);
 
+  // ĐÃ SỬA: Nhận diện chuẩn xác nhóm series cha (pro, air, gen, mini) bất kể slug là ipad-pro-m4 hay pro-m4
   const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
-    if (currentFilter.startsWith('pro') || currentFilter === 'ipad-pro') return 'pro';
-    if (currentFilter.startsWith('air') || currentFilter === 'ipad-air') return 'air';
-    if (currentFilter.startsWith('gen') || currentFilter === 'ipad-gen') return 'gen';
-    if (currentFilter.startsWith('mini') || currentFilter === 'ipad-mini') return 'mini';
+    if (currentFilter.includes('pro')) return 'pro';
+    if (currentFilter.includes('air')) return 'air';
+    if (currentFilter.includes('gen')) return 'gen';
+    if (currentFilter.includes('mini')) return 'mini';
     return null;
   }, [currentFilter]);
 
   const activeSubmodels = currentSeriesTag ? IPAD_SUBMODELS_MAP[currentSeriesTag] || [] : [];
 
+  // ĐÃ SỬA TRIỆT ĐỂ: Lọc chuẩn xác từng model con (VD: iPad Pro M4 chỉ hiện máy có chữ "Pro" và "M4")
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
     if (currentFilter) {
       const f = currentFilter.toLowerCase();
 
-      if (f.startsWith('pro') || f === 'ipad-pro') {
+      if (f.includes('pro')) {
+        // Thu hẹp vào nhóm Pro (không dính Air, Mini)
         items = items.filter((i) => {
-          const nameLower = i.name.toLowerCase();
+          const nameLower = (i.name || '').toLowerCase();
           return nameLower.includes('pro') && !nameLower.includes('air') && !nameLower.includes('mini');
         });
 
-        if (f.includes('m5')) items = items.filter((i) => i.name.toLowerCase().includes('m5'));
-        else if (f.includes('m4')) items = items.filter((i) => i.name.toLowerCase().includes('m4'));
-        else if (f.includes('m2')) items = items.filter((i) => i.name.toLowerCase().includes('m2'));
-      } else if (f.startsWith('air') || f === 'ipad-air') {
+        // Lọc sâu hơn nếu có model cụ thể (m5, m4, m2...)
+        if (f.includes('m5')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('m5'));
+        } else if (f.includes('m4')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('m4'));
+        } else if (f.includes('m2')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('m2'));
+        }
+      } else if (f.includes('air')) {
         items = items.filter((i) => {
-          const nameLower = i.name.toLowerCase();
+          const nameLower = (i.name || '').toLowerCase();
           return nameLower.includes('air') && !nameLower.includes('pro');
         });
 
-        if (f.includes('7') || f.includes('air-7')) items = items.filter((i) => i.name.toLowerCase().includes('air 7') || i.name.toLowerCase().includes('m4'));
-        else if (f.includes('6') || f.includes('air-6') || f.includes('m2')) items = items.filter((i) => i.name.toLowerCase().includes('air 6') || i.name.toLowerCase().includes('m2'));
-        else if (f.includes('5') || f.includes('air-5')) items = items.filter((i) => i.name.toLowerCase().includes('air 5') || i.name.toLowerCase().includes('m1'));
-      } else if (f.startsWith('gen') || f === 'ipad-gen') {
+        if (f.includes('7') || f.includes('m4')) {
+          items = items.filter((i) => {
+            const nl = (i.name || '').toLowerCase();
+            return nl.includes('air 7') || nl.includes('m4');
+          });
+        } else if (f.includes('6') || f.includes('m2')) {
+          items = items.filter((i) => {
+            const nl = (i.name || '').toLowerCase();
+            return nl.includes('air 6') || nl.includes('m2');
+          });
+        } else if (f.includes('5')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('air 5'));
+        }
+      } else if (f.includes('gen')) {
         items = items.filter((i) => {
-          const nameLower = i.name.toLowerCase();
+          const nameLower = (i.name || '').toLowerCase();
           const isNotOthers = !nameLower.includes('pro') && !nameLower.includes('air') && !nameLower.includes('mini');
           return nameLower.includes('gen') || isNotOthers;
         });
 
-        if (f.includes('11')) items = items.filter((i) => i.name.toLowerCase().includes('11'));
-        else if (f.includes('10')) items = items.filter((i) => i.name.toLowerCase().includes('10'));
-        else if (f.includes('9')) items = items.filter((i) => i.name.toLowerCase().includes('9'));
-      } else if (f.startsWith('mini') || f === 'ipad-mini') {
-        items = items.filter((i) => i.name.toLowerCase().includes('mini'));
+        if (f.includes('11')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('11'));
+        } else if (f.includes('10')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('10'));
+        } else if (f.includes('9')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('9'));
+        }
+      } else if (f.includes('mini')) {
+        items = items.filter((i) => (i.name || '').toLowerCase().includes('mini'));
 
-        if (f.includes('7')) items = items.filter((i) => i.name.toLowerCase().includes('mini 7') || i.name.toLowerCase().includes('a17'));
-        else if (f.includes('6')) items = items.filter((i) => i.name.toLowerCase().includes('mini 6') || i.name.toLowerCase().includes('a15'));
+        if (f.includes('7')) {
+          items = items.filter((i) => {
+            const nl = (i.name || '').toLowerCase();
+            return nl.includes('mini 7') || nl.includes('a17');
+          });
+        } else if (f.includes('6')) {
+          items = items.filter((i) => {
+            const nl = (i.name || '').toLowerCase();
+            return nl.includes('mini 6') || nl.includes('a15');
+          });
+        }
       }
     }
 
@@ -442,51 +469,36 @@ export default function DynamicIPadPage() {
     return items;
   }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
+  // ĐÃ SỬA: Hiển thị đúng tiêu đề trang khi URL là ipad-pro-m4
   const displayTitle = useMemo(() => {
-    switch (currentFilter) {
-      case 'ipad-pro':
-      case 'pro':
-        return 'iPad Pro';
-      case 'pro-m5':
-        return 'iPad Pro M5';
-      case 'pro-m4':
-        return 'iPad Pro M4';
-      case 'pro-m2':
-        return 'iPad Pro M2';
-      case 'ipad-air':
-      case 'air':
-        return 'iPad Air';
-      case 'air-7':
-        return 'iPad Air 7';
-      case 'air-6':
-        return 'iPad Air 6';
-      case 'air-5':
-        return 'iPad Air 5';
-      case 'ipad-gen':
-      case 'gen':
-        return 'iPad Gen';
-      case 'gen-11':
-        return 'iPad Gen 11';
-      case 'gen-10':
-        return 'iPad Gen 10';
-      case 'gen-9':
-        return 'iPad Gen 9';
-      case 'ipad-mini':
-      case 'mini':
-        return 'iPad Mini';
-      case 'mini-7':
-        return 'iPad Mini 7';
-      case 'mini-6':
-        return 'iPad Mini 6';
-      default:
-        return currentFilter
-          ? currentFilter
-              .split('-')
-              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-              .join(' ')
-              .replace('Ipad', 'iPad')
-          : 'Tất cả sản phẩm iPad';
-    }
+    const f = currentFilter.toLowerCase();
+    if (f.includes('pro-m5')) return 'iPad Pro M5';
+    if (f.includes('pro-m4')) return 'iPad Pro M4';
+    if (f.includes('pro-m2')) return 'iPad Pro M2';
+    if (f.includes('pro')) return 'iPad Pro';
+
+    if (f.includes('air-7')) return 'iPad Air 7';
+    if (f.includes('air-6')) return 'iPad Air 6';
+    if (f.includes('air-5')) return 'iPad Air 5';
+    if (f.includes('air-m4')) return 'iPad Air M4';
+    if (f.includes('air')) return 'iPad Air';
+
+    if (f.includes('gen-11')) return 'iPad Gen 11';
+    if (f.includes('gen-10')) return 'iPad Gen 10';
+    if (f.includes('gen-9')) return 'iPad Gen 9';
+    if (f.includes('gen')) return 'iPad Gen';
+
+    if (f.includes('mini-7')) return 'iPad Mini 7';
+    if (f.includes('mini-6')) return 'iPad Mini 6';
+    if (f.includes('mini')) return 'iPad Mini';
+
+    return currentFilter
+      ? currentFilter
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+          .replace('Ipad', 'iPad')
+      : 'Tất cả sản phẩm iPad';
   }, [currentFilter]);
 
   const handleAddToCartQuick = (e: React.MouseEvent, product: any) => {
@@ -555,7 +567,7 @@ export default function DynamicIPadPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* 1. BANNER ĐÔI THUẦN ẢNH */}
+          {/* 1. BANNER ĐÔI */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link
@@ -582,21 +594,20 @@ export default function DynamicIPadPage() {
             </div>
           </div>
 
-          {/* 2. HÀNG SERIES CHA: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP), HIỂN THỊ ĐỦ PRO, AIR, GEN, MINI */}
+          {/* 2. HÀNG SERIES CHA (ĐÃ SỬA: DÙNG ĐƯỜNG DẪN DẠNG /ipad/ipad-pro ĐỒNG BỘ) */}
           <div className="my-6 py-2 w-full">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
                   ? !currentFilter
-                  : currentFilter === series.queryTag ||
-                    currentFilter.startsWith(series.queryTag || '') ||
+                  : currentFilter.includes(series.queryTag || '') ||
                     (series.slug && currentFilter.includes(series.slug));
 
                 return (
                   <Link
                     key={series.slug || idx}
-                    href={isAllButton ? '/ipad' : `/ipad?series=${series.queryTag}`}
+                    href={isAllButton ? '/ipad' : `/ipad/${series.slug || `ipad-${series.queryTag}`}`}
                     className="group flex flex-col items-center gap-2 cursor-pointer w-[76px] sm:w-[90px] md:w-[105px] transition-transform active:scale-95 shrink-0"
                   >
                     <div
@@ -625,17 +636,17 @@ export default function DynamicIPadPage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON: TỰ ĐỘNG XUỐNG DÒNG (FLEX-WRAP) */}
+          {/* 3. HÀNG SUBMODEL CON (ĐÃ SỬA: ĐƯỜNG DẪN TRỎ VỀ /ipad/ipad-pro-m4) */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-3 pb-3 border-t border-dashed border-gray-200 w-full">
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 md:gap-6 w-full px-2">
                 {activeSubmodels.map((model) => {
-                  const isSubSelected = currentFilter === model.tag;
+                  const isSubSelected = currentFilter.includes(model.tag);
 
                   return (
                     <Link
                       key={model.tag}
-                      href={`/ipad?series=${model.tag}`}
+                      href={`/ipad/${model.tag}`}
                       className="group flex flex-col items-center gap-1.5 cursor-pointer w-[72px] sm:w-[84px] md:w-[96px] transition-transform active:scale-95 shrink-0"
                     >
                       <div
@@ -685,7 +696,7 @@ export default function DynamicIPadPage() {
             />
           </div>
 
-          {/* LƯỚI SẢN PHẨM: CO GIÃN CHUẨN TỶ LỆ */}
+          {/* LƯỚI SẢN PHẨM */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-3.5 mb-14">
               {Array.from({ length: 5 }).map((_, index) => (
