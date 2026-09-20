@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Save, 
   Search, 
@@ -11,8 +11,8 @@ import {
   Cpu, 
   CheckSquare, 
   Square,
-  AlertCircle,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 import { ToastNotification } from '@/components/common/ToastNotification';
 
@@ -41,6 +41,7 @@ interface SpecItem {
 export default function ManageSpecificationsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSeries, setSelectedSeries] = useState('ALL'); // Thêm state lọc dòng sản phẩm
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -107,33 +108,53 @@ export default function ManageSpecificationsPage() {
     }
   };
 
+  // Các dòng sản phẩm mẫu để chọn nhanh
+  const seriesFilters = [
+    { label: 'Tất cả', value: 'ALL' },
+    { label: 'iPhone', value: 'iphone' },
+    { label: 'iPad', value: 'ipad' },
+    { label: 'MacBook', value: 'mac`book' },
+    { label: 'Watch', value: 'watch' },
+    { label: 'Hàng Cũ', value: 'cũ' },
+  ];
+
+  // Lọc sản phẩm theo từ khóa và dòng sản phẩm được chọn
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const name = (p.name || '').toLowerCase();
+      const category = (p.category?.name || p.categorySlug || '').toLowerCase();
+      
+      const matchSearch = name.includes(searchQuery.toLowerCase());
+
+      if (selectedSeries === 'ALL') return matchSearch;
+
+      const matchSeries = name.includes(selectedSeries) || category.includes(selectedSeries);
+      return matchSearch && matchSeries;
+    });
+  }, [products, searchQuery, selectedSeries]);
+
   // Toggle tích chọn trường thông số có sẵn
   const toggleDefaultField = (fieldName: string) => {
     const exists = specsList.some((item) => item.key.toLowerCase() === fieldName.toLowerCase());
     if (exists) {
-      // Nếu đã có -> xóa đi
       setSpecsList(specsList.filter((item) => item.key.toLowerCase() !== fieldName.toLowerCase()));
     } else {
-      // Nếu chưa có -> thêm mới vào bảng
       setSpecsList([...specsList, { key: fieldName, value: '' }]);
     }
   };
 
-  // Cập nhật giá trị một dòng thông số
   const handleSpecValueChange = (index: number, val: string) => {
     const updated = [...specsList];
     updated[index].value = val;
     setSpecsList(updated);
   };
 
-  // Thêm trường tùy biến khác
   const addCustomSpec = () => {
     if (!customKey.trim()) return;
     setSpecsList([...specsList, { key: customKey.trim(), value: '' }]);
     setCustomKey('');
   };
 
-  // Xóa một dòng thông số
   const removeSpecRow = (index: number) => {
     setSpecsList(specsList.filter((_, i) => i !== index));
   };
@@ -161,7 +182,6 @@ export default function ManageSpecificationsPage() {
       });
 
       if (!res.ok) {
-        // Dự phòng lưu LocalStorage nếu API chưa hỗ trợ lưu spec dạng array
         localStorage.setItem(`fogo_specs_${selectedProduct.id}`, JSON.stringify(payload));
       }
 
@@ -177,10 +197,6 @@ export default function ManageSpecificationsPage() {
       setIsSaving(false);
     }
   };
-
-  const filteredProducts = products.filter((p) =>
-    (p.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] p-4 md:p-8 select-none">
@@ -218,7 +234,7 @@ export default function ManageSpecificationsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* CỘT TRÁI: DANH SÁCH CHỌN SẢN PHẨM (4 CỘT) */}
+          {/* CỘT TRÁI: DANH SÁCH CHỌN SẢN PHẨM KÈM LỌC NHANH DÒNG */}
           <div className="lg:col-span-4 bg-white p-4 rounded-xl border border-gray-200 shadow-xs space-y-3">
             <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
               Chọn sản phẩm ({filteredProducts.length})
@@ -236,34 +252,59 @@ export default function ManageSpecificationsPage() {
               />
             </div>
 
-            {/* List sản phẩm cuộn */}
-            <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto pr-1">
-              {loading ? (
-                <div className="p-8 text-center text-xs text-gray-400">Đang tải sản phẩm...</div>
-              ) : filteredProducts.map((item) => (
+            {/* THANH CHỌN NHANH DÒNG SẢN PHẨM */}
+            <div className="flex items-center gap-1 overflow-x-auto py-1 no-scrollbar border-b border-gray-100 pb-2">
+              <span className="text-[10px] font-bold text-gray-400 shrink-0 flex items-center gap-0.5">
+                <Filter size={11} /> Dòng:
+              </span>
+              {seriesFilters.map((series) => (
                 <button
-                  key={item.id}
+                  key={series.value}
                   type="button"
-                  onClick={() => selectProductToEdit(item)}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                    selectedProduct?.id === item.id
-                      ? 'bg-red-50/70 border border-red-200 text-[#d70018]'
-                      : 'hover:bg-gray-50 text-gray-800'
+                  onClick={() => setSelectedSeries(series.value)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    selectedSeries === series.value
+                      ? 'bg-[#d70018] text-white shadow-2xs'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  <img
-                    src={item.imageUrl || item.image || '/placeholder.png'}
-                    alt={item.name}
-                    className="w-10 h-10 object-contain rounded bg-white p-1 border border-gray-200 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold truncate leading-snug">{item.name}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {Number(item.price || 0).toLocaleString('vi-VN')}đ
-                    </p>
-                  </div>
+                  {series.label}
                 </button>
               ))}
+            </div>
+
+            {/* List sản phẩm cuộn */}
+            <div className="divide-y divide-gray-100 max-h-[550px] overflow-y-auto pr-1">
+              {loading ? (
+                <div className="p-8 text-center text-xs text-gray-400">Đang tải sản phẩm...</div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="p-8 text-center text-xs text-gray-400">Không tìm thấy sản phẩm phù hợp.</div>
+              ) : (
+                filteredProducts.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => selectProductToEdit(item)}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all cursor-pointer ${
+                      selectedProduct?.id === item.id
+                        ? 'bg-red-50/70 border border-red-200 text-[#d70018]'
+                        : 'hover:bg-gray-50 text-gray-800'
+                    }`}
+                  >
+                    <img
+                      src={item.imageUrl || item.image || '/placeholder.png'}
+                      alt={item.name}
+                      className="w-10 h-10 object-contain rounded bg-white p-1 border border-gray-200 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold truncate leading-snug">{item.name}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {Number(item.price || 0).toLocaleString('vi-VN')}đ
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
@@ -325,14 +366,12 @@ export default function ManageSpecificationsPage() {
                   ) : (
                     specsList.map((spec, index) => (
                       <div key={index} className="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
-                        {/* Tên đặc điểm */}
                         <div className="w-1/3 min-w-[130px]">
                           <span className="text-xs font-bold text-gray-900 block truncate">
                             {spec.key}
                           </span>
                         </div>
 
-                        {/* Ô nhập thông số chi tiết */}
                         <input
                           type="text"
                           value={spec.value}
@@ -341,7 +380,6 @@ export default function ManageSpecificationsPage() {
                           className="flex-1 text-xs border border-gray-300 rounded px-3 py-1.5 focus:border-[#d70018] focus:outline-none"
                         />
 
-                        {/* Nút xóa dòng */}
                         <button
                           type="button"
                           onClick={() => removeSpecRow(index)}
@@ -384,7 +422,6 @@ export default function ManageSpecificationsPage() {
                 </h2>
               </div>
 
-              {/* Mô tả sản phẩm */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
                   <FileText size={14} className="text-gray-500" />
@@ -399,7 +436,6 @@ export default function ManageSpecificationsPage() {
                 />
               </div>
 
-              {/* Chính sách bán hàng */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
                   <ShieldCheck size={14} className="text-gray-500" />
@@ -409,7 +445,7 @@ export default function ManageSpecificationsPage() {
                   rows={5}
                   value={salesPolicy}
                   onChange={(e) => setSalesPolicy(e.target.value)}
-                  placeholder="Nhập các điều khoản bảo hành, ưu đãi quà tặng (mỗi dòng 1 gạch đầu dòng)..."
+                  placeholder="Nhập các điều khoản bảo hành, ưu đãi quà tặng..."
                   className="w-full text-xs border border-gray-300 rounded-md p-3 focus:border-[#d70018] focus:outline-none leading-relaxed"
                 />
               </div>
