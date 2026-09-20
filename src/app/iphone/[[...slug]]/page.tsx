@@ -79,8 +79,7 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
     { name: 'iPhone 16', tag: '16-standard', img: 'https://product.hstatic.net/200000768357/product/16pr_93cbc33842244d9a8a24f5e40c62a4f5_master.png?w=100' },
   ],
   'duo': [
-    { name: 'iPhone Duo Fold', tag: 'duo-fold', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
-    { name: 'iPhone Duo Flip', tag: 'duo-flip', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
+    { name: 'iPhone Duo Series', tag: 'duo-fold', img: 'https://cdn.hstatic.net/products/200000768357/duo-3_fd7ff82269ad428d92cac7125608414b_master.png?w=100' },
   ],
 };
 

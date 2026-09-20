@@ -28,10 +28,10 @@ import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { AuthModal } from '@/components/auth/AuthModal';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 // ----------------------------------------------------------------------
-// DỮ LIỆU ĐỊA CHÍNH MỚI: TỈNH/THÀNH PHỐ -> XÃ/PHƯỜNG TRỰC THUỘC
+// DỮ LIỆU ĐỊA CHÍNH: TỈNH/THÀNH PHỐ -> XÃ/PHƯỜNG TRỰC THUỘC
 // ----------------------------------------------------------------------
 const VIETNAM_STREAMLINED_LOCATIONS: Record<string, string[]> = {
   'Thành phố Hồ Chí Minh': [
@@ -71,64 +71,26 @@ const VIETNAM_STREAMLINED_LOCATIONS: Record<string, string[]> = {
     'Phường Ninh Kiều', 'Phường Cái Khế', 'Phường An Khánh', 'Phường Bình Thủy', 'Phường Trà Nóc',
     'Phường Cái Răng', 'Phường Hưng Phú', 'Phường Ô Môn', 'Phường Thốt Nốt', 'Xã Phong Điền',
   ],
-  'Tỉnh An Giang': ['Phường Long Xuyên', 'Phường Mỹ Bình', 'Phường Châu Đốc', 'Phường Núi Sam', 'Phường Tân Châu', 'Xã An Phú', 'Xã Tri Tôn', 'Xã Thoại Sơn'],
-  'Tỉnh Bà Rịa - Vũng Tàu': ['Phường Vũng Tàu', 'Phường Thắng Tam', 'Phường Bà Rịa', 'Phường Phước Hưng', 'Phường Phú Mỹ', 'Xã Long Đất', 'Xã Châu Đức', 'Xã Côn Đảo'],
-  'Tỉnh Bắc Giang': ['Phường Bắc Giang', 'Phường Trần Phú', 'Phường Yên Dũng', 'Xã Việt Yên', 'Xã Lục Ngạn', 'Xã Hiệp Hòa'],
-  'Tỉnh Bắc Kạn': ['Phường Bắc Kạn', 'Phường Sông Cầu', 'Xã Ba Bể', 'Xã Chợ Đồn', 'Xã Na Rì'],
-  'Tỉnh Bạc Liêu': ['Phường Bạc Liêu', 'Phường 1', 'Phường Giá Rai', 'Xã Phước Long', 'Xã Hòa Bình'],
-  'Tỉnh Bắc Ninh': ['Phường Bắc Ninh', 'Phường Suối Hoa', 'Phường Từ Sơn', 'Phường Đồng Kỵ', 'Xã Yên Phong', 'Xã Thuận Thành', 'Xã Quế Võ'],
-  'Tỉnh Bến Tre': ['Phường Bến Tre', 'Phường An Hội', 'Xã Châu Thành', 'Xã Ba Tri', 'Xã Mỏ Cày', 'Xã Chợ Lách'],
-  'Tỉnh Bình Định': ['Phường Quy Nhơn', 'Phường Ghềnh Ráng', 'Phường An Nhơn', 'Phường Hoài Nhơn', 'Xã Phù Cát', 'Xã Tuy Phước'],
-  'Tỉnh Bình Dương': ['Phường Thủ Dầu Một', 'Phường Phú Cường', 'Phường Dĩ An', 'Phường An Bình', 'Phường Thuận An', 'Phường Lái Thiêu', 'Phường Bến Cát', 'Phường Tân Uyên', 'Xã Bàu Bàng'],
-  'Tỉnh Bình Phước': ['Phường Đồng Xoài', 'Phường Tân Phú', 'Phường Phước Long', 'Phường Bình Long', 'Xã Chơn Thành', 'Xã Lộc Ninh'],
-  'Tỉnh Bình Thuận': ['Phường Phan Thiết', 'Phường Mũi Né', 'Phường La Gi', 'Xã Hàm Thuận', 'Xã Tuy Phong', 'Xã Phú Quý'],
-  'Tỉnh Cà Mau': ['Phường Cà Mau', 'Phường 5', 'Xã Năm Căn', 'Xã Đầm Dơi', 'Xã Thới Bình', 'Xã Trần Văn Thời'],
-  'Tỉnh Cao Bằng': ['Phường Cao Bằng', 'Phường Hợp Giang', 'Xã Trùng Khánh', 'Xã Quảng Hòa', 'Xã Bảo Lạc'],
-  'Tỉnh Đắk Lắk': ['Phường Buôn Ma Thuột', 'Phường Thắng Lợi', 'Phường Buôn Hồ', 'Xã Krông Pắc', 'Xã Ea Kar', 'Xã Cư M’gar'],
-  'Tỉnh Đắk Nông': ['Phường Gia Nghĩa', 'Phường Nghĩa Đức', 'Xã Đắk Mil', 'Xã Cư Jút', 'Xã Đắk Song'],
-  'Tỉnh Điện Biên': ['Phường Điện Biên Phủ', 'Phường Mường Thanh', 'Phường Mường Lay', 'Xã Điện Biên Đông', 'Xã Tuần Giáo'],
-  'Tỉnh Đồng Nai': ['Phường Biên Hòa', 'Phường Quyết Thắng', 'Phường Trảng Dài', 'Phường Long Khánh', 'Xã Long Thành', 'Xã Nhơn Trạch', 'Xã Trảng Bom', 'Xã Vĩnh Cửu'],
-  'Tỉnh Đồng Tháp': ['Phường Cao Lãnh', 'Phường Sa Đéc', 'Phường Hồng Ngự', 'Xã Lấp Vò', 'Xã Lai Vung', 'Xã Tháp Mười'],
-  'Tỉnh Gia Lai': ['Phường Pleiku', 'Phường Hoa Lư', 'Phường An Khê', 'Phường Ayun Pa', 'Xã Chư Sê', 'Xã Đức Cơ'],
-  'Tỉnh Hà Giang': ['Phường Hà Giang', 'Phường Trần Phú', 'Xã Đồng Văn', 'Xã Mèo Vạc', 'Xã Vị Xuyên'],
-  'Tỉnh Hà Nam': ['Phường Phủ Lý', 'Phường Minh Khai', 'Phường Duy Tiên', 'Xã Kim Bảng', 'Xã Thanh Liêm'],
-  'Tỉnh Hà Tĩnh': ['Phường Hà Tĩnh', 'Phường Bắc Hà', 'Phường Hồng Lĩnh', 'Phường Kỳ Anh', 'Xã Thạch Hà', 'Xã Cẩm Xuyên', 'Xã Nghi Xuân'],
-  'Tỉnh Hải Dương': ['Phường Hải Dương', 'Phường Lê Thanh Nghị', 'Phường Chí Linh', 'Xã Kinh Môn', 'Xã Nam Sách', 'Xã Cẩm Giàng'],
-  'Tỉnh Hậu Giang': ['Phường Vị Thanh', 'Phường Ngã Bảy', 'Phường Long Mỹ', 'Xã Châu Thành', 'Xã Phụng Hiệp'],
-  'Tỉnh Hòa Bình': ['Phường Hòa Bình', 'Phường Đồng Tiến', 'Xã Lương Sơn', 'Xã Mai Châu', 'Xã Kim Bôi'],
-  'Tỉnh Hưng Yên': ['Phường Hưng Yên', 'Phường Hiến Nam', 'Phường Mỹ Hào', 'Xã Văn Giang', 'Xã Văn Lâm', 'Xã Yên Mỹ'],
-  'Tỉnh Khánh Hòa': ['Phường Nha Trang', 'Phường Lộc Thọ', 'Phường Vĩnh Hải', 'Phường Cam Ranh', 'Phường Ninh Hòa', 'Xã Diên Khánh', 'Xã Vạn Ninh', 'Huyện đảo Trường Sa'],
-  'Tỉnh Kiên Giang': ['Phường Rạch Giá', 'Phường Vĩnh Thanh', 'Phường Hà Tiên', 'Phường Phú Quốc', 'Phường Dương Đông', 'Phường An Thới', 'Xã Kiên Lương', 'Xã Hòn Đất'],
-  'Tỉnh Kon Tum': ['Phường Kon Tum', 'Phường Quang Trung', 'Xã Đắk Hà', 'Xã Ngọc Hồi', 'Xã Măng Đen (Kon Plông)'],
-  'Tỉnh Lai Châu': ['Phường Lai Châu', 'Phường Đoàn Kết', 'Xã Tam Đường', 'Xã Phong Thổ', 'Xã Mường Tè'],
-  'Tỉnh Lâm Đồng': ['Phường Đà Lạt', 'Phường 1', 'Phường 10', 'Phường Bảo Lộc', 'Phường B’Lao', 'Xã Đức Trọng', 'Xã Lạc Dương', 'Xã Đơn Dương'],
-  'Tỉnh Lạng Sơn': ['Phường Lạng Sơn', 'Phường Vĩnh Trại', 'Xã Đồng Đăng', 'Xã Hữu Lũng', 'Xã Chi Lăng'],
-  'Tỉnh Lào Cai': ['Phường Lào Cai', 'Phường Kim Tân', 'Phường Sa Pa', 'Xã Bát Xát', 'Xã Bắc Hà'],
-  'Tỉnh Long An': ['Phường Tân An', 'Phường 2', 'Phường Kiến Tường', 'Xã Bến Lức', 'Xã Cần Giuộc', 'Xã Đức Hòa'],
-  'Tỉnh Nam Định': ['Phường Nam Định', 'Phường Vị Hoàng', 'Xã Ý Yên', 'Xã Giao Thủy', 'Xã Hải Hậu'],
-  'Tỉnh Nghệ An': ['Phường Vinh', 'Phường Quang Trung', 'Phường Trường Thi', 'Phường Cửa Lò', 'Phường Hoàng Mai', 'Phường Thái Hòa', 'Xã Diễn Châu', 'Xã Quỳnh Lưu', 'Xã Nam Đàn'],
-  'Tỉnh Ninh Bình': ['Phường Hoa Lư', 'Phường Ninh Bình', 'Phường Vân Giang', 'Phường Tam Điệp', 'Xã Gia Viễn', 'Xã Nho Quan'],
-  'Tỉnh Ninh Thuận': ['Phường Phan Rang', 'Phường Kinh Dinh', 'Xã Ninh Hải', 'Xã Ninh Phước', 'Xã Thuận Bắc'],
-  'Tỉnh Phú Thọ': ['Phường Việt Trì', 'Phường Gia Cẩm', 'Phường Phú Thọ', 'Xã Lâm Thao', 'Xã Phù Ninh'],
-  'Tỉnh Phú Yên': ['Phường Tuy Hòa', 'Phường 7', 'Phường Sông Cầu', 'Phường Đông Hòa', 'Xã Tuy An', 'Xã Tây Hòa'],
-  'Tỉnh Quảng Bình': ['Phường Đồng Hới', 'Phường Hải Thành', 'Phường Ba Đồn', 'Xã Bố Trạch', 'Xã Lệ Thủy', 'Xã Quảng Trạch'],
-  'Tỉnh Quảng Nam': ['Phường Tam Kỳ', 'Phường An Mỹ', 'Phường Hội An', 'Phường Cẩm Phô', 'Phường Điện Bàn', 'Xã Quế Sơn', 'Xã Núi Thành', 'Xã Đại Lộc'],
-  'Tỉnh Quảng Ngãi': ['Phường Quảng Ngãi', 'Phường Trần Phú', 'Phường Đức Phổ', 'Xã Bình Sơn', 'Xã Tư Nghĩa', 'Xã Lý Sơn'],
-  'Tỉnh Quảng Ninh': ['Phường Hạ Long', 'Phường Bãi Cháy', 'Phường Hòn Gai', 'Phường Cẩm Phả', 'Phường Móng Cái', 'Phường Uông Bí', 'Phường Đông Triều', 'Xã Vân Đồn', 'Xã Cô Tô'],
-  'Tỉnh Quảng Trị': ['Phường Đông Hà', 'Phường 1', 'Phường Quảng Trị', 'Xã Vĩnh Linh', 'Xã Gio Linh', 'Xã Hướng Hóa'],
-  'Tỉnh Sóc Trăng': ['Phường Sóc Trăng', 'Phường 3', 'Phường Vĩnh Châu', 'Phường Ngã Năm', 'Xã Trần Đề', 'Xã Mỹ Xuyên'],
-  'Tỉnh Sơn La': ['Phường Sơn La', 'Phường Chiềng Lề', 'Xã Mộc Châu', 'Xã Mai Sơn', 'Xã Thuận Châu'],
-  'Tỉnh Tây Ninh': ['Phường Tây Ninh', 'Phường 3', 'Phường Trảng Bàng', 'Phường Hòa Thành', 'Xã Gò Dầu', 'Xã Tân Biên'],
-  'Tỉnh Thái Bình': ['Phường Thái Bình', 'Phường Lê Hồng Phong', 'Xã Đông Hưng', 'Xã Tiền Hải', 'Xã Hưng Hà'],
-  'Tỉnh Thái Nguyên': ['Phường Thái Nguyên', 'Phường Phan Đình Phùng', 'Phường Sông Công', 'Phường Phổ Yên', 'Xã Đại Từ', 'Xã Phú Lương'],
-  'Tỉnh Thanh Hóa': ['Phường Thanh Hóa', 'Phường Điện Biên', 'Phường Đông Sơn', 'Phường Sầm Sơn', 'Phường Bỉm Sơn', 'Phường Nghi Sơn', 'Xã Hoằng Hóa', 'Xã Quảng Xương', 'Xã Thọ Xuân'],
-  'Tỉnh Thừa Thiên Huế': ['Phường Thuận Hóa', 'Phường Phú Xuân', 'Phường Hương Thủy', 'Phường Hương Trà', 'Xã Phú Lộc', 'Xã Phong Điền', 'Xã A Lưới'],
-  'Tỉnh Tiền Giang': ['Phường Mỹ Tho', 'Phường 1', 'Phường Gò Công', 'Phường Cai Lậy', 'Xã Châu Thành', 'Xã Chợ Gạo'],
-  'Tỉnh Trà Vinh': ['Phường Trà Vinh', 'Phường 1', 'Phường Duyên Hải', 'Xã Càng Long', 'Xã Cầu Kè'],
-  'Tỉnh Tuyên Quang': ['Phường Tuyên Quang', 'Phường Tân Quang', 'Xã Sơn Dương', 'Xã Yên Sơn', 'Xã Chiêm Hóa'],
-  'Tỉnh Vĩnh Long': ['Phường Vĩnh Long', 'Phường 1', 'Phường Bình Minh', 'Xã Long Hồ', 'Xã Tam Bình'],
-  'Tỉnh Vĩnh Phúc': ['Phường Vĩnh Yên', 'Phường Tích Sơn', 'Phường Phúc Yên', 'Xã Bình Xuyên', 'Xã Vĩnh Tường'],
-  'Tỉnh Yên Bái': ['Phường Yên Bái', 'Phường Đồng Tâm', 'Phường Nghĩa Lộ', 'Xã Trấn Yên', 'Xã Mù Cang Chải'],
+  'Tỉnh Bình Dương': [
+    'Phường Thủ Dầu Một', 'Phường Phú Cường', 'Phường Dĩ An', 'Phường An Bình', 'Phường Thuận An',
+    'Phường Lái Thiêu', 'Phường Bến Cát', 'Phường Tân Uyên', 'Xã Bàu Bàng',
+  ],
+  'Tỉnh Đồng Nai': [
+    'Phường Biên Hòa', 'Phường Quyết Thắng', 'Phường Trảng Dài', 'Phường Long Khánh',
+    'Xã Long Thành', 'Xã Nhơn Trạch', 'Xã Trảng Bom', 'Xã Vĩnh Cửu',
+  ],
+  'Tỉnh Bà Rịa - Vũng Tàu': [
+    'Phường Vũng Tàu', 'Phường Thắng Tam', 'Phường Bà Rịa', 'Phường Phước Hưng', 'Phường Phú Mỹ',
+    'Xã Long Đất', 'Xã Châu Đức', 'Xã Côn Đảo',
+  ],
+  'Tỉnh Lâm Đồng': [
+    'Phường Đà Lạt', 'Phường 1', 'Phường 10', 'Phường Bảo Lộc', 'Phường B’Lao',
+    'Xã Đức Trọng', 'Xã Lạc Dương', 'Xã Đơn Dương',
+  ],
+  'Tỉnh Khánh Hòa': [
+    'Phường Nha Trang', 'Phường Lộc Thọ', 'Phường Vĩnh Hải', 'Phường Cam Ranh', 'Phường Ninh Hòa',
+    'Xã Diên Khánh', 'Xã Vạn Ninh', 'Huyện đảo Trường Sa',
+  ],
 };
 
 export default function CheckoutPage() {
@@ -161,10 +123,9 @@ export default function CheckoutPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
 
-  // Mô hình 2 cấp: Tỉnh/Thành phố -> Xã/Phường
+  // Tỉnh/Thành phố -> Xã/Phường
   const provincesList = Object.keys(VIETNAM_STREAMLINED_LOCATIONS);
   const [province, setProvince] = useState('Thành phố Hồ Chí Minh');
-  
   const wardsList = VIETNAM_STREAMLINED_LOCATIONS[province] || ['Phường / Xã khác'];
   const [ward, setWard] = useState(wardsList[0] || '');
 
@@ -172,7 +133,6 @@ export default function CheckoutPage() {
   const [note, setNote] = useState('');
   const [selectedStore, setSelectedStore] = useState('61-63 Trần Quang Khải, P. Tân Định, Quận 1');
 
-  // Đổi Tỉnh/Thành phố -> Cập nhật danh sách Phường/Xã
   const handleProvinceChange = (newProv: string) => {
     setProvince(newProv);
     const newWards = VIETNAM_STREAMLINED_LOCATIONS[newProv] || ['Phường / Xã khác'];
@@ -191,47 +151,19 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState('');
 
   useEffect(() => {
-    const syncUser = () => {
-      const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
-      if (rawUser) {
-        try {
-          const parsed = JSON.parse(rawUser);
-          setCurrentUser(parsed);
-          if (parsed.name && !customerName) setCustomerName(parsed.name);
-          if (parsed.phone && !customerPhone) setCustomerPhone(parsed.phone);
-          if (parsed.email && !customerEmail) setCustomerEmail(parsed.email);
-        } catch {
-          setCurrentUser(null);
-        }
-      } else {
-        setCurrentUser(null);
-        setIsAuthModalOpen(true);
-      }
-    };
-
-    syncUser();
-  }, []);
-
-  const handleLoginSuccess = () => {
     const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
     if (rawUser) {
       try {
         const parsed = JSON.parse(rawUser);
         setCurrentUser(parsed);
-        if (parsed.name) setCustomerName(parsed.name);
+        if (parsed.fullName || parsed.name) setCustomerName(parsed.fullName || parsed.name);
         if (parsed.phone) setCustomerPhone(parsed.phone);
         if (parsed.email) setCustomerEmail(parsed.email);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        setCurrentUser(null);
       }
     }
-    setIsAuthModalOpen(false);
-    setToast({
-      show: true,
-      type: 'success',
-      message: 'Đăng nhập thành công! Bạn có thể tiếp tục hoàn tất đơn hàng.',
-    });
-  };
+  }, []);
 
   const handleApplyCoupon = () => {
     const code = couponCode.trim().toUpperCase();
@@ -256,22 +188,6 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
-    if (!rawUser) {
-      setToast({ show: true, type: 'error', message: 'Vui lòng đăng nhập tài khoản để hoàn tất đơn hàng!' });
-      setIsAuthModalOpen(true);
-      return;
-    }
-
-    const userObj = JSON.parse(rawUser);
-    const userId = userObj.id || userObj._id;
-
-    if (!userId) {
-      setToast({ show: true, type: 'error', message: 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại!' });
-      setIsAuthModalOpen(true);
-      return;
-    }
-
     if (!customerName.trim()) {
       setToast({ show: true, type: 'error', message: 'Vui lòng điền họ và tên người nhận hàng.' });
       return;
@@ -294,6 +210,16 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
+    // Lấy ID người dùng hoặc tự sinh ID Guest cho khách vãng lai
+    const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
+    let userId: string | null = null;
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser);
+        userId = u.id || u._id || null;
+      } catch {}
+    }
+
     const fullAddress = `${streetAddress.trim()}, ${ward}, ${province}`;
 
     try {
@@ -301,7 +227,8 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
+          userId: userId || undefined,
+          isGuest: !userId,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           customerEmail: customerEmail.trim() || undefined,
@@ -339,20 +266,23 @@ export default function CheckoutPage() {
         throw new Error(result.error || result.message || 'Đặt hàng không thành công');
       }
 
+      const orderCode = result.data?.orderCode || result.data?.id || `DH${Date.now()}`;
+
       setToast({
         show: true,
         type: 'success',
-        message: `Đặt hàng thành công! Mã đơn: ${result.data?.orderCode || ''}`,
+        message: `Đặt hàng thành công! Mã đơn: ${orderCode}`,
       });
 
+      // Nếu chọn hình thức thanh toán VietQR / MoMo -> Bật Modal QR Code
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
-        setCreatedOrderCode(result.data.orderCode);
+        setCreatedOrderCode(orderCode);
         setCreatedTotalAmount(finalPrice);
         setIsQrModalOpen(true);
       } else {
         clearCart();
         setTimeout(() => {
-          router.push(`/don-hang/${result.data.orderCode}`);
+          router.push(`/tra-cuu-don-hang?code=${orderCode}`);
         }, 1200);
       }
     } catch (error: any) {
@@ -370,7 +300,7 @@ export default function CheckoutPage() {
   const handleConfirmQrSuccess = () => {
     clearCart();
     setIsQrModalOpen(false);
-    router.push(`/don-hang/${createdOrderCode}`);
+    router.push(`/tra-cuu-don-hang?code=${createdOrderCode}`);
   };
 
   return (
@@ -385,7 +315,6 @@ export default function CheckoutPage() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={handleLoginSuccess}
       />
 
       <div>
@@ -406,9 +335,9 @@ export default function CheckoutPage() {
 
         <main className="max-w-6xl mx-auto px-4 py-8">
           <div className="flex items-center justify-between mb-6">
-            <Link href="/iphone" className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-[#d70018] transition-colors">
+            <Link href="/gio-hang" className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-[#d70018] transition-colors">
               <ChevronLeft size={16} />
-              <span>Tiếp tục mua hàng</span>
+              <span>Quay lại giỏ hàng</span>
             </Link>
             <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
               THANH TOÁN ĐƠN HÀNG
@@ -416,47 +345,49 @@ export default function CheckoutPage() {
             <div className="w-16" />
           </div>
 
+          {/* Thanh thông báo trạng thái tài khoản */}
           {currentUser ? (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-2.5 rounded mb-6 flex items-center justify-between">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-2.5 rounded-lg mb-6 flex items-center justify-between shadow-2xs">
               <div className="flex items-center gap-2">
                 <UserCheck size={16} className="text-emerald-600 shrink-0" />
                 <span>
-                  Đang đặt hàng với tài khoản: <strong>{currentUser.name || currentUser.email}</strong>
+                  Đang đặt hàng với tài khoản: <strong>{currentUser.fullName || currentUser.name || currentUser.email}</strong>
                 </span>
               </div>
-              <Link href="/tai-khoan/don-hang" className="font-bold underline hover:text-emerald-950">
+              <Link href="/tra-cuu-don-hang" className="font-bold underline hover:text-emerald-950">
                 Đơn hàng của tôi
               </Link>
             </div>
           ) : (
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs px-4 py-3 rounded mb-6 flex items-center justify-between">
-              <span>Bạn chưa đăng nhập. Vui lòng đăng nhập để lưu và theo dõi đơn hàng của mình.</span>
+            <div className="bg-blue-50 border border-blue-200 text-blue-900 text-xs px-4 py-3 rounded-lg mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+              <span>
+                💡 Bạn có thể đặt hàng nhanh ngay bên dưới mà không cần đăng nhập.
+              </span>
               <button
                 type="button"
                 onClick={() => setIsAuthModalOpen(true)}
-                className="bg-[#d70018] text-white px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1.5 hover:bg-red-700 transition-colors cursor-pointer"
+                className="bg-[#d70018] text-white px-3 py-1.5 rounded-md font-bold text-xs flex items-center gap-1.5 hover:bg-red-700 transition-colors cursor-pointer w-fit"
               >
-                <LogIn size={14} />
-                <span>Đăng nhập ngay</span>
+                <LogIn size={13} />
+                <span>Đăng nhập để tích điểm</span>
               </button>
             </div>
           )}
 
           {cartItems.length === 0 ? (
-            <div className="bg-white rounded-md p-12 text-center border border-gray-200 shadow-sm max-w-lg mx-auto">
+            <div className="bg-white rounded-xl p-12 text-center border border-gray-200 shadow-sm max-w-lg mx-auto">
               <p className="text-gray-600 font-semibold mb-4">Giỏ hàng của bạn đang trống.</p>
-              <Link href="/iphone" className="bg-[#d70018] text-white px-6 py-2.5 rounded font-bold text-xs inline-flex items-center gap-2 hover:bg-[#b50014] transition-colors">
+              <Link href="/iphone" className="bg-[#d70018] text-white px-6 py-2.5 rounded-lg font-bold text-xs inline-flex items-center gap-2 hover:bg-[#b50014] transition-colors shadow-sm">
                 <span>Khám phá sản phẩm ngay</span>
                 <ArrowRight size={14} />
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
               <div className="lg:col-span-7 space-y-6">
                 
                 {/* 1. THÔNG TIN KHÁCH HÀNG */}
-                <div className="bg-white p-5 rounded-md border border-gray-200 shadow-sm">
+                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                   <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 flex items-center gap-2 border-b border-gray-100 pb-2.5">
                     <span className="w-1.5 h-4 bg-[#d70018] inline-block" />
                     <span>1. Thông tin người đặt hàng</span>
@@ -496,7 +427,7 @@ export default function CheckoutPage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="Ví dụ: Nguyễn Văn A"
-                        className="w-full text-xs border border-gray-300 rounded px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
+                        className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
                       />
                     </div>
                     <div>
@@ -509,27 +440,27 @@ export default function CheckoutPage() {
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
                         placeholder="Ví dụ: 0987654321"
-                        className="w-full text-xs border border-gray-300 rounded px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
+                        className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">
-                      Email (để nhận hóa đơn điện tử)
+                      Email (để nhận hóa đơn & cập nhật vận đơn)
                     </label>
                     <input
                       type="email"
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       placeholder="email@example.com"
-                      className="w-full text-xs border border-gray-300 rounded px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
+                      className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* 2. HÌNH THỨC NHẬN HÀNG */}
-                <div className="bg-white p-5 rounded-md border border-gray-200 shadow-sm">
+                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                   <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 flex items-center gap-2 border-b border-gray-100 pb-2.5">
                     <span className="w-1.5 h-4 bg-[#d70018] inline-block" />
                     <span>2. Hình thức nhận hàng</span>
@@ -539,7 +470,7 @@ export default function CheckoutPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod('delivery')}
-                      className={`py-2.5 px-3 rounded border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      className={`py-2.5 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                         deliveryMethod === 'delivery'
                           ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/50 shadow-xs'
                           : 'border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-white'
@@ -552,7 +483,7 @@ export default function CheckoutPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod('store')}
-                      className={`py-2.5 px-3 rounded border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      className={`py-2.5 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                         deliveryMethod === 'store'
                           ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/50 shadow-xs'
                           : 'border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-white'
@@ -566,13 +497,12 @@ export default function CheckoutPage() {
                   {deliveryMethod === 'delivery' ? (
                     <div className="space-y-3.5">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        {/* 1. Tỉnh / Thành phố */}
                         <div>
                           <label className="block text-[11px] font-bold text-gray-600 mb-1">Tỉnh / Thành phố</label>
                           <select
                             value={province}
                             onChange={(e) => handleProvinceChange(e.target.value)}
-                            className="w-full text-xs border border-gray-300 rounded px-3 py-2.5 bg-white focus:border-[#d70018] focus:outline-none"
+                            className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 bg-white focus:border-[#d70018] focus:outline-none"
                           >
                             {provincesList.map((prov) => (
                               <option key={prov} value={prov}>{prov}</option>
@@ -580,13 +510,12 @@ export default function CheckoutPage() {
                           </select>
                         </div>
 
-                        {/* 2. Xã / Phường / Thị trấn trực thuộc */}
                         <div>
                           <label className="block text-[11px] font-bold text-gray-600 mb-1">Xã / Phường / Thị trấn</label>
                           <select
                             value={ward}
                             onChange={(e) => setWard(e.target.value)}
-                            className="w-full text-xs border border-gray-300 rounded px-3 py-2.5 bg-white focus:border-[#d70018] focus:outline-none"
+                            className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 bg-white focus:border-[#d70018] focus:outline-none"
                           >
                             {wardsList.map((wName) => (
                               <option key={wName} value={wName}>{wName}</option>
@@ -605,7 +534,7 @@ export default function CheckoutPage() {
                           value={streetAddress}
                           onChange={(e) => setStreetAddress(e.target.value)}
                           placeholder="Ví dụ: 123 Nguyễn Thị Minh Khai, Khu phố 2"
-                          className="w-full text-xs border border-gray-300 rounded px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
+                          className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
                         />
                       </div>
 
@@ -616,7 +545,7 @@ export default function CheckoutPage() {
                           value={note}
                           onChange={(e) => setNote(e.target.value)}
                           placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến 15 phút"
-                          className="w-full text-xs border border-gray-300 rounded px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
+                          className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
                         />
                       </div>
                     </div>
@@ -631,7 +560,7 @@ export default function CheckoutPage() {
                       ].map((st, i) => (
                         <label
                           key={i}
-                          className={`flex items-start gap-2.5 p-3 rounded border cursor-pointer text-xs transition-colors ${
+                          className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer text-xs transition-colors ${
                             selectedStore === st
                               ? 'border-[#d70018] bg-red-50/40 text-gray-900 font-semibold'
                               : 'border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -655,7 +584,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* 3. PHƯƠNG THỨC THANH TOÁN */}
-                <div className="bg-white p-5 rounded-md border border-gray-200 shadow-sm">
+                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                   <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 flex items-center gap-2 border-b border-gray-100 pb-2.5">
                     <span className="w-1.5 h-4 bg-[#d70018] inline-block" />
                     <span>3. Chọn phương thức thanh toán</span>
@@ -664,35 +593,36 @@ export default function CheckoutPage() {
                   <div className="space-y-2.5">
                     {[
                       {
-                        id: 'cod',
-                        title: 'Thanh toán tiền mặt khi nhận hàng (COD)',
-                        desc: 'Nhận máy, kiểm tra hàng chính hãng rồi mới trả tiền',
-                        icon: <Receipt size={18} className="text-[#d70018]" />,
+                        id: 'vnpay-qr',
+                        title: 'Quét mã VietQR (Tự động nhận tiền 24/7)',
+                        desc: 'Tự động tạo mã QR có sẵn số tiền & nội dung đơn hàng để chuyển khoản',
+                        icon: <QrCode size={18} className="text-[#d70018]" />,
+                        badge: 'Khuyên dùng',
                       },
                       {
-                        id: 'vnpay-qr',
-                        title: 'Chuyển khoản / Quét mã VietQR',
-                        desc: 'Hiển thị mã QR có sẵn số tiền & nội dung đơn hàng để quét',
-                        icon: <QrCode size={18} className="text-[#d70018]" />,
+                        id: 'cod',
+                        title: 'Thanh toán tiền mặt khi nhận hàng (COD)',
+                        desc: 'Nhận máy, kiểm tra hàng chính hãng nguyên seal rồi mới thanh toán',
+                        icon: <Receipt size={18} className="text-[#d70018]" />,
                       },
                       {
                         id: 'card',
                         title: 'Thanh toán thẻ Visa, MasterCard, JCB, Thẻ ATM',
-                        desc: 'Không mất phí thanh toán, bảo mật quốc tế',
+                        desc: 'Cổng thanh toán thẻ nội địa & quốc tế bảo mật',
                         icon: <CreditCard size={18} className="text-[#d70018]" />,
                       },
                       {
                         id: 'momo',
                         title: 'Ví MoMo / ZaloPay',
-                        desc: 'Quét mã thanh toán qua ví điện tử',
+                        desc: 'Quét mã thanh toán tức thì qua ví điện tử',
                         icon: <Wallet size={18} className="text-[#d70018]" />,
                       },
                     ].map((p) => (
                       <label
                         key={p.id}
-                        className={`flex items-start gap-3 p-3.5 rounded border cursor-pointer transition-all ${
+                        className={`flex items-start gap-3 p-3.5 rounded-lg border cursor-pointer transition-all ${
                           paymentMethod === p.id
-                            ? 'border-2 border-[#d70018] bg-red-50/40 shadow-xs'
+                            ? 'border-2 border-[#d70018] bg-red-50/40 shadow-2xs'
                             : 'border-gray-200 hover:border-gray-300 bg-white'
                         }`}
                       >
@@ -707,6 +637,11 @@ export default function CheckoutPage() {
                           <div className="flex items-center gap-2 font-bold text-xs text-gray-900">
                             {p.icon}
                             <span>{p.title}</span>
+                            {p.badge && (
+                              <span className="bg-[#d70018] text-white text-[9px] font-black px-1.5 py-0.2 rounded">
+                                {p.badge}
+                              </span>
+                            )}
                           </div>
                           <p className="text-[11px] text-gray-500 mt-0.5">{p.desc}</p>
                         </div>
@@ -727,14 +662,14 @@ export default function CheckoutPage() {
                     </label>
 
                     {needVat && (
-                      <div className="mt-3.5 space-y-3 p-3 bg-gray-50 border border-gray-200 rounded">
+                      <div className="mt-3.5 space-y-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                         <input
                           type="text"
                           required={needVat}
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
                           placeholder="Tên công ty đầy đủ theo ĐKKD"
-                          className="w-full text-xs border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:border-[#d70018]"
+                          className="w-full text-xs border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:border-[#d70018]"
                         />
                         <input
                           type="text"
@@ -742,7 +677,7 @@ export default function CheckoutPage() {
                           value={taxCode}
                           onChange={(e) => setTaxCode(e.target.value)}
                           placeholder="Mã số thuế"
-                          className="w-full text-xs border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:border-[#d70018]"
+                          className="w-full text-xs border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:border-[#d70018]"
                         />
                         <input
                           type="text"
@@ -750,7 +685,7 @@ export default function CheckoutPage() {
                           value={companyAddress}
                           onChange={(e) => setCompanyAddress(e.target.value)}
                           placeholder="Địa chỉ trụ sở công ty"
-                          className="w-full text-xs border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:border-[#d70018]"
+                          className="w-full text-xs border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:border-[#d70018]"
                         />
                       </div>
                     )}
@@ -761,7 +696,7 @@ export default function CheckoutPage() {
 
               {/* CỘT PHẢI: GIỎ HÀNG & NÚT ĐẶT HÀNG */}
               <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white p-5 rounded-md border border-gray-200 shadow-sm">
+                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
                     <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide flex items-center gap-1.5">
                       <span>Đơn hàng của bạn</span>
@@ -772,7 +707,7 @@ export default function CheckoutPage() {
                   <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto pr-1">
                     {cartItems.map((item) => (
                       <div key={item.id} className="py-3.5 flex gap-3 items-start">
-                        <div className="w-16 h-16 shrink-0 bg-gray-50 border border-gray-200 rounded p-1 flex items-center justify-center">
+                        <div className="w-16 h-16 shrink-0 bg-gray-50 border border-gray-200 rounded-lg p-1 flex items-center justify-center">
                           <img src={item.imageUrl || '/placeholder.png'} alt={item.name || 'Sản phẩm'} className="max-h-full max-w-full object-contain" />
                         </div>
 
@@ -828,13 +763,13 @@ export default function CheckoutPage() {
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
                           placeholder="Mã: FOGO100 hoặc VIPAPPLE"
-                          className="w-full text-xs border border-gray-300 rounded pl-8 pr-3 py-2 uppercase font-semibold focus:outline-none focus:border-[#d70018]"
+                          className="w-full text-xs border border-gray-300 rounded-md pl-8 pr-3 py-2 uppercase font-semibold focus:outline-none focus:border-[#d70018]"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={handleApplyCoupon}
-                        className="bg-gray-900 hover:bg-black text-white text-xs font-bold px-4 py-2 rounded transition-colors cursor-pointer"
+                        className="bg-gray-900 hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-md transition-colors cursor-pointer"
                       >
                         Áp dụng
                       </button>
@@ -878,7 +813,7 @@ export default function CheckoutPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full mt-6 bg-[#d70018] hover:bg-[#b50014] text-white py-3.5 rounded font-black text-sm uppercase tracking-wide shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                    className="w-full mt-6 bg-[#d70018] hover:bg-[#b50014] text-white py-3.5 rounded-lg font-black text-sm uppercase tracking-wide shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 active:scale-98"
                   >
                     {isSubmitting ? (
                       <>
@@ -887,7 +822,7 @@ export default function CheckoutPage() {
                       </>
                     ) : (
                       <>
-                        <span>HOÀN TẤT ĐẶT HÀNG</span>
+                        <span>{paymentMethod === 'vnpay-qr' ? 'TIẾP TỤC QUÉT MÃ THANH TOÁN' : 'HOÀN TẤT ĐẶT HÀNG'}</span>
                         <ArrowRight size={16} />
                       </>
                     )}
