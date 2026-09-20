@@ -44,8 +44,8 @@ const OFFICIAL_MENU_DATA = [
         groupTitle: 'iPhone Duo Series',
         href: '/iphone?series=duo',
         items: [
-          { name: 'iPhone Duo Fold', href: '/iphone?series=duo' },
-          { name: 'iPhone Duo Flip', href: '/iphone?series=duo' },
+          { name: 'iPhone Duo ', href: '/iphone?series=duo' },
+         
         ],
       },
       {
@@ -55,7 +55,7 @@ const OFFICIAL_MENU_DATA = [
           { name: 'iPhone 17 Pro Max', href: '/iphone?series=17' },
           { name: 'iPhone 17 Pro', href: '/iphone?series=17' },
           { name: 'iPhone 17 Plus', href: '/iphone?series=17' },
-          { name: 'iPhone 17 Slim / Air', href: '/iphone?series=17' },
+          { name: 'iPhone 17 Air', href: '/iphone?series=17' },
           { name: 'iPhone 17', href: '/iphone?series=17' },
         ],
       },
@@ -75,6 +75,7 @@ const OFFICIAL_MENU_DATA = [
         items: [
           { name: 'iPhone 15 Pro Max', href: '/iphone?series=15' },
           { name: 'iPhone 15 Pro', href: '/iphone?series=15' },
+          { name: 'iPhone 15 Plus', href: '/iphone?series=15' },
           { name: 'iPhone 15', href: '/iphone?series=15' },
         ],
       },
@@ -105,12 +106,18 @@ const OFFICIAL_MENU_DATA = [
         ],
       },
       {
-        groupTitle: 'iPad Gen & Mini',
+        groupTitle: 'iPad Mini',
         href: '/ipad?series=gen',
         items: [
           { name: 'iPad Gen 11', href: '/ipad?series=gen-11' },
-          { name: 'iPad Gen 10', href: '/ipad?series=gen-10' },
+        ],
+      },
+      {
+        groupTitle: 'iPad Mini',
+        href: '/ipad?series=mini',
+        items: [
           { name: 'iPad Mini 7', href: '/ipad?series=mini-7' },
+
         ],
       },
     ],
@@ -128,6 +135,8 @@ const OFFICIAL_MENU_DATA = [
           { name: 'MacBook Pro M5', href: '/macbook?series=pro-m5' },
           { name: 'MacBook Pro M4', href: '/macbook?series=pro-m4' },
           { name: 'MacBook Pro M3', href: '/macbook?series=pro-m3' },
+          { name: 'MacBook Pro M2', href: '/macbook?series=pro-m2' },
+          { name: 'MacBook Pro M1', href: '/macbook?series=pro-m1' },
         ],
       },
       {
@@ -137,6 +146,8 @@ const OFFICIAL_MENU_DATA = [
           { name: 'MacBook Air M5', href: '/macbook?series=air-m5' },
           { name: 'MacBook Air M4', href: '/macbook?series=air-m4' },
           { name: 'MacBook Air M3', href: '/macbook?series=air-m3' },
+          { name: 'MacBook Air M2', href: '/macbook?series=air-m2' },
+          { name: 'MacBook Air M1', href: '/macbook?series=air-m1' },
         ],
       },
       {
