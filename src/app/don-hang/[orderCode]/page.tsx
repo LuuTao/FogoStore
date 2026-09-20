@@ -22,8 +22,7 @@ import {
   X,
   QrCode,
   Wallet,
-  Receipt,
-  ArrowRight
+  Receipt
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -168,7 +167,6 @@ export default function OrderDetailPage() {
         setOrder(data.data);
         setIsPaymentModalOpen(false);
 
-        // Nếu chuyển sang VietQR hoặc Momo thì tự động bật modal QR thanh toán luôn
         if (selectedPayment === 'vnpay-qr' || selectedPayment === 'momo') {
           setIsQrOpen(true);
         }
@@ -314,9 +312,9 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {/* CÁC NÚT THAO TÁC CỦA KHÁCH */}
+              {/* CÁC NÚT THAO TÁC CỦA KHÁCH: CĂN GIỮA NẰM CÂN ĐỐI */}
               {order && !isCancelled && order.orderStatus !== 'SHIPPING' && order.orderStatus !== 'COMPLETED' && (
-                <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-gray-100">
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => setIsPaymentModalOpen(true)}
@@ -359,8 +357,12 @@ export default function OrderDetailPage() {
                         <span>Người nhận hàng</span>
                       </div>
                       <p className="font-black text-gray-900 text-base">{order.customerName}</p>
-                      <p className="text-gray-700 font-mono text-sm">{order.customerPhone}</p>
-                      {order.customerEmail && <p className="text-gray-500 text-xs">{order.customerEmail}</p>}
+                      
+                      {/* TĂNG CỠ CHỮ SĐT VÀ GMAIL THÊM 2PX (LÊN 15PX) */}
+                      <div className="space-y-1">
+                        <p className="text-gray-700 font-mono text-[15px] font-semibold">{order.customerPhone}</p>
+                        {order.customerEmail && <p className="text-gray-600 text-[15px]">{order.customerEmail}</p>}
+                      </div>
                     </div>
 
                     <div className="p-5 bg-gray-50/80 rounded-2xl border border-gray-200/80 space-y-2">
@@ -415,14 +417,14 @@ export default function OrderDetailPage() {
                     </div>
                   </div>
 
-                  {/* KHỐI THANH TOÁN & NÚT THANH TOÁN NGAY */}
-                  <div className="p-5 sm:p-6 bg-red-50/50 border border-red-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-gray-800">
-                        <CreditCard size={18} className="text-[#d70018]" />
+                  {/* KHỐI THANH TOÁN: ĐÃ GIẢM CỠ CHỮ XUỐNG 2PX */}
+                  <div className="p-4 sm:p-5 bg-red-50/50 border border-red-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-[14px] text-gray-800">
+                        <CreditCard size={17} className="text-[#d70018]" />
                         <span>{getPaymentName(order.paymentMethod)}</span>
                       </div>
-                      <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2">
+                      <p className="text-[12px] text-gray-600 flex items-center gap-1.5">
                         <span>Trạng thái:</span>
                         <b className={isPaid ? 'text-[#00a859]' : 'text-amber-700'}>
                           {isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
@@ -430,22 +432,22 @@ export default function OrderDetailPage() {
                       </p>
                     </div>
 
-                    <div className="flex flex-col sm:items-end gap-2.5">
+                    <div className="flex flex-col sm:items-end gap-2">
                       <div className="text-left sm:text-right">
-                        <span className="text-xs sm:text-sm text-gray-500 block font-medium">Tổng thanh toán:</span>
-                        <span className="text-2xl sm:text-3xl font-black text-[#d70018]">
+                        <span className="text-[12px] text-gray-500 block font-medium">Tổng thanh toán:</span>
+                        <span className="text-[25px] font-black text-[#d70018] leading-tight">
                           {formatVnd(order.totalAmount)}
                         </span>
                       </div>
 
-                      {/* NÚT THANH TOÁN THẲNG LUÔN */}
+                      {/* NÚT THANH TOÁN THU NHỎ 2PX */}
                       {!isPaid && !isCancelled && (
                         <button
                           type="button"
                           onClick={() => setIsQrOpen(true)}
-                          className="px-5 py-2.5 bg-[#d70018] hover:bg-red-700 text-white font-bold rounded-xl text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                          className="px-4 py-2 bg-[#d70018] hover:bg-red-700 text-white font-bold rounded-xl text-[12px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                         >
-                          <QrCode size={16} />
+                          <QrCode size={15} />
                           <span>THANH TOÁN NGAY BẰNG QR</span>
                         </button>
                       )}
@@ -454,18 +456,18 @@ export default function OrderDetailPage() {
                 </div>
               )}
 
-              {/* CAM KẾT */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 border-t border-gray-100 text-xs sm:text-sm text-gray-600">
+              {/* CAM KẾT CUỐI CÙNG: ĐÃ TĂNG CỠ CHỮ LÊN THÊM 2PX (14PX SM:15PX) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-6 border-t border-gray-100 text-[14px] sm:text-[15px] font-semibold text-gray-700">
                 <div className="flex items-center justify-center gap-2">
-                  <ShieldCheck size={18} className="text-[#00a859]" />
+                  <ShieldCheck size={20} className="text-[#00a859] shrink-0" />
                   <span>100% Chính Hãng Apple</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <Clock size={18} className="text-[#00a859]" />
+                  <Clock size={20} className="text-[#00a859] shrink-0" />
                   <span>Lỗi 1 đổi 1 trong 45 ngày</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <Package size={18} className="text-[#00a859]" />
+                  <Truck size={20} className="text-[#00a859] shrink-0" />
                   <span>Giao hàng toàn quốc</span>
                 </div>
               </div>

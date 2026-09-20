@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { 
   Search, 
   Calendar, 
@@ -18,7 +19,10 @@ import {
   CheckCircle2,
   XCircle,
   X,
-  Save
+  Save,
+  Crown,
+  UserCheck,
+  Sparkles
 } from 'lucide-react';
 
 const API_URL = 'https://fogo-store-api.onrender.com';
@@ -63,17 +67,20 @@ export const STATUS_LABELS: Record<string, { label: string; bg: string; text: st
 };
 
 export default function AdminOrdersPage() {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams?.get('search') || '';
+
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState(initialSearch);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   
   // State quản lý chọn nhiều đơn hàng để xóa
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // State thông báo banner (Xanh: thành công, Đỏ: thất bại)
+  // State thông báo banner
   const [alertInfo, setAlertInfo] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null);
 
   // State Modal chỉnh sửa thông tin đơn hàng
@@ -114,7 +121,75 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  // Cập nhật trạng thái đơn: Nếu chọn COMPLETED (Hoàn tất) -> Tự động ép paymentStatus thành PAID
+  // Tự động tính toán tổng số đơn và chi tiêu của từng khách hàng theo số điện thoại
+  const customerRankMap = useMemo(() => {
+    const map = new Map<string, { totalOrders: number; totalSpent: number; rank: 'NEW' | 'RETURNING' | 'LOYAL' | 'VIP' }>();
+
+    orders.forEach((ord) => {
+      if (ord.orderStatus === 'CANCELLED') return;
+      const phone = (ord.customerPhone || '').trim();
+      if (!phone) return;
+
+      if (!map.has(phone)) {
+        map.set(phone, { totalOrders: 0, totalSpent: 0, rank: 'NEW' });
+      }
+      const item = map.get(phone)!;
+      item.totalOrders += 1;
+      item.totalSpent += Number(ord.totalAmount || 0);
+    });
+
+    map.forEach((item) => {
+      if (item.totalOrders >= 5 || item.totalSpent >= 80000000) {
+        item.rank = 'VIP';
+      } else if (item.totalOrders >= 3 || item.totalSpent >= 30000000) {
+        item.rank = 'LOYAL';
+      } else if (item.totalOrders >= 2) {
+        item.rank = 'RETURNING';
+      } else {
+        item.rank = 'NEW';
+      }
+    });
+
+    return map;
+  }, [orders]);
+
+  const renderCustomerRankBadge = (phone: string) => {
+    const cleanPhone = (phone || '').trim();
+    const info = customerRankMap.get(cleanPhone);
+    if (!info) return null;
+
+    switch (info.rank) {
+      case 'VIP':
+        return (
+          <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-black px-1.5 py-0.5 rounded shadow-2xs">
+            <Crown size={10} className="text-amber-500" />
+            VIP
+          </span>
+        );
+      case 'LOYAL':
+        return (
+          <span className="inline-flex items-center gap-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-1.5 py-0.5 rounded">
+            <UserCheck size={10} className="text-purple-600" />
+            Thân thiết
+          </span>
+        );
+      case 'RETURNING':
+        return (
+          <span className="inline-flex items-center gap-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-medium px-1.5 py-0.5 rounded">
+            Quay lại ({info.totalOrders})
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium px-1.5 py-0.5 rounded">
+            <Sparkles size={10} className="text-emerald-500" />
+            Khách mới
+          </span>
+        );
+    }
+  };
+
+  // Cập nhật trạng thái đơn: Nếu chọn COMPLETED -> paymentStatus = PAID
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
@@ -164,7 +239,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Mở modal chỉnh sửa đơn hàng
   const handleOpenEdit = (order: any) => {
     setEditingOrder(order);
     setEditForm({
@@ -176,7 +250,6 @@ export default function AdminOrdersPage() {
     setIsEditModalOpen(true);
   };
 
-  // Lưu thông tin chỉnh sửa đơn hàng
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrder) return;
@@ -204,7 +277,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Xóa 1 đơn hàng đơn lẻ
   const handleDeleteSingle = async (orderId: string, orderCode: string) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${orderCode}?`)) return;
 
@@ -225,7 +297,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Xóa hàng loạt nhiều đơn hàng đã chọn
   const handleDeleteBulk = async () => {
     if (selectedIds.length === 0) return;
     if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} đơn hàng đã chọn? Hành động này không thể hoàn tác!`)) return;
@@ -298,7 +369,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-6 max-w-full overflow-hidden select-none relative">
-      {/* THÔNG BÁO BANNER TRỰC QUAN (Xanh: thành công, Đỏ: thất bại) */}
+      {/* THÔNG BÁO BANNER TRỰC QUAN */}
       {alertInfo && (
         <div
           className={`p-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-md transition-all animate-in fade-in slide-in-from-top-2 ${
@@ -476,7 +547,10 @@ export default function AdminOrdersPage() {
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <p className="font-bold text-gray-900">{ord.customerName}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-gray-900">{ord.customerName}</p>
+                          {renderCustomerRankBadge(ord.customerPhone)}
+                        </div>
                         <p className="text-[11px] text-gray-600 font-mono flex items-center gap-1 mt-0.5">
                           <Phone size={11} />
                           {ord.customerPhone}
