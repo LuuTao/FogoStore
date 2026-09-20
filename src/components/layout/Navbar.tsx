@@ -1,30 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import {
-  Menu as MenuIcon,
-  X,
-  Search,
-  ShoppingBag,
-  User,
-  PhoneCall,
-  ClipboardList,
-  Shield,
-  LogOut,
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-} from 'lucide-react';
-import { AuthModal } from '@/components/auth/AuthModal';
-import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
+import { ChevronRight } from 'lucide-react';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Dữ liệu danh mục chuẩn cho toàn bộ hệ thống (Desktop & Mobile) trỏ tới bộ lọc ?series=
-const OFFICIAL_MENU_DATA = [
+// Dữ liệu danh mục: Đồng bộ hoàn toàn sang dạng query ?series= để trang danh mục lọc đúng sản phẩm
+const OFFICIAL_NAV_DATA = [
   {
     id: 'iphone',
     title: 'iPhone',
@@ -135,6 +118,8 @@ const OFFICIAL_MENU_DATA = [
           { name: 'MacBook Pro M5', href: '/macbook?series=macbook-pro-m5' },
           { name: 'MacBook Pro M4', href: '/macbook?series=macbook-pro-m4' },
           { name: 'MacBook Pro M3', href: '/macbook?series=macbook-pro-m3' },
+          { name: 'MacBook Pro M2', href: '/macbook?series=macbook-pro-m2' },
+          { name: 'MacBook Pro M1', href: '/macbook?series=macbook-pro-m1' },
         ],
       },
       {
@@ -144,6 +129,8 @@ const OFFICIAL_MENU_DATA = [
           { name: 'MacBook Air M5', href: '/macbook?series=macbook-air-m5' },
           { name: 'MacBook Air M4', href: '/macbook?series=macbook-air-m4' },
           { name: 'MacBook Air M3', href: '/macbook?series=macbook-air-m3' },
+          { name: 'MacBook Air M2', href: '/macbook?series=macbook-air-m2' },
+          { name: 'MacBook Air M1', href: '/macbook?series=macbook-air-m1' },
         ],
       },
     ],
@@ -198,7 +185,7 @@ const OFFICIAL_MENU_DATA = [
 
 export const Navbar: React.FC = () => {
   const [mounted, setMounted] = useState(false);
-  const [navData, setNavData] = useState(OFFICIAL_MENU_DATA);
+  const [navData, setNavData] = useState(OFFICIAL_NAV_DATA);
 
   useEffect(() => {
     setMounted(true);
@@ -254,7 +241,6 @@ export const Navbar: React.FC = () => {
 
                     return (
                       <div key={gIdx} className="relative group/level2">
-                        {/* Cấp 2 chỉ là tiêu đề nhóm, không điều hướng */}
                         <div className="flex items-center justify-between px-5 py-2.5 text-sm font-semibold text-gray-800 hover:text-[#d70018] hover:bg-red-50/70 transition-colors cursor-pointer">
                           <span>{group.groupTitle}</span>
                           {uniqueItems.length > 0 && (
@@ -268,7 +254,7 @@ export const Navbar: React.FC = () => {
                               {uniqueItems.map((sub, sIdx) => (
                                 <Link
                                   key={sIdx}
-                                  href={sub.href} // Dẫn tới trang danh mục kèm query lọc đúng dòng (VD: /ipad?series=ipad-gen)
+                                  href={sub.href}
                                   className="flex items-center justify-between px-5 py-2.5 text-sm text-gray-600 hover:text-[#d70018] hover:bg-red-50/70 transition-colors"
                                 >
                                   <span>{sub.name}</span>
@@ -294,3 +280,5 @@ export const Navbar: React.FC = () => {
     </nav>
   );
 };
+
+export default Navbar;

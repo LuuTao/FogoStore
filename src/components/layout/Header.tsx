@@ -23,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 // Dữ liệu danh mục chuẩn cho toàn bộ Mobile Menu
+// Dữ liệu danh mục chuẩn cho toàn bộ Mobile Menu đồng bộ dạng query ?series=
 const OFFICIAL_MENU_DATA = [
   {
     id: 'iphone',
@@ -32,51 +33,50 @@ const OFFICIAL_MENU_DATA = [
     groups: [
       {
         groupTitle: 'iPhone 18 Series',
-        href: '/iphone?series=18',
+        href: '/iphone?series=iphone-18',
         items: [
-          { name: 'iPhone 18 Pro Max', href: '/iphone?series=18' },
-          { name: 'iPhone 18 Pro', href: '/iphone?series=18' },
-          { name: 'iPhone 18 Plus', href: '/iphone?series=18' },
-          { name: 'iPhone 18', href: '/iphone?series=18' },
+          { name: 'iPhone 18 Pro Max', href: '/iphone?series=iphone-18-pro-max', isNew: true },
+          { name: 'iPhone 18 Pro', href: '/iphone?series=iphone-18-pro', isNew: true },
+          { name: 'iPhone 18 Plus', href: '/iphone?series=iphone-18-plus' },
+          { name: 'iPhone 18', href: '/iphone?series=iphone-18' },
         ],
       },
       {
         groupTitle: 'iPhone Duo Series',
-        href: '/iphone?series=duo',
+        href: '/iphone?series=iphone-duo',
         items: [
-          { name: 'iPhone Duo ', href: '/iphone?series=duo' },
-         
+          { name: 'iPhone Duo', href: '/iphone?series=iphone-duo', isNew: true },
         ],
       },
       {
         groupTitle: 'iPhone 17 Series',
-        href: '/iphone?series=17',
+        href: '/iphone?series=iphone-17',
         items: [
-          { name: 'iPhone 17 Pro Max', href: '/iphone?series=17' },
-          { name: 'iPhone 17 Pro', href: '/iphone?series=17' },
-          { name: 'iPhone 17 Plus', href: '/iphone?series=17' },
-          { name: 'iPhone 17 Air', href: '/iphone?series=17' },
-          { name: 'iPhone 17', href: '/iphone?series=17' },
+          { name: 'iPhone 17 Pro Max', href: '/iphone?series=iphone-17-pro-max' },
+          { name: 'iPhone 17 Pro', href: '/iphone?series=iphone-17-pro' },
+          { name: 'iPhone 17 Plus', href: '/iphone?series=iphone-17-plus' },
+          { name: 'iPhone 17 Air', href: '/iphone?series=iphone-17-air' },
+          { name: 'iPhone 17', href: '/iphone?series=iphone-17' },
         ],
       },
       {
         groupTitle: 'iPhone 16 Series',
-        href: '/iphone?series=16',
+        href: '/iphone?series=iphone-16',
         items: [
-          { name: 'iPhone 16 Pro Max', href: '/iphone?series=16' },
-          { name: 'iPhone 16 Pro', href: '/iphone?series=16' },
-          { name: 'iPhone 16 Plus', href: '/iphone?series=16' },
-          { name: 'iPhone 16', href: '/iphone?series=16' },
+          { name: 'iPhone 16 Pro Max', href: '/iphone?series=iphone-16-pro-max' },
+          { name: 'iPhone 16 Pro', href: '/iphone?series=iphone-16-pro' },
+          { name: 'iPhone 16 Plus', href: '/iphone?series=iphone-16-plus' },
+          { name: 'iPhone 16', href: '/iphone?series=iphone-16' },
         ],
       },
       {
         groupTitle: 'iPhone 15 Series',
-        href: '/iphone?series=15',
+        href: '/iphone?series=iphone-15',
         items: [
-          { name: 'iPhone 15 Pro Max', href: '/iphone?series=15' },
-          { name: 'iPhone 15 Pro', href: '/iphone?series=15' },
-          { name: 'iPhone 15 Plus', href: '/iphone?series=15' },
-          { name: 'iPhone 15', href: '/iphone?series=15' },
+          { name: 'iPhone 15 Pro Max', href: '/iphone?series=iphone-15-pro-max' },
+          { name: 'iPhone 15 Pro', href: '/iphone?series=iphone-15-pro' },
+          { name: 'iPhone 15 Plus', href: '/iphone?series=iphone-15-plus' },
+          { name: 'iPhone 15', href: '/iphone?series=iphone-15' },
         ],
       },
     ],
@@ -89,35 +89,35 @@ const OFFICIAL_MENU_DATA = [
     groups: [
       {
         groupTitle: 'iPad Pro',
-        href: '/ipad?series=pro',
+        href: '/ipad?series=ipad-pro',
         items: [
-          { name: 'iPad Pro M5', href: '/ipad?series=pro-m5' },
-          { name: 'iPad Pro M4', href: '/ipad?series=pro-m4' },
-          { name: 'iPad Pro M2', href: '/ipad?series=pro-m2' },
+          { name: 'iPad Pro M5', href: '/ipad?series=ipad-pro-m5', isNew: true },
+          { name: 'iPad Pro M4', href: '/ipad?series=ipad-pro-m4' },
+          { name: 'iPad Pro M2', href: '/ipad?series=ipad-pro-m2' },
         ],
       },
       {
         groupTitle: 'iPad Air',
-        href: '/ipad?series=air',
+        href: '/ipad?series=ipad-air',
         items: [
-          { name: 'iPad Air 7 (M4)', href: '/ipad?series=air-7' },
-          { name: 'iPad Air 6 (M2)', href: '/ipad?series=air-6' },
-          { name: 'iPad Air 5', href: '/ipad?series=air-5' },
+          { name: 'iPad Air 7 (M4)', href: '/ipad?series=ipad-air-7', isNew: true },
+          { name: 'iPad Air 6 (M2)', href: '/ipad?series=ipad-air-6' },
+          { name: 'iPad Air 5', href: '/ipad?series=ipad-air-5' },
+        ],
+      },
+      {
+        groupTitle: 'iPad Gen',
+        href: '/ipad?series=ipad-gen',
+        items: [
+          { name: 'iPad Gen 11', href: '/ipad?series=ipad-gen-11' },
+          { name: 'iPad Gen 10', href: '/ipad?series=ipad-gen-10' },
         ],
       },
       {
         groupTitle: 'iPad Mini',
-        href: '/ipad?series=gen',
+        href: '/ipad?series=ipad-mini',
         items: [
-          { name: 'iPad Gen 11', href: '/ipad?series=gen-11' },
-        ],
-      },
-      {
-        groupTitle: 'iPad Mini',
-        href: '/ipad?series=mini',
-        items: [
-          { name: 'iPad Mini 7', href: '/ipad?series=mini-7' },
-
+          { name: 'iPad Mini 7', href: '/ipad?series=ipad-mini-7' },
         ],
       },
     ],
@@ -130,31 +130,24 @@ const OFFICIAL_MENU_DATA = [
     groups: [
       {
         groupTitle: 'MacBook Pro',
-        href: '/macbook?series=pro',
+        href: '/macbook?series=macbook-pro',
         items: [
-          { name: 'MacBook Pro M5', href: '/macbook?series=pro-m5' },
-          { name: 'MacBook Pro M4', href: '/macbook?series=pro-m4' },
-          { name: 'MacBook Pro M3', href: '/macbook?series=pro-m3' },
-          { name: 'MacBook Pro M2', href: '/macbook?series=pro-m2' },
-          { name: 'MacBook Pro M1', href: '/macbook?series=pro-m1' },
+          { name: 'MacBook Pro M5', href: '/macbook?series=macbook-pro-m5' },
+          { name: 'MacBook Pro M4', href: '/macbook?series=macbook-pro-m4' },
+          { name: 'MacBook Pro M3', href: '/macbook?series=macbook-pro-m3' },
+          { name: 'MacBook Pro M2', href: '/macbook?series=macbook-pro-m2' },
+          { name: 'MacBook Pro M1', href: '/macbook?series=macbook-pro-m1' },
         ],
       },
       {
         groupTitle: 'MacBook Air',
-        href: '/macbook?series=air',
+        href: '/macbook?series=macbook-air',
         items: [
-          { name: 'MacBook Air M5', href: '/macbook?series=air-m5' },
-          { name: 'MacBook Air M4', href: '/macbook?series=air-m4' },
-          { name: 'MacBook Air M3', href: '/macbook?series=air-m3' },
-          { name: 'MacBook Air M2', href: '/macbook?series=air-m2' },
-          { name: 'MacBook Air M1', href: '/macbook?series=air-m1' },
-        ],
-      },
-      {
-        groupTitle: 'MacBook Neo',
-        href: '/macbook?series=neo',
-        items: [
-          { name: 'MacBook NEO (2026)', href: '/macbook?series=neo-2026' },
+          { name: 'MacBook Air M5', href: '/macbook?series=macbook-air-m5' },
+          { name: 'MacBook Air M4', href: '/macbook?series=macbook-air-m4' },
+          { name: 'MacBook Air M3', href: '/macbook?series=macbook-air-m3' },
+          { name: 'MacBook Air M2', href: '/macbook?series=macbook-air-m2' },
+          { name: 'MacBook Air M1', href: '/macbook?series=macbook-air-m1' },
         ],
       },
     ],
@@ -166,22 +159,11 @@ const OFFICIAL_MENU_DATA = [
     groups: [
       {
         groupTitle: 'iPhone Cũ Like New 99%',
-        href: '/hang-cu/iphone-cu',
+        href: '/hang-cu?series=iphone-cu',
         items: [
-          { name: 'iPhone 17 Series Cũ', href: '/hang-cu/iphone-17-series-cu' },
-          { name: 'iPhone 16 Series Cũ', href: '/hang-cu/iphone-16-series-cu' },
-          { name: 'iPhone 15 Series Cũ', href: '/hang-cu/iphone-15-series-cu' },
-          { name: 'iPhone 14 Series Cũ', href: '/hang-cu/iphone-14-series-cu' },
-        ],
-      },
-      {
-        groupTitle: 'iPad & MacBook Cũ Zin',
-        href: '/hang-cu/ipad-cu',
-        items: [
-          { name: 'iPad Pro Cũ 99%', href: '/hang-cu/ipad-pro-cu' },
-          { name: 'iPad Air Cũ 99%', href: '/hang-cu/ipad-air-cu' },
-          { name: 'MacBook Pro Cũ Zin', href: '/hang-cu/macbook-pro-cu' },
-          { name: 'MacBook Air Cũ Zin', href: '/hang-cu/macbook-air-cu' },
+          { name: 'iPhone 17 Series Cũ', href: '/hang-cu?series=iphone-17-cu' },
+          { name: 'iPhone 16 Series Cũ', href: '/hang-cu?series=iphone-16-cu' },
+          { name: 'iPhone 15 Series Cũ', href: '/hang-cu?series=iphone-15-cu' },
         ],
       },
     ],
@@ -193,12 +175,10 @@ const OFFICIAL_MENU_DATA = [
     groups: [
       {
         groupTitle: 'Dòng Apple Watch',
-        href: '/watch',
+        href: '/watch?series=watch',
         items: [
-          { name: 'Apple Watch Ultra 2', href: '/watch?series=ultra-2' },
-          { name: 'Apple Watch Series 10', href: '/watch?series=series-10' },
-          { name: 'Apple Watch Series 9', href: '/watch?series=series-9' },
-          { name: 'Apple Watch SE 2', href: '/watch?series=se-2' },
+          { name: 'Apple Watch Ultra 2', href: '/watch?series=apple-watch-ultra-2' },
+          { name: 'Apple Watch Series 10', href: '/watch?series=apple-watch-series-10' },
         ],
       },
     ],
@@ -210,12 +190,10 @@ const OFFICIAL_MENU_DATA = [
     groups: [
       {
         groupTitle: 'Phụ kiện chính hãng Apple',
-        href: '/phu-kien',
+        href: '/phu-kien?series=phu-kien',
         items: [
-          { name: 'Củ Sạc Nhanh 20W / 35W', href: '/phu-kien?series=sac-cap' },
-          { name: 'Cáp Sạc Type-C Chuẩn Apple', href: '/phu-kien?series=sac-cap' },
-          { name: 'Tai Nghe AirPods 4 / Pro 2', href: '/phu-kien?series=tai-nghe' },
-          { name: 'Apple Pencil Pro & Magic Keyboard', href: '/phu-kien?series=phu-kien-mac' },
+          { name: 'Củ Sạc Nhanh 20W / 35W', href: '/phu-kien?series=cu-sac' },
+          { name: 'Tai Nghe AirPods', href: '/phu-kien?series=airpods' },
         ],
       },
     ],
