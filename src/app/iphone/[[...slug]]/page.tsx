@@ -346,11 +346,10 @@ export default function DynamicIPhonePage() {
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
-        // Luôn thu hẹp vào đúng thế hệ (ví dụ: iPhone 18)
+        // Thu hẹp vào đúng thế hệ (ví dụ: iPhone 18)
         const seriesRegex = new RegExp(`\\b${targetNumber}\\b`, 'i');
         items = items.filter((i) => seriesRegex.test(i.name));
 
-        // Phân loại chi tiết từng mẫu con
         if (lowerFilter.includes('pro-max') || lowerFilter.includes('promax')) {
           items = items.filter((i) => {
             const nl = (i.name || '').toLowerCase();
@@ -365,24 +364,24 @@ export default function DynamicIPhonePage() {
           items = items.filter((i) => (i.name || '').toLowerCase().includes('plus'));
         } else if (lowerFilter.includes('air')) {
           items = items.filter((i) => (i.name || '').toLowerCase().includes('air'));
-        } else if (lowerFilter.includes('tieuchuan') || lowerFilter.includes('standard')) {
-          // Chỉ lọc loại trừ khi người dùng click đúng nút "iPhone 18 (bản thường)"
-          const subStandardItems = items.filter((i) => {
+        } else if (
+          lowerFilter.includes('tieuchuan') || 
+          lowerFilter.includes('standard') ||
+          lowerFilter.endsWith(`-${targetNumber}-base`)
+        ) {
+          // Lọc đúng bản thường: loại bỏ Pro, Pro Max, Plus, Air
+          items = items.filter((i) => {
             const n = (i.name || '').toLowerCase();
             return !n.includes('pro') && !n.includes('plus') && !n.includes('air');
           });
-          // Nếu kho chưa có bản thường, giữ lại cả series để tránh trang trắng rỗng
-          if (subStandardItems.length > 0) {
-            items = subStandardItems;
-          }
         }
-        // Nếu URL là /iphone/iphone-18 hoặc /iphone/iphone-18-series thì giữ nguyên tất cả bản của dòng 18
+        // Nếu URL là /iphone/iphone-18 thì giữ nguyên tất cả bản thuộc dòng 18 Series
       } else if (lowerFilter.includes('duo')) {
-        items = items.filter((i) => i.name.toLowerCase().includes('duo'));
+        items = items.filter((i) => (i.name || '').toLowerCase().includes('duo'));
       } else {
         const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
         if (cleanTag) {
-          items = items.filter((i) => i.name.toLowerCase().includes(cleanTag));
+          items = items.filter((i) => (i.name || '').toLowerCase().includes(cleanTag));
         }
       }
     }
