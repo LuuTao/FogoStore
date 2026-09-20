@@ -54,7 +54,7 @@ const DEFAULT_WATCH_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// 2. Sub-models chi tiết từng dòng (chuẩn hóa tag sang dạng đầy đủ)
+// 2. Sub-models chi tiết từng dòng
 const WATCH_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   ultra: [
     {
@@ -114,17 +114,7 @@ const WATCH_SUBMODELS_MAP: Record<string, SubModelItem[]> = {
   ],
 };
 
-const DEFAULT_WATCH_SEO_TEXT = `Apple Watch là dòng đồng hồ thông minh bán chạy nhất thế giới do Apple Inc. phát triển, đóng vai trò như một người bạn đồng hành sức khỏe tối thượng, huấn luyện viên thể thao chuyên nghiệp và công cụ kết nối thông minh tức thì ngay trên cổ tay của bạn.
-
-Các dòng sản phẩm Apple Watch chính hãng nổi bật:
-- Apple Watch Ultra: Thiết kế vỏ Titanium siêu bền chuẩn quân đội, màn hình sapphire độ sáng lên đến 3000 nits, định vị GPS tần số kép chính xác cao và thời lượng pin vượt trội dành cho vận động viên sức bền và nhà thám hiểm.
-- Apple Watch Series (Series 10, 9, 8): Viền màn hình siêu mỏng, cảm biến điện tâm đồ ECG, đo nồng độ oxy trong máu SpO2, đo nhiệt độ cổ tay và tính năng phát hiện té ngã, va chạm an toàn.
-- Apple Watch SE: Tối ưu chi phí với đầy đủ các tính năng theo dõi sức khỏe cốt lõi, gọi khẩn cấp SOS và thông báo thông minh, phù hợp cho học sinh, sinh viên và người dùng cơ bản.
-
-Lợi ích khi chọn mua Apple Watch tại FoGo Store:
-- Hàng Apple chính hãng VN/A nguyên seal bảo hành 12 tháng tại các trung tâm uỷ quyền Apple.
-- Đầy đủ phiên bản GPS và LTE (eSIM) kết nối gọi điện, nghe nhạc độc lập không cần mang theo điện thoại.
-- Trả góp 0% lãi suất, hỗ trợ thu cũ đổi mới lên đời trợ giá tốt nhất thị trường.`;
+const DEFAULT_WATCH_SEO_TEXT = `Apple Watch là dòng đồng hồ thông minh bán chạy nhất thế giới do Apple Inc. phát triển, đóng vai trò như một người bạn đồng hành sức khỏe tối thượng, huấn luyện viên thể thao chuyên nghiệp và công cụ kết nối thông minh tức thì ngay trên cổ tay của bạn.`;
 
 const parsePrice = (priceStr: string | number) => {
   if (typeof priceStr === 'number') return priceStr;
@@ -185,11 +175,22 @@ export default function DynamicWatchPage() {
   const [seoContent, setSeoContent] = useState<string>(DEFAULT_WATCH_SEO_TEXT);
   const [isSeoExpanded, setIsSeoExpanded] = useState<boolean>(false);
 
-  // Đọc chuẩn từ URL phân tầng (/watch/watch-ultra-2) hoặc query (?series=...)
+  // Đọc slug phân tầng (/watch/watch-series-10) hoặc query (?series=...)
   const slugParam = params?.slug;
   const rawSlug = Array.isArray(slugParam) ? slugParam.join('/') : (slugParam as string) || '';
   const queryParam = searchParams?.get('series') || '';
   const currentFilter = (rawSlug || queryParam || '').toLowerCase().trim();
+
+  // FIX LỖI: Nhận diện chính xác category cha bằng regex word boundary, tránh việc "series" dính chữ "se"
+  const currentSeriesKey = useMemo(() => {
+    if (!currentFilter) return null;
+    if (currentFilter.includes('ultra')) return 'ultra';
+    if (currentFilter.includes('series')) return 'series';
+    if (/\bse\b/.test(currentFilter) || currentFilter.includes('-se') || currentFilter === 'watch-se') return 'se';
+    return null;
+  }, [currentFilter]);
+
+  const activeSubmodels = currentSeriesKey ? WATCH_SUBMODELS_MAP[currentSeriesKey] || [] : [];
 
   useEffect(() => {
     try {
@@ -347,18 +348,7 @@ export default function DynamicWatchPage() {
     return result;
   }, [rawDbProducts]);
 
-  // Nhận diện dòng cha đang chọn (ultra, series, se)
-  const currentSeriesKey = useMemo(() => {
-    if (!currentFilter) return null;
-    if (currentFilter.includes('ultra')) return 'ultra';
-    if (currentFilter.includes('se')) return 'se';
-    if (currentFilter.includes('series')) return 'series';
-    return null;
-  }, [currentFilter]);
-
-  const activeSubmodels = currentSeriesKey ? WATCH_SUBMODELS_MAP[currentSeriesKey] || [] : [];
-
-  // Lọc sản phẩm Apple Watch chính xác theo tên và dòng
+  // FIX LỖI: Lọc chính xác, tuyệt đối không bị SE đè vào Series
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -373,36 +363,39 @@ export default function DynamicWatchPage() {
       // 1. Phân loại theo nhóm Watch ULTRA
       if (lowerFilter.includes('ultra')) {
         items = items.filter((i) => i.name.toLowerCase().includes('ultra'));
-        if (lowerFilter.includes('2') || lowerFilter.includes('ultra-2')) {
+        if (lowerFilter.includes('2')) {
           items = items.filter((i) => i.name.toLowerCase().includes('2'));
-        } else if (lowerFilter.includes('1') || lowerFilter.includes('ultra-1')) {
+        } else if (lowerFilter.includes('1')) {
           items = items.filter((i) => !i.name.toLowerCase().includes('2'));
         }
       }
-      // 2. Phân loại theo nhóm Watch SE
-      else if (lowerFilter.includes('se')) {
-        items = items.filter((i) => {
-          const nameLower = i.name.toLowerCase();
-          return /\bse\b/.test(nameLower);
-        });
-        if (lowerFilter.includes('2') || lowerFilter.includes('se-2')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('2'));
-        } else if (lowerFilter.includes('1') || lowerFilter.includes('se-1')) {
-          items = items.filter((i) => !i.name.toLowerCase().includes('2'));
-        }
-      }
-      // 3. Phân loại theo nhóm Watch SERIES (10, 9, 8...)
+      // 2. Phân loại theo nhóm Watch SERIES (10, 9, 8...) -> Đặt TRƯỚC SE
       else if (lowerFilter.includes('series')) {
+        // Loại bỏ Ultra và SE
         items = items.filter((i) => {
-          const nameLower = i.name.toLowerCase();
-          return !nameLower.includes('ultra') && !/\bse\b/.test(nameLower);
+          const nl = (i.name || '').toLowerCase();
+          return !nl.includes('ultra') && !/\bse\b/.test(nl);
         });
+
         if (lowerFilter.includes('10')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('10'));
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('10'));
         } else if (lowerFilter.includes('9')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('9'));
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('9'));
         } else if (lowerFilter.includes('8')) {
-          items = items.filter((i) => i.name.toLowerCase().includes('8'));
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('8'));
+        }
+      }
+      // 3. Phân loại theo nhóm Watch SE
+      else if (/\bse\b/.test(lowerFilter) || lowerFilter.includes('-se') || lowerFilter.startsWith('se')) {
+        items = items.filter((i) => {
+          const nl = (i.name || '').toLowerCase();
+          return /\bse\b/.test(nl);
+        });
+
+        if (lowerFilter.includes('2')) {
+          items = items.filter((i) => (i.name || '').toLowerCase().includes('2'));
+        } else if (lowerFilter.includes('1')) {
+          items = items.filter((i) => !i.name.toLowerCase().includes('2'));
         }
       }
     }
@@ -444,6 +437,7 @@ export default function DynamicWatchPage() {
     return items;
   }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
+  // Hiển thị tiêu đề chuẩn xác
   const displayTitle = useMemo(() => {
     const f = currentFilter.toLowerCase();
     if (f.includes('ultra-2')) return 'Apple Watch Ultra 2';
@@ -457,7 +451,7 @@ export default function DynamicWatchPage() {
 
     if (f.includes('se-2')) return 'Apple Watch SE 2';
     if (f.includes('se-1')) return 'Apple Watch SE 1';
-    if (f.includes('se')) return 'Apple Watch SE';
+    if (/\bse\b/.test(f) || f.includes('-se')) return 'Apple Watch SE';
 
     return currentFilter
       ? currentFilter
@@ -534,7 +528,7 @@ export default function DynamicWatchPage() {
         </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
-          {/* 1. BANNER ĐÔI THUẦN ẢNH */}
+          {/* BANNER ĐÔI */}
           <div className="relative mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link
@@ -561,16 +555,24 @@ export default function DynamicWatchPage() {
             </div>
           </div>
 
-          {/* 2. HÀNG SERIES CHA: ĐÃ CHUYỂN SANG DẠNG NESTED PATH /watch/watch-ultra */}
+          {/* HÀNG SERIES CHA: FIX LỖI ACTIVE TRÙNG GIỮA SERIES VÀ SE */}
           <div className="my-6 py-2 w-full">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
-                const isSelected = isAllButton
-                  ? !currentFilter
-                  : currentFilter === series.slug ||
-                    (series.queryTag && currentFilter.includes(series.queryTag)) ||
-                    (series.slug && currentFilter.includes(series.slug));
+                
+                // FIX TRIỆT ĐỂ: Điều kiện active rạch ròi không bị dính chữ "se"
+                let isSelected = false;
+                if (isAllButton) {
+                  isSelected = !currentFilter;
+                } else if (series.queryTag === 'ultra') {
+                  isSelected = currentFilter.includes('ultra');
+                } else if (series.queryTag === 'series') {
+                  isSelected = currentFilter.includes('series');
+                } else if (series.queryTag === 'se') {
+                  // Chỉ active khi là SE và KHÔNG chứa "series"
+                  isSelected = !currentFilter.includes('series') && (/\bse\b/.test(currentFilter) || currentFilter.includes('-se'));
+                }
 
                 return (
                   <Link
@@ -604,17 +606,19 @@ export default function DynamicWatchPage() {
             </div>
           </div>
 
-          {/* 3. HÀNG SUBMODEL CON: ĐÃ SỬA DẪN SANG /watch/watch-ultra-2 VÀ ACTIVE VIỀN ĐỎ CHUẨN XÁC */}
+          {/* HÀNG SUBMODEL CON: ACTIVE CHUẨN XÁC TỪNG MODEL */}
           {activeSubmodels.length > 0 && (
             <div className="mb-8 pt-3 pb-3 border-t border-dashed border-gray-200 w-full">
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 md:gap-6 w-full px-2">
                 {activeSubmodels.map((model) => {
-                  const isSubSelected =
-                    currentFilter === model.tag ||
-                    currentFilter.endsWith(model.tag.replace('watch-', '')) ||
-                    (model.tag === 'watch-ultra' && (currentFilter === 'watch-ultra' || currentFilter === 'ultra')) ||
-                    (model.tag === 'watch-series' && (currentFilter === 'watch-series' || currentFilter === 'series')) ||
-                    (model.tag === 'watch-se' && (currentFilter === 'watch-se' || currentFilter === 'se'));
+                  let isSubSelected = false;
+
+                  if (model.tag === 'watch-ultra' || model.tag === 'watch-series' || model.tag === 'watch-se') {
+                    // Nút "Tất cả của dòng"
+                    isSubSelected = currentFilter === model.tag;
+                  } else {
+                    isSubSelected = currentFilter.includes(model.tag.replace('watch-', ''));
+                  }
 
                   return (
                     <Link
@@ -815,7 +819,7 @@ export default function DynamicWatchPage() {
             </div>
           )}
 
-          {/* BÀI VIẾT SEO CHÂN TRANG */}
+          {/* BÀI VIẾT SEO */}
           <div className="w-full bg-white border border-gray-200 rounded-xl p-5 md:p-8 shadow-xs my-10 relative">
             <div
               className={`relative overflow-hidden transition-all duration-500 text-xs md:text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line ${
