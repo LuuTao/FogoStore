@@ -81,6 +81,25 @@ export default function IPadDetail({
     message: '',
   });
 
+  // ĐỒNG BỘ DỮ LIỆU THÔNG SỐ VÀ MÔ TẢ TỪ ADMIN (LOCALSTORAGE)
+  useEffect(() => {
+    if (!product?.id) return;
+    try {
+      const localSaved = localStorage.getItem(`fogo_specs_${product.id}`);
+      if (localSaved) {
+        const parsed = JSON.parse(localSaved);
+        setProduct((prev: any) => ({
+          ...prev,
+          description: parsed.description || prev?.description,
+          salesPolicy: parsed.salesPolicy || prev?.salesPolicy,
+          specifications: parsed.specifications || prev?.specifications,
+        }));
+      }
+    } catch (e) {
+      console.warn('Lỗi đọc specs từ local storage:', e);
+    }
+  }, [product?.id]);
+
   useEffect(() => {
     if (initialProduct) {
       setProduct(initialProduct);
@@ -238,11 +257,10 @@ export default function IPadDetail({
       images: sample?.images || product.variants[0]?.images || [],
     };
   }, [product, selectedStorage, selectedColor]);
-  // CHUẨN XÁC: Lấy đầy đủ tất cả ảnh của riêng màu đang chọn, không lặp màu, không bị dính màu khác
+
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
 
-    // Tìm chính xác biến thể theo màu sắc đang chọn
     const exactVariant = product?.variants?.find(
       (v: any) => 
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
@@ -251,7 +269,6 @@ export default function IPadDetail({
       (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     );
 
-    // Nếu biến thể có mảng ảnh -> Lấy toàn bộ ảnh của biến thể đó
     if (exactVariant) {
       if (Array.isArray(exactVariant.images)) {
         exactVariant.images.forEach((img: string) => {
@@ -263,7 +280,6 @@ export default function IPadDetail({
       }
     }
 
-    // Nếu biến thể đó không có ảnh riêng, fallback về ảnh chung của sản phẩm
     if (list.length === 0) {
       if (product?.images && Array.isArray(product.images)) {
         product.images.forEach((img: string) => {
@@ -306,7 +322,7 @@ export default function IPadDetail({
 
     setIsImageTransitioning(true);
     setSelectedColor(colorName);
-    setCurrentImageIndex(0); // Luôn đưa về ảnh đầu tiên của màu vừa chọn
+    setCurrentImageIndex(0);
 
     setTimeout(() => {
       setIsImageTransitioning(false);
@@ -491,7 +507,7 @@ export default function IPadDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG (TO LÊN 2 SIZE, NẰM HÀNG NGANG) */}
+              {/* CHỌN DUNG LƯỢNG */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
@@ -518,7 +534,7 @@ export default function IPadDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC (TO LÊN 2 SIZE, NẰM HÀNG NGANG) */}
+              {/* CHỌN MÀU SẮC */}
               {currentColorOptions.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
@@ -702,34 +718,49 @@ export default function IPadDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (3/12 cột - THẲNG TRỤC 100%, ICON & CHỮ LỚN HƠN 3PX) */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (ĐÃ KẾT NỐI ĐỘNG VỚI product.salesPolicy) */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
                   <h3 className="font-black text-base text-gray-900 mb-4">
                     Chính sách bán hàng
                   </h3>
-                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                        <Check size={15} strokeWidth={3} />
-                      </div>
-                      <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <Banknote size={17} />
-                      </div>
-                      <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                        <RotateCcw size={16} />
-                      </div>
-                      <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
-                    </div>
+                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold leading-snug">
+                    {product?.salesPolicy ? (
+                      product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                        const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                        if (!cleanLine) return null;
+                        return (
+                          <div key={idx} className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                              <Check size={14} strokeWidth={3} />
+                            </div>
+                            <span className="leading-snug">{cleanLine}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                            <Check size={15} strokeWidth={3} />
+                          </div>
+                          <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                            <Banknote size={17} />
+                          </div>
+                          <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <RotateCcw size={16} />
+                          </div>
+                          <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -862,25 +893,63 @@ export default function IPadDetail({
               </div>
             )}
 
-            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
+            {/* TAB CHÍNH SÁCH BÁN HÀNG: ĐỒNG BỘ ĐỘNG THEO product.salesPolicy */}
             {activeTab === 'policy' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
-                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                  <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                  <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
-                  <li>Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.</li>
-                  <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
-                </ul>
+                {product?.salesPolicy ? (
+                  <div className="whitespace-pre-line font-medium text-gray-700 leading-relaxed space-y-2">
+                    {product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                      const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                      if (!cleanLine) return null;
+                      return (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-[#d70018] font-bold">•</span>
+                          <span>{cleanLine}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                    <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                    <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
+                    <li>Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.</li>
+                    <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
+                  </ul>
+                )}
               </div>
             )}
 
-            {/* TAB THÔNG SỐ KỸ THUẬT */}
+            {/* TAB THÔNG SỐ KỸ THUẬT: ĐỒNG BỘ ĐỘNG THEO product.specifications */}
             {activeTab === 'specs' && (
-              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
-                <p>Thông số kỹ thuật chi tiết chuẩn Apple VN/A.</p>
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                  Thông Số Kỹ Thuật Chi Tiết
+                </h3>
+                {Array.isArray(product?.specifications) && product.specifications.length > 0 ? (
+                  <div className="divide-y divide-gray-100">
+                    {product.specifications.map((spec: any, idx: number) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{spec.key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{spec.value || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : typeof product?.specifications === 'object' && product?.specifications !== null ? (
+                  <div className="divide-y divide-gray-100">
+                    {Object.entries(product.specifications).map(([key, val], idx) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{String(val) || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-4">Thông số kỹ thuật đang được cập nhật.</p>
+                )}
               </div>
             )}
           </div>
@@ -945,7 +1014,7 @@ export default function IPadDetail({
                       <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
                         {viewed.name}
                       </h4>
-                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-1.5 block">
+                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-2 block">
                         {viewed.currentPrice}
                       </span>
                     </div>

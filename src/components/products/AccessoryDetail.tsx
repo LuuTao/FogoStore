@@ -28,8 +28,6 @@ import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
-const USED_STORAGES = ['64GB', '128GB', '256GB', '512GB', '1TB'];
-
 interface Props {
   initialProduct: any;
   currentSlug: string;
@@ -41,7 +39,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onre
 
 const formatImg = (url?: string): string => {
   if (!url || typeof url !== 'string' || url.trim() === '') {
-    return 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600';
+    return 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600';
   }
   const clean = url.trim();
   if (clean.startsWith('http') || clean.startsWith('data:')) {
@@ -51,7 +49,7 @@ const formatImg = (url?: string): string => {
   return `${API_URL}/${clean.replace(/^\//, '')}`;
 };
 
-export default function UsedProductDetail({
+export default function AccessoryDetail({
   initialProduct,
   currentSlug,
   baseSlug,
@@ -81,6 +79,25 @@ export default function UsedProductDetail({
     message: '',
   });
 
+  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE / API)
+  useEffect(() => {
+    if (!product?.id) return;
+    try {
+      const localSaved = localStorage.getItem(`fogo_specs_${product.id}`);
+      if (localSaved) {
+        const parsed = JSON.parse(localSaved);
+        setProduct((prev: any) => ({
+          ...prev,
+          description: parsed.description || prev?.description,
+          salesPolicy: parsed.salesPolicy || prev?.salesPolicy,
+          specifications: parsed.specifications || prev?.specifications,
+        }));
+      }
+    } catch (e) {
+      console.warn('Lỗi đọc specs từ local storage:', e);
+    }
+  }, [product?.id]);
+
   useEffect(() => {
     if (initialProduct) {
       setProduct(initialProduct);
@@ -95,17 +112,12 @@ export default function UsedProductDetail({
       return st && st !== 'TIÊU CHUẨN';
     }) || product.variants[0];
 
-    const activeSt = (urlStorage || firstValidVar?.storage || '128GB').toUpperCase();
-    if (activeSt === 'TIÊU CHUẨN') {
-      setSelectedStorage('');
-    } else {
-      setSelectedStorage(activeSt);
-    }
+    const activeSt = (urlStorage || firstValidVar?.storage || '').toUpperCase();
+    setSelectedStorage(activeSt === 'TIÊU CHUẨN' ? '' : activeSt);
+    setSelectedColor(firstValidVar?.color || 'Tiêu chuẩn');
 
-    setSelectedColor(firstValidVar?.color || '');
-
-    // Lấy danh sách máy cũ liên quan từ DB
-    fetch(`${API_URL}/api/products/filter?category=hang-cu`, { cache: 'no-store' })
+    // Lấy danh sách phụ kiện liên quan từ DB
+    fetch(`${API_URL}/api/products/filter?category=phu-kien`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
         let items = resJson.success && Array.isArray(resJson.data) ? resJson.data : [];
@@ -140,7 +152,7 @@ export default function UsedProductDetail({
         setRelatedProducts(validList.length >= 5 ? validList.slice(0, 5) : mapped.slice(0, 5));
       })
       .catch((err) => {
-        console.error('Lỗi khi fetch máy cũ liên quan:', err);
+        console.error('Lỗi khi fetch phụ kiện liên quan:', err);
         setRelatedProducts([]);
       });
 
@@ -168,18 +180,11 @@ export default function UsedProductDetail({
   }, [product, urlStorage, currentSlug]);
 
   const storageList = useMemo(() => {
-    if (!product?.variants) return USED_STORAGES;
-    const existing = product.variants.map((v: any) => (v.storage || '').trim()).filter(Boolean);
-    const merged = Array.from(new Set([...USED_STORAGES, ...existing]));
-
-    const parseSize = (s: string) => {
-      const upper = s.toUpperCase();
-      const num = parseInt(upper.replace(/[^0-9]/g, '')) || 0;
-      if (upper.includes('TB')) return num * 1024 * 1024;
-      if (upper.includes('GB')) return num * 1024;
-      return num;
-    };
-    return merged.sort((a, b) => parseSize(a) - parseSize(b));
+    if (!product?.variants) return [];
+    const existing = product.variants
+      .map((v: any) => (v.storage || '').trim())
+      .filter((s: string) => s && s.toUpperCase() !== 'TIÊU CHUẨN');
+    return Array.from(new Set(existing));
   }, [product]);
 
   const currentColorOptions = useMemo(() => {
@@ -224,7 +229,7 @@ export default function UsedProductDetail({
     const samplePrice = sample?.price || product.variants[0]?.price || 0;
 
     return {
-      id: sample?.id || `out-of-stock-${selectedStorage.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
+      id: sample?.id || `out-of-stock-${encodeURIComponent(selectedColor)}`,
       storage: selectedStorage,
       color: selectedColor,
       price: samplePrice,
@@ -234,11 +239,10 @@ export default function UsedProductDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
-  // ĐÃ SỬA TRIỆT ĐỂ: Chỉ lấy mảng ảnh độc lập của riêng màu đang chọn, hiển thị nhiều ảnh và không bị lặp màu
+  // Lấy ảnh độc lập theo màu sắc đang chọn
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
 
-    // 1. Tìm chính xác biến thể theo màu sắc và dung lượng đang chọn
     const exactVariant = product?.variants?.find(
       (v: any) => 
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
@@ -247,7 +251,6 @@ export default function UsedProductDetail({
       (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     );
 
-    // 2. Lấy toàn bộ ảnh của biến thể đó nếu có
     if (exactVariant) {
       if (Array.isArray(exactVariant.images)) {
         exactVariant.images.forEach((img: string) => {
@@ -259,7 +262,6 @@ export default function UsedProductDetail({
       }
     }
 
-    // 3. Fallback về ảnh chung của sản phẩm nếu biến thể không có ảnh riêng
     if (list.length === 0) {
       if (product?.images && Array.isArray(product.images)) {
         product.images.forEach((img: string) => {
@@ -270,7 +272,7 @@ export default function UsedProductDetail({
       }
     }
 
-    return list.length > 0 ? list : ['https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600'];
+    return list.length > 0 ? list : ['https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600'];
   }, [product, selectedColor, selectedStorage]);
 
   const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
@@ -302,7 +304,7 @@ export default function UsedProductDetail({
 
     setIsImageTransitioning(true);
     setSelectedColor(colorName);
-    setCurrentImageIndex(0); // Luôn đưa về ảnh đầu tiên của màu vừa chọn
+    setCurrentImageIndex(0);
 
     setTimeout(() => {
       setIsImageTransitioning(false);
@@ -312,7 +314,7 @@ export default function UsedProductDetail({
       (v: any) => v.color.toLowerCase() === colorName.toLowerCase()
     );
 
-    const nextId = matched ? matched.id : `mock-${selectedStorage.toLowerCase()}-${encodeURIComponent(colorName)}`;
+    const nextId = matched ? matched.id : `mock-${encodeURIComponent(colorName)}`;
 
     if (typeof window !== 'undefined') {
       const stPath = selectedStorage ? `-${selectedStorage.toLowerCase()}` : '';
@@ -328,11 +330,7 @@ export default function UsedProductDetail({
     return parsedNum.toLocaleString('vi-VN') + 'đ';
   };
 
-  const cleanProductName = product.name
-    .replace(/\b(64GB|128GB|256GB|512GB|1TB|2TB)\b/gi, '')
-    .replace(/(cũ|like new|99%|chính hãng vn)/gi, '')
-    .trim();
-
+  const cleanProductName = product?.name || 'Phụ kiện chính hãng';
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
 
@@ -348,7 +346,7 @@ export default function UsedProductDetail({
 
     addToCart({
       id: currentVariant.id,
-      name: `${cleanProductName} ${selectedStorage} (Like New 99%)`,
+      name: `${cleanProductName} ${selectedStorage ? `(${selectedStorage})` : ''}`,
       modelSlug: baseSlug,
       price: currentPrice,
       originalPrice: currentOriginalPrice || currentPrice,
@@ -363,7 +361,7 @@ export default function UsedProductDetail({
     } else {
       setToast({
         show: true,
-        message: `Đã thêm ${cleanProductName} (${selectedStorage} - ${selectedColor}) vào giỏ hàng!`,
+        message: `Đã thêm ${cleanProductName} vào giỏ hàng!`,
       });
     }
   };
@@ -394,9 +392,9 @@ export default function UsedProductDetail({
           <div className="max-w-7xl mx-auto flex items-center gap-2 truncate">
             <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
             <span>/</span>
-            <Link href="/hang-cu" className="hover:text-[#d70018]">Hàng Cũ Like New</Link>
+            <Link href="/phu-kien" className="hover:text-[#d70018]">Phụ kiện</Link>
             <span>/</span>
-            <span className="text-gray-900 font-bold">{cleanProductName} {selectedStorage} (99%)</span>
+            <span className="text-gray-900 font-bold">{cleanProductName}</span>
           </div>
         </div>
 
@@ -460,7 +458,7 @@ export default function UsedProductDetail({
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
-                  {cleanProductName} {selectedStorage} - Cũ Đẹp 99% Zin Keng
+                  {cleanProductName} - Chính hãng
                 </h1>
               </div>
 
@@ -473,7 +471,7 @@ export default function UsedProductDetail({
                   </span>
                   {currentOriginalPrice > currentPrice && currentPrice > 0 && (
                     <span className="text-sm sm:text-base text-gray-400 line-through font-semibold">
-                      Máy mới: {formatVnd(currentOriginalPrice)}
+                      {formatVnd(currentOriginalPrice)}
                     </span>
                   )}
                   {isOutOfStock ? (
@@ -488,11 +486,11 @@ export default function UsedProductDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG */}
+              {/* CHỌN PHÂN LOẠI / KÍCH CỠ */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
-                    Chọn dung lượng:
+                    Phân loại:
                   </label>
                   <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
                     {storageList.map((st) => {
@@ -577,7 +575,7 @@ export default function UsedProductDetail({
                 <div className="pt-2 space-y-2">
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
                     <p className="text-xs font-bold text-[#d70018]">
-                      Cấu hình {cleanProductName} ({selectedColor}) hiện đang tạm hết hàng.
+                      Sản phẩm {cleanProductName} hiện đang tạm hết hàng.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -664,34 +662,49 @@ export default function UsedProductDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (ĐÃ KẾT NỐI ĐỘNG VỚI product.salesPolicy) */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
                   <h3 className="font-black text-base text-gray-900 mb-4">
                     Chính sách bán hàng
                   </h3>
-                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                        <Check size={15} strokeWidth={3} />
-                      </div>
-                      <span className="leading-snug">Cam kết chuẩn zin 100%, nguyên bản Like New</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <Banknote size={17} />
-                      </div>
-                      <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                        <RotateCcw size={16} />
-                      </div>
-                      <span className="leading-snug">1 Đổi 1 trong 30 ngày nếu phát sinh lỗi</span>
-                    </div>
+                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold leading-snug">
+                    {product?.salesPolicy ? (
+                      product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                        const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                        if (!cleanLine) return null;
+                        return (
+                          <div key={idx} className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                              <Check size={14} strokeWidth={3} />
+                            </div>
+                            <span className="leading-snug">{cleanLine}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                            <Check size={15} strokeWidth={3} />
+                          </div>
+                          <span className="leading-snug">Cam kết 100% chính hãng</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                            <Banknote size={17} />
+                          </div>
+                          <span className="leading-snug">Bảo hành chính hãng 12 tháng</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <RotateCcw size={16} />
+                          </div>
+                          <span className="leading-snug">Lỗi 1 đổi 1 nhanh chóng</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -768,6 +781,7 @@ export default function UsedProductDetail({
               </button>
             </div>
 
+            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
             {activeTab === 'desc' && (
               <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
                 <div className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'}`}>
@@ -776,10 +790,14 @@ export default function UsedProductDetail({
                       className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
                                  [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
                                  [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
-                      dangerouslySetInnerHTML={{ __html: formattedDescription }}
+                      dangerouslySetInnerHTML={{
+                        __html: String(product.description)
+                          .replace(/src="\/\//g, 'src="https://')
+                          .replace(/src='\/\//g, "src='https://"),
+                      }}
                     />
                   ) : (
-                    <p className="text-xs text-gray-500 text-center">Thông tin mô tả máy cũ đang được cập nhật.</p>
+                    <p className="text-xs text-gray-500 text-center">Thông tin mô tả phụ kiện đang được cập nhật.</p>
                   )}
                   {!isDescExpanded && (
                     <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
@@ -801,23 +819,62 @@ export default function UsedProductDetail({
               </div>
             )}
 
+            {/* TAB CHÍNH SÁCH BÁN HÀNG: ĐỒNG BỘ ĐỘNG THEO product.salesPolicy */}
             {activeTab === 'policy' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
-                  Chính Sách Bảo Hành &amp; Khuyến Mãi Máy Cũ:
+                  Chính Sách Bảo Hành &amp; Khuyến Mãi:
                 </h3>
-                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                  <li>Lỗi 1 đổi 1 trong 30 ngày toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                  <li>Bảo hành phần cứng toàn diện lên đến 12 tháng.</li>
-                  <li>Tặng bộ sạc cáp 20W chính hãng và dán cường lực miễn phí trọn đời.</li>
-                  <li>Thu cũ lên đời trợ giá đến 95% - cao nhất thị trường.</li>
-                </ul>
+                {product?.salesPolicy ? (
+                  <div className="whitespace-pre-line font-medium text-gray-700 leading-relaxed space-y-2">
+                    {product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                      const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                      if (!cleanLine) return null;
+                      return (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-[#d70018] font-bold">•</span>
+                          <span>{cleanLine}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                    <li>Lỗi 1 đổi 1 trong 12 tháng toàn diện nếu có lỗi từ NSX.</li>
+                    <li>Cam kết 100% sản phẩm chính hãng Apple và các thương hiệu hàng đầu.</li>
+                    <li>Giao hàng nhanh hỏa tốc trong 2 giờ tại TP.HCM.</li>
+                  </ul>
+                )}
               </div>
             )}
 
+            {/* TAB THÔNG SỐ KỸ THUẬT: ĐỒNG BỘ ĐỘNG THEO product.specifications */}
             {activeTab === 'specs' && (
-              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
-                <p>Thông số kỹ thuật nguyên bản chuẩn Apple VN/A.</p>
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                  Thông Số Kỹ Thuật Chi Tiết
+                </h3>
+                {Array.isArray(product?.specifications) && product.specifications.length > 0 ? (
+                  <div className="divide-y divide-gray-100">
+                    {product.specifications.map((spec: any, idx: number) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{spec.key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{spec.value || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : typeof product?.specifications === 'object' && product?.specifications !== null ? (
+                  <div className="divide-y divide-gray-100">
+                    {Object.entries(product.specifications).map(([key, val], idx) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{String(val) || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-4">Thông số kỹ thuật đang được cập nhật.</p>
+                )}
               </div>
             )}
           </div>
@@ -827,7 +884,7 @@ export default function UsedProductDetail({
             <div className="mt-14 pt-8 border-t border-gray-200">
               <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
                 <span className="w-1.5 h-5 bg-[#d70018] inline-block" />
-                <span>MÁY CŨ KHÁC CÙNG QUAN TÂM</span>
+                <span>PHỤ KIỆN KHÁC CÙNG QUAN TÂM</span>
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
                 {relatedProducts.map((rel) => (
@@ -881,7 +938,7 @@ export default function UsedProductDetail({
       <InstallmentModal
         isOpen={isInstallmentOpen}
         onClose={() => setIsInstallmentOpen(false)}
-        productName={`${cleanProductName} ${selectedStorage} (Like New 99%)`}
+        productName={cleanProductName}
         productImage={displayImage}
         productPrice={currentPrice}
         initialQuantity={quantity}

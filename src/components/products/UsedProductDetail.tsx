@@ -81,6 +81,25 @@ export default function UsedProductDetail({
     message: '',
   });
 
+  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE / API)
+  useEffect(() => {
+    if (!product?.id) return;
+    try {
+      const localSaved = localStorage.getItem(`fogo_specs_${product.id}`);
+      if (localSaved) {
+        const parsed = JSON.parse(localSaved);
+        setProduct((prev: any) => ({
+          ...prev,
+          description: parsed.description || prev?.description,
+          salesPolicy: parsed.salesPolicy || prev?.salesPolicy,
+          specifications: parsed.specifications || prev?.specifications,
+        }));
+      }
+    } catch (e) {
+      console.warn('Lỗi đọc specs từ local storage:', e);
+    }
+  }, [product?.id]);
+
   useEffect(() => {
     if (initialProduct) {
       setProduct(initialProduct);
@@ -238,7 +257,7 @@ export default function UsedProductDetail({
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
 
-    // 1. Tìm chính xác biến thể theo màu sắc đang chọn
+    // 1. Tìm chính xác biến thể theo màu sắc và dung lượng đang chọn
     const exactVariant = product?.variants?.find(
       (v: any) => 
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
@@ -664,34 +683,49 @@ export default function UsedProductDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (ĐÃ KẾT NỐI ĐỘNG VỚI product.salesPolicy) */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
                   <h3 className="font-black text-base text-gray-900 mb-4">
                     Chính sách bán hàng
                   </h3>
-                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                        <Check size={15} strokeWidth={3} />
-                      </div>
-                      <span className="leading-snug">Cam kết chuẩn zin 100%, nguyên bản Like New</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <Banknote size={17} />
-                      </div>
-                      <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                        <RotateCcw size={16} />
-                      </div>
-                      <span className="leading-snug">1 Đổi 1 trong 30 ngày nếu phát sinh lỗi</span>
-                    </div>
+                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold leading-snug">
+                    {product?.salesPolicy ? (
+                      product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                        const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                        if (!cleanLine) return null;
+                        return (
+                          <div key={idx} className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                              <Check size={14} strokeWidth={3} />
+                            </div>
+                            <span className="leading-snug">{cleanLine}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                            <Check size={15} strokeWidth={3} />
+                          </div>
+                          <span className="leading-snug">Cam kết chuẩn zin 100%, nguyên bản Like New</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                            <Banknote size={17} />
+                          </div>
+                          <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <RotateCcw size={16} />
+                          </div>
+                          <span className="leading-snug">1 Đổi 1 trong 30 ngày nếu phát sinh lỗi</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -768,6 +802,7 @@ export default function UsedProductDetail({
               </button>
             </div>
 
+            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
             {activeTab === 'desc' && (
               <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
                 <div className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'}`}>
@@ -776,7 +811,11 @@ export default function UsedProductDetail({
                       className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
                                  [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
                                  [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
-                      dangerouslySetInnerHTML={{ __html: formattedDescription }}
+                      dangerouslySetInnerHTML={{
+                        __html: String(product.description)
+                          .replace(/src="\/\//g, 'src="https://')
+                          .replace(/src='\/\//g, "src='https://"),
+                      }}
                     />
                   ) : (
                     <p className="text-xs text-gray-500 text-center">Thông tin mô tả máy cũ đang được cập nhật.</p>
@@ -801,23 +840,63 @@ export default function UsedProductDetail({
               </div>
             )}
 
+            {/* TAB CHÍNH SÁCH BÁN HÀNG: ĐỒNG BỘ ĐỘNG THEO product.salesPolicy */}
             {activeTab === 'policy' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành &amp; Khuyến Mãi Máy Cũ:
                 </h3>
-                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                  <li>Lỗi 1 đổi 1 trong 30 ngày toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                  <li>Bảo hành phần cứng toàn diện lên đến 12 tháng.</li>
-                  <li>Tặng bộ sạc cáp 20W chính hãng và dán cường lực miễn phí trọn đời.</li>
-                  <li>Thu cũ lên đời trợ giá đến 95% - cao nhất thị trường.</li>
-                </ul>
+                {product?.salesPolicy ? (
+                  <div className="whitespace-pre-line font-medium text-gray-700 leading-relaxed space-y-2">
+                    {product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                      const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                      if (!cleanLine) return null;
+                      return (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-[#d70018] font-bold">•</span>
+                          <span>{cleanLine}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                    <li>Lỗi 1 đổi 1 trong 30 ngày toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                    <li>Bảo hành phần cứng toàn diện lên đến 12 tháng.</li>
+                    <li>Tặng bộ sạc cáp 20W chính hãng và dán cường lực miễn phí trọn đời.</li>
+                    <li>Thu cũ lên đời trợ giá đến 95% - cao nhất thị trường.</li>
+                  </ul>
+                )}
               </div>
             )}
 
+            {/* TAB THÔNG SỐ KỸ THUẬT: ĐỒNG BỘ ĐỘNG THEO product.specifications */}
             {activeTab === 'specs' && (
-              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
-                <p>Thông số kỹ thuật nguyên bản chuẩn Apple VN/A.</p>
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                  Thông Số Kỹ Thuật Chi Tiết
+                </h3>
+                {Array.isArray(product?.specifications) && product.specifications.length > 0 ? (
+                  <div className="divide-y divide-gray-100">
+                    {product.specifications.map((spec: any, idx: number) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{spec.key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{spec.value || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : typeof product?.specifications === 'object' && product?.specifications !== null ? (
+                  <div className="divide-y divide-gray-100">
+                    {Object.entries(product.specifications).map(([key, val], idx) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{String(val) || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-4">Thông số kỹ thuật đang được cập nhật.</p>
+                )}
               </div>
             )}
           </div>

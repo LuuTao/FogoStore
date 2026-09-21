@@ -80,6 +80,7 @@ export default function IPhoneDetail({
     show: false,
     message: '',
   });
+
   // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE / API)
   useEffect(() => {
     if (!product?.id) return;
@@ -249,12 +250,9 @@ export default function IPhoneDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
-  // ĐÃ SỬA: Lọc bỏ ảnh trùng lặp và ưu tiên gom ảnh chính xác theo màu sắc đang chọn
-  // CHUẨN XÁC: Lấy đầy đủ tất cả ảnh của riêng màu đang chọn, không lặp màu, không bị dính màu khác
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
 
-    // Tìm chính xác biến thể theo màu sắc đang chọn
     const exactVariant = product?.variants?.find(
       (v: any) => 
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
@@ -263,7 +261,6 @@ export default function IPhoneDetail({
       (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     );
 
-    // Nếu biến thể có mảng ảnh -> Lấy toàn bộ ảnh của biến thể đó
     if (exactVariant) {
       if (Array.isArray(exactVariant.images)) {
         exactVariant.images.forEach((img: string) => {
@@ -275,7 +272,6 @@ export default function IPhoneDetail({
       }
     }
 
-    // Nếu biến thể đó không có ảnh riêng, fallback về ảnh chung của sản phẩm
     if (list.length === 0) {
       if (product?.images && Array.isArray(product.images)) {
         product.images.forEach((img: string) => {
@@ -318,7 +314,7 @@ export default function IPhoneDetail({
 
     setIsImageTransitioning(true);
     setSelectedColor(colorName);
-    setCurrentImageIndex(0); // Luôn đưa về ảnh đầu tiên của màu vừa chọn
+    setCurrentImageIndex(0);
 
     setTimeout(() => {
       setIsImageTransitioning(false);
@@ -471,7 +467,7 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG (5/12 cột - CĂN KHỚP VỚI NÚT MUA VÀ NÚT CHAT ZALO) */}
+            {/* CỘT 2: THÔNG TIN MUA HÀNG (5/12 cột) */}
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
@@ -530,7 +526,7 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC: TỚI ĐÚNG VIỀN NÚT ZALO, QUÁ DÀI TỰ ĐỘNG XUỐNG DÒNG KHÔNG BỊ CẮT CHỮ */}
+              {/* CHỌN MÀU SẮC */}
               {currentColorOptions.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
@@ -714,34 +710,49 @@ export default function IPhoneDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (ĐÃ KẾT NỐI ĐỘNG VỚI product.salesPolicy) */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
                   <h3 className="font-black text-base text-gray-900 mb-4">
                     Chính sách bán hàng
                   </h3>
-                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                        <Check size={15} strokeWidth={3} />
-                      </div>
-                      <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <Banknote size={17} />
-                      </div>
-                      <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                        <RotateCcw size={16} />
-                      </div>
-                      <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
-                    </div>
+                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold leading-snug">
+                    {product?.salesPolicy ? (
+                      product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                        const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                        if (!cleanLine) return null;
+                        return (
+                          <div key={idx} className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                              <Check size={14} strokeWidth={3} />
+                            </div>
+                            <span className="leading-snug">{cleanLine}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                            <Check size={15} strokeWidth={3} />
+                          </div>
+                          <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                            <Banknote size={17} />
+                          </div>
+                          <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <RotateCcw size={16} />
+                          </div>
+                          <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -828,74 +839,113 @@ export default function IPhoneDetail({
               </button>
             </div>
 
+            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
             {activeTab === 'desc' && (
-  <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
-    <div
-      className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
-        isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
-      }`}
-    >
-      {product?.description ? (
-        <div
-          className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
-                     [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
-                     [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
-          dangerouslySetInnerHTML={{
-            __html: String(product.description)
-              .replace(/src="\/\//g, 'src="https://')
-              .replace(/src='\/\//g, "src='https://"),
-          }}
-        />
-      ) : (
-        <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
-      )}
+              <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
+                <div
+                  className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
+                    isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
+                  }`}
+                >
+                  {formattedDescription ? (
+                    <div
+                      className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
+                                 [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
+                                 [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
+                      dangerouslySetInnerHTML={{
+                        __html: String(product.description)
+                          .replace(/src="\/\//g, 'src="https://')
+                          .replace(/src='\/\//g, "src='https://"),
+                      }}
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
+                  )}
 
-      {!isDescExpanded && (
-        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
-      )}
-    </div>
+                  {!isDescExpanded && (
+                    <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+                  )}
+                </div>
 
-    <div className="flex justify-center mt-4 border-t border-gray-100 pt-4">
-      <button
-        type="button"
-        onClick={() => setIsDescExpanded(!isDescExpanded)}
-        className="px-8 py-2.5 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-2xs"
-      >
-        {isDescExpanded ? (
-          <>
-            <span>— Rút gọn nội dung</span>
-            <ChevronUp size={14} />
-          </>
-        ) : (
-          <>
-            <span>— Xem thêm nội dung</span>
-            <ChevronDown size={14} />
-          </>
-        )}
-      </button>
-    </div>
-  </div>
-)}
+                <div className="flex justify-center mt-4 border-t border-gray-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsDescExpanded(!isDescExpanded)}
+                    className="px-8 py-2.5 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-2xs"
+                  >
+                    {isDescExpanded ? (
+                      <>
+                        <span>— Rút gọn nội dung</span>
+                        <ChevronUp size={14} />
+                      </>
+                    ) : (
+                      <>
+                        <span>— Xem thêm nội dung</span>
+                        <ChevronDown size={14} />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
-            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
+            {/* TAB CHÍNH SÁCH BÁN HÀNG: ĐỒNG BỘ ĐỘNG THEO product.salesPolicy */}
             {activeTab === 'policy' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
-                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                  <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                  <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
-                  <li>Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.</li>
-                  <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
-                </ul>
+                {product?.salesPolicy ? (
+                  <div className="whitespace-pre-line font-medium text-gray-700 leading-relaxed space-y-2">
+                    {product.salesPolicy.split('\n').map((line: string, idx: number) => {
+                      const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                      if (!cleanLine) return null;
+                      return (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-[#d70018] font-bold">•</span>
+                          <span>{cleanLine}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                    <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                    <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
+                    <li>Giảm giá 150.000đ khi mua kèm Củ sạc nhanh Apple chính hãng.</li>
+                    <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
+                  </ul>
+                )}
               </div>
             )}
 
-            {/* TAB THÔNG SỐ KỸ THUẬT */}
+            {/* TAB THÔNG SỐ KỸ THUẬT: ĐỒNG BỘ ĐỘNG THEO product.specifications */}
             {activeTab === 'specs' && (
-              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
-                <p>Thông số kỹ thuật chi tiết chuẩn Apple VN/A.</p>
+              <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                  Thông Số Kỹ Thuật Chi Tiết
+                </h3>
+                {Array.isArray(product?.specifications) && product.specifications.length > 0 ? (
+                  <div className="divide-y divide-gray-100">
+                    {product.specifications.map((spec: any, idx: number) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{spec.key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{spec.value || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : typeof product?.specifications === 'object' && product?.specifications !== null ? (
+                  <div className="divide-y divide-gray-100">
+                    {Object.entries(product.specifications).map(([key, val], idx) => (
+                      <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                        <span className="font-bold text-gray-600 sm:w-1/3">{key}</span>
+                        <span className="font-semibold text-gray-900 sm:w-2/3">{String(val) || 'Đang cập nhật'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-4">Thông số kỹ thuật đang được cập nhật.</p>
+                )}
               </div>
             )}
           </div>
@@ -935,7 +985,7 @@ export default function IPhoneDetail({
             </div>
           )}
 
-        {/* SẢN PHẨM BẠN VỪA XEM */}
+          {/* SẢN PHẨM BẠN VỪA XEM */}
           {recentViewed.length > 0 && (
             <div className="mt-12 pt-8 border-t border-gray-200">
               <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
@@ -970,8 +1020,8 @@ export default function IPhoneDetail({
             </div>
           )}
 
-        </main>  {/* <--- Đảm bảo thẻ đóng này khớp với <main> bên trên */}
-      </div>       {/* <--- Đảm bảo thẻ đóng này khớp với thẻ bọc ngoài */}
+        </main>
+      </div>
 
       <InstallmentModal
         isOpen={isInstallmentOpen}
