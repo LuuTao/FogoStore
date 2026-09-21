@@ -718,49 +718,34 @@ export default function IPadDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (ĐÃ KẾT NỐI ĐỘNG VỚI product.salesPolicy) */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (QUAY VỀ NGUYÊN BẢN CŨ) */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
                   <h3 className="font-black text-base text-gray-900 mb-4">
                     Chính sách bán hàng
                   </h3>
-                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold leading-snug">
-                    {product?.salesPolicy ? (
-                      product.salesPolicy.split('\n').map((line: string, idx: number) => {
-                        const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
-                        if (!cleanLine) return null;
-                        return (
-                          <div key={idx} className="flex items-start gap-3">
-                            <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
-                              <Check size={14} strokeWidth={3} />
-                            </div>
-                            <span className="leading-snug">{cleanLine}</span>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                            <Check size={15} strokeWidth={3} />
-                          </div>
-                          <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                            <Banknote size={17} />
-                          </div>
-                          <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                            <RotateCcw size={16} />
-                          </div>
-                          <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
-                        </div>
-                      </>
-                    )}
+                  <div className="space-y-4 text-[15px] text-gray-800 font-semibold">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                        <Check size={15} strokeWidth={3} />
+                      </div>
+                      <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Banknote size={17} />
+                      </div>
+                      <span className="leading-snug">Lên đời trợ giá lên đến 95%</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <RotateCcw size={16} />
+                      </div>
+                      <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
+                    </div>
                   </div>
                 </div>
 
