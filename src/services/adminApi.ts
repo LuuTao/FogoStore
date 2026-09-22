@@ -1,6 +1,6 @@
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Hàm helper tự động quét tất cả các loại token admin lưu trong trình duyệt
+// Tự động nhận diện token admin lưu trong browser
 export const getAuthHeaders = (isFormData: boolean = false) => {
   let token = '';
   if (typeof window !== 'undefined') {
@@ -32,9 +32,7 @@ export const getAuthHeaders = (isFormData: boolean = false) => {
   return headers;
 };
 
-// -------------------------------------------------------------
 // SẢN PHẨM & TỒN KHO
-// -------------------------------------------------------------
 export const adminGetProducts = async () => {
   const res = await fetch(`${API_URL}/api/admin/products`, {
     headers: getAuthHeaders(),
@@ -69,9 +67,7 @@ export const adminDeleteProduct = async (id: string) => {
   return res.json();
 };
 
-// -------------------------------------------------------------
 // ĐƠN HÀNG
-// -------------------------------------------------------------
 export const adminGetOrders = async () => {
   const res = await fetch(`${API_URL}/api/admin/orders`, {
     headers: getAuthHeaders(),
@@ -97,9 +93,7 @@ export const adminDeleteOrder = async (orderId: string) => {
   return res.json();
 };
 
-// -------------------------------------------------------------
 // BANNERS
-// -------------------------------------------------------------
 export const adminGetBanners = async () => {
   const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, {
     headers: getAuthHeaders(),
@@ -117,9 +111,7 @@ export const adminSyncBanners = async (items: any[]) => {
   return res.json();
 };
 
-// -------------------------------------------------------------
 // BÀI VIẾT
-// -------------------------------------------------------------
 export const adminGetPosts = async () => {
   const res = await fetch(`${API_URL}/api/admin/posts`, {
     headers: getAuthHeaders(),
@@ -154,9 +146,7 @@ export const adminDeletePost = async (id: string) => {
   return res.json();
 };
 
-// -------------------------------------------------------------
 // THỐNG KÊ
-// -------------------------------------------------------------
 export const adminGetStats = async () => {
   const res = await fetch(`${API_URL}/api/admin/stats`, {
     headers: getAuthHeaders(),
@@ -173,9 +163,7 @@ export const adminGetTrafficStats = async () => {
   return res.json();
 };
 
-// -------------------------------------------------------------
 // IMPORT EXCEL
-// -------------------------------------------------------------
 export const adminImportExcel = async (formData: FormData) => {
   const res = await fetch(`${API_URL}/api/admin/products/import-excel`, {
     method: 'POST',
