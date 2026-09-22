@@ -81,7 +81,7 @@ export default function WatchDetail({
     message: '',
   });
 
-  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE / API)
+  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE)
   useEffect(() => {
     if (!product?.id) return;
     try {
@@ -91,7 +91,6 @@ export default function WatchDetail({
         setProduct((prev: any) => ({
           ...prev,
           description: parsed.description || prev?.description,
-          salesPolicy: parsed.salesPolicy || prev?.salesPolicy,
           specifications: parsed.specifications || prev?.specifications,
         }));
       }
@@ -114,8 +113,8 @@ export default function WatchDetail({
       return st && st !== 'TIÊU CHUẨN';
     }) || product.variants[0];
 
-    const defaultSize = firstValidVar?.storage || firstValidVar?.size || '45mm';
-    const activeSize = (urlStorage || defaultSize).toUpperCase();
+    const defaultSize = (firstValidVar?.storage || firstValidVar?.size || '45mm').trim();
+    const activeSize = (urlStorage || defaultSize).trim();
 
     setSelectedSize(activeSize);
     setSelectedColor(firstValidVar?.color || 'Sport Band');
@@ -186,21 +185,26 @@ export default function WatchDetail({
   }, [product, urlStorage, currentSlug]);
 
   const sizeList = useMemo(() => {
-    if (!product?.variants) return WATCH_SIZES;
-    const existing = product.variants
-      .map((v: any) => (v.storage || v.size || '').trim())
-      .filter((s: string) => s && s.toUpperCase() !== 'TIÊU CHUẨN');
-    const merged = Array.from(new Set(existing.length > 0 ? existing : WATCH_SIZES));
+    if (!product?.variants || product.variants.length === 0) return WATCH_SIZES;
+    const set = new Set<string>();
+    product.variants.forEach((v: any) => {
+      const st = (v.storage || v.size || '').trim();
+      if (st && st.toUpperCase() !== 'TIÊU CHUẨN') {
+        set.add(st);
+      }
+    });
+    const list = Array.from(set);
+    if (list.length === 0) return WATCH_SIZES;
 
     const parseSize = (s: string) => parseInt(s.replace(/[^0-9]/g, '')) || 0;
-    return merged.sort((a, b) => parseSize(a) - parseSize(b));
+    return list.sort((a, b) => parseSize(a) - parseSize(b));
   }, [product]);
 
   const currentColorOptions = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return [];
 
     const scopedVariants = selectedSize
-      ? product.variants.filter((v: any) => (v.storage || v.size || '').trim().toUpperCase() === selectedSize.toUpperCase())
+      ? product.variants.filter((v: any) => (v.storage || v.size || '').trim().toLowerCase() === selectedSize.trim().toLowerCase())
       : product.variants;
 
     const targetList = scopedVariants.length > 0 ? scopedVariants : product.variants;
@@ -225,14 +229,14 @@ export default function WatchDetail({
     if (selectedSize) {
       const exact = product.variants.find(
         (v: any) =>
-          (v.storage || v.size || '').toUpperCase() === selectedSize.toUpperCase() &&
-          v.color.toLowerCase() === selectedColor.toLowerCase()
+          (v.storage || v.size || '').trim().toLowerCase() === selectedSize.trim().toLowerCase() &&
+          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
       );
       if (exact) return exact;
     }
 
     const sample = product.variants.find(
-      (v: any) => v.color.toLowerCase() === selectedColor.toLowerCase()
+      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
     );
 
     const samplePrice = sample?.price || product.variants[0]?.price || 0;
@@ -254,7 +258,7 @@ export default function WatchDetail({
     const exactVariant = product?.variants?.find(
       (v: any) => 
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
-        (!selectedSize || (v.storage || v.size || '').trim().toUpperCase() === selectedSize.toUpperCase())
+        (!selectedSize || (v.storage || v.size || '').trim().toLowerCase() === selectedSize.toLowerCase())
     ) || product?.variants?.find(
       (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     );
@@ -291,20 +295,23 @@ export default function WatchDetail({
     return price <= 0;
   }, [currentVariant]);
 
+  // SỬA: CẬP NHẬT TRỰC TIẾP VÀ SÁNG VIỀN ĐỎ NGAY
   const handleSelectSize = (sz: string) => {
-    if (selectedSize.toUpperCase() === sz.toUpperCase()) return;
+    setSelectedSize(sz);
 
     const matched = product?.variants?.find(
       (v: any) =>
-        (v.storage || v.size || '').toUpperCase() === sz.toUpperCase() &&
-        v.color.toLowerCase() === selectedColor.toLowerCase()
-    ) || product?.variants?.find((v: any) => (v.storage || v.size || '').toUpperCase() === sz.toUpperCase());
+        (v.storage || v.size || '').trim().toLowerCase() === sz.trim().toLowerCase() &&
+        (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
+    ) || product?.variants?.find((v: any) => (v.storage || v.size || '').trim().toLowerCase() === sz.trim().toLowerCase());
 
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
-    const targetSize = sz.toLowerCase().replace(/\//g, '-');
+    const targetSize = sz.toLowerCase().replace(/\s+/g, '-');
     const proidParam = matched ? `?proid=${matched.id}` : '';
 
-    router.replace(`/san-pham/${cleanBase}-${targetSize}${proidParam}`);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `/san-pham/${cleanBase}-${targetSize}${proidParam}`);
+    }
   };
 
   const handleSelectColor = (colorName: string) => {
@@ -319,13 +326,13 @@ export default function WatchDetail({
     }, 150);
 
     const matched = product?.variants?.find(
-      (v: any) => v.color.toLowerCase() === colorName.toLowerCase()
+      (v: any) => (v.color || '').trim().toLowerCase() === colorName.toLowerCase()
     );
 
     const nextId = matched ? matched.id : `mock-${selectedSize.toLowerCase()}-${encodeURIComponent(colorName)}`;
 
     if (typeof window !== 'undefined') {
-      const stPath = selectedSize ? `-${selectedSize.toLowerCase()}` : '';
+      const stPath = selectedSize ? `-${selectedSize.toLowerCase().replace(/\s+/g, '-')}` : '';
       window.history.replaceState(null, '', `/san-pham/${baseSlug}${stPath}?proid=${nextId}`);
     }
   };
@@ -339,8 +346,8 @@ export default function WatchDetail({
   };
 
   const cleanProductName = product.name
-    .replace(/\b(40mm|41mm|42mm|44mm|45mm|46mm|49mm|Tiêu chuẩn)\b/gi, '')
-    .trim();
+    ? product.name.replace(/\b(40mm|41mm|42mm|44mm|45mm|46mm|49mm|Tiêu chuẩn)\b/gi, '').trim()
+    : 'Apple Watch';
 
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
@@ -413,7 +420,7 @@ export default function WatchDetail({
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (4/12 cột) */}
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM */}
             <div className="lg:col-span-4 flex flex-col items-center w-full">
               <div className="relative w-full aspect-square max-w-[480px] border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
                 <img
@@ -465,7 +472,7 @@ export default function WatchDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG (5/12 cột) */}
+            {/* CỘT 2: THÔNG TIN MUA HÀNG */}
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
@@ -497,23 +504,24 @@ export default function WatchDetail({
                 </div>
               </div>
 
-              {/* CHỌN KÍCH THƯỚC MẶT */}
+              {/* CHỌN KÍCH THƯỚC MẶT: TỰ ĐỘNG XUỐNG DÒNG VÀ SÁNG VIỀN ĐỎ */}
               {sizeList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Kích thước mặt:
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2.5 w-full">
                     {sizeList.map((sz) => {
-                      const isSelected = selectedSize.toLowerCase() === sz.toLowerCase();
+                      const isSelected = selectedSize.trim().toLowerCase() === sz.trim().toLowerCase();
                       return (
                         <button
                           key={sz}
+                          type="button"
                           onClick={() => handleSelectSize(sz)}
-                          className={`min-w-[76px] px-4 py-2.5 text-sm sm:text-base font-black rounded-xl border-2 text-center shrink-0 cursor-pointer transition-all ${
+                          className={`px-4 py-2.5 text-xs sm:text-sm font-black rounded-xl border-2 text-center transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#d70018] text-[#d70018] bg-white shadow-xs'
-                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] bg-red-50/20 shadow-sm'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
                           {sz}
@@ -530,19 +538,20 @@ export default function WatchDetail({
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Màu sắc &amp; Dây đeo:
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full">
                     {currentColorOptions.map(({ color, sampleVariant }) => {
-                      const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
+                      const isSelected = selectedColor.trim().toLowerCase() === color.trim().toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
 
                       return (
                         <button
                           key={color}
+                          type="button"
                           onClick={() => handleSelectColor(color)}
-                          className={`px-4 py-2 rounded-xl border-2 flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer ${
+                          className={`px-3.5 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#d70018] text-[#d70018] font-black bg-white shadow-xs'
-                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] font-black bg-red-50/20 shadow-sm'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
                           <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
@@ -581,7 +590,7 @@ export default function WatchDetail({
                 </div>
               )}
 
-              {/* NÚT MUA HÀNG */}
+              {/* NÚT MUA HÀNG HOẶC LIÊN HỆ */}
               {isOutOfStock ? (
                 <div className="pt-2 space-y-2">
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
@@ -664,16 +673,55 @@ export default function WatchDetail({
 
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-xs font-bold text-gray-700">Chia sẻ:</span>
-                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#1877f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity">f</a>
-                  <a href="https://messenger.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#0084ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity"><MessageCircle size={13} /></a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#1da1f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity">t</a>
-                  <a href="https://pinterest.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#bd081c] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity">p</a>
-                  <button type="button" onClick={handleCopyUrl} className="w-7 h-7 rounded-full bg-[#0099ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer" title="Sao chép liên kết"><Link2 size={13} /></button>
+                  <a
+                    href="https://facebook.com/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#1877f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    f
+                  </a>
+                  <a
+                    href="https://m.me/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#0084ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+                  >
+                    <MessageCircle size={13} />
+                  </a>
+                  <a
+                    href="https://twitter.com/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center hover:opacity-85 transition-opacity"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </a>
+                  <a
+                    href="https://pinterest.com/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#e60023] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.546.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+                    </svg>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className="w-7 h-7 rounded-full bg-[#0099ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                    title="Sao chép liên kết"
+                  >
+                    <Link2 size={13} />
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (QUAY VỀ NGUYÊN BẢN CŨ) */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
@@ -758,7 +806,9 @@ export default function WatchDetail({
               <button
                 onClick={() => setActiveTab('desc')}
                 className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
-                  activeTab === 'desc' ? 'text-[#d70018] border-b-2 border-[#d70018]' : 'text-gray-500 hover:text-gray-900'
+                  activeTab === 'desc'
+                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
+                    : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
                 Mô tả sản phẩm
@@ -766,7 +816,9 @@ export default function WatchDetail({
               <button
                 onClick={() => setActiveTab('policy')}
                 className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
-                  activeTab === 'policy' ? 'text-[#d70018] border-b-2 border-[#d70018]' : 'text-gray-500 hover:text-gray-900'
+                  activeTab === 'policy'
+                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
+                    : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
                 Chính sách bán hàng
@@ -774,17 +826,23 @@ export default function WatchDetail({
               <button
                 onClick={() => setActiveTab('specs')}
                 className={`pb-3 text-lg sm:text-xl md:text-2xl font-black transition-all cursor-pointer whitespace-nowrap relative ${
-                  activeTab === 'specs' ? 'text-[#d70018] border-b-2 border-[#d70018]' : 'text-gray-500 hover:text-gray-900'
+                  activeTab === 'specs'
+                    ? 'text-[#d70018] border-b-2 border-[#d70018]'
+                    : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
                 Thông số kỹ thuật
               </button>
             </div>
 
-            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
+            {/* TAB MÔ TẢ */}
             {activeTab === 'desc' && (
               <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
-                <div className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'}`}>
+                <div
+                  className={`max-w-4xl mx-auto relative overflow-hidden transition-all duration-300 ${
+                    isDescExpanded ? 'max-h-full pb-6' : 'max-h-[440px]'
+                  }`}
+                >
                   {formattedDescription ? (
                     <div
                       className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
@@ -799,10 +857,12 @@ export default function WatchDetail({
                   ) : (
                     <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
                   )}
+
                   {!isDescExpanded && (
                     <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
                   )}
                 </div>
+
                 <div className="flex justify-center mt-4 border-t border-gray-100 pt-4">
                   <button
                     type="button"
@@ -810,46 +870,37 @@ export default function WatchDetail({
                     className="px-8 py-2.5 rounded-full border border-gray-300 hover:border-[#d70018] text-gray-700 hover:text-[#d70018] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer bg-white shadow-2xs"
                   >
                     {isDescExpanded ? (
-                      <><span>— Rút gọn nội dung</span><ChevronUp size={14} /></>
+                      <>
+                        <span>— Rút gọn nội dung</span>
+                        <ChevronUp size={14} />
+                      </>
                     ) : (
-                      <><span>— Xem thêm nội dung</span><ChevronDown size={14} /></>
+                      <>
+                        <span>— Xem thêm nội dung</span>
+                        <ChevronDown size={14} />
+                      </>
                     )}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* TAB CHÍNH SÁCH BÁN HÀNG: ĐỒNG BỘ ĐỘNG THEO product.salesPolicy */}
+            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
             {activeTab === 'policy' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
-                  Chính Sách Bảo Hành &amp; Khuyến Mãi:
+                  Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
-                {product?.salesPolicy ? (
-                  <div className="whitespace-pre-line font-medium text-gray-700 leading-relaxed space-y-2">
-                    {product.salesPolicy.split('\n').map((line: string, idx: number) => {
-                      const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
-                      if (!cleanLine) return null;
-                      return (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="text-[#d70018] font-bold">•</span>
-                          <span>{cleanLine}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                    <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                    <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
-                    <li>Giảm giá 150.000đ khi mua kèm Dây đeo thể thao chính hãng.</li>
-                    <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
-                  </ul>
-                )}
+                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                  <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                  <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
+                  <li>Giảm giá 150.000đ khi mua kèm Dây đeo thể thao chính hãng.</li>
+                  <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
+                </ul>
               </div>
             )}
 
-            {/* TAB THÔNG SỐ KỸ THUẬT: ĐỒNG BỘ ĐỘNG THEO product.specifications */}
+            {/* TAB THÔNG SỐ KỸ THUẬT */}
             {activeTab === 'specs' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
                 <h3 className="text-base sm:text-lg font-black text-gray-900 mb-4 pb-2 border-b border-gray-100">
@@ -895,11 +946,19 @@ export default function WatchDetail({
                     className="bg-white rounded-xl p-3 border border-gray-200 hover:border-[#d70018] hover:shadow-md transition-all group flex flex-col justify-between"
                   >
                     <div className="w-full aspect-square flex items-center justify-center p-2">
-                      <img src={rel.imageUrl} alt={rel.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                      <img
+                        src={rel.imageUrl}
+                        alt={rel.name}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                      />
                     </div>
                     <div className="mt-2">
-                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">{rel.name}</h4>
-                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-1.5 block">{rel.priceDisplay}</span>
+                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
+                        {rel.name}
+                      </h4>
+                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-1.5 block">
+                        {rel.priceDisplay}
+                      </span>
                     </div>
                   </Link>
                 ))}
@@ -907,7 +966,7 @@ export default function WatchDetail({
             </div>
           )}
 
-          {/* SẢN PHẨM VỪA XEM */}
+          {/* SẢN PHẨM BẠN VỪA XEM */}
           {recentViewed.length > 0 && (
             <div className="mt-12 pt-8 border-t border-gray-200">
               <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
@@ -922,17 +981,26 @@ export default function WatchDetail({
                     className="bg-white rounded-xl p-3 border border-gray-200 hover:border-[#d70018] hover:shadow-md transition-all group flex flex-col justify-between"
                   >
                     <div className="w-full aspect-square flex items-center justify-center p-2">
-                      <img src={viewed.imageUrl} alt={viewed.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                      <img
+                        src={viewed.imageUrl}
+                        alt={viewed.name}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                      />
                     </div>
                     <div className="mt-2">
-                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">{viewed.name}</h4>
-                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-2 block">{viewed.currentPrice}</span>
+                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-[#d70018] transition-colors leading-snug">
+                        {viewed.name}
+                      </h4>
+                      <span className="text-xs sm:text-sm font-black text-[#d70018] mt-2 block">
+                        {viewed.currentPrice}
+                      </span>
                     </div>
                   </Link>
                 ))}
               </div>
             </div>
           )}
+
         </main>
       </div>
 

@@ -81,7 +81,7 @@ export default function MacBookDetail({
     message: '',
   });
 
-  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE / API)
+  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN
   useEffect(() => {
     if (!product?.id) return;
     try {
@@ -91,7 +91,6 @@ export default function MacBookDetail({
         setProduct((prev: any) => ({
           ...prev,
           description: parsed.description || prev?.description,
-          salesPolicy: parsed.salesPolicy || prev?.salesPolicy,
           specifications: parsed.specifications || prev?.specifications,
         }));
       }
@@ -109,13 +108,14 @@ export default function MacBookDetail({
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
 
+    // Tìm biến thể hợp lệ đầu tiên
     const firstValidVar = product.variants.find((v: any) => {
       const st = (v.storage || '').trim().toUpperCase();
       return st && st !== 'TIÊU CHUẨN';
     }) || product.variants[0];
 
-    let activeSt = (urlStorage || firstValidVar?.storage || '256GB').toUpperCase();
-    if (activeSt === 'TIÊU CHUẨN') activeSt = '256GB';
+    const defaultSt = (firstValidVar?.storage || '256GB').trim();
+    const activeSt = (urlStorage || defaultSt).trim();
 
     setSelectedStorage(activeSt);
     setSelectedColor(firstValidVar?.color || 'Space Gray');
@@ -185,31 +185,26 @@ export default function MacBookDetail({
     }
   }, [product, urlStorage, currentSlug]);
 
+  // LẤY DANH SÁCH CẤU HÌNH BỘ NHỚ/RAM TỪ TẤT CẢ BIẾN THỂ
   const storageList = useMemo(() => {
-    if (!product?.variants) return MACBOOK_STORAGES;
+    if (!product?.variants || product.variants.length === 0) return MACBOOK_STORAGES;
     const set = new Set<string>();
     product.variants.forEach((v: any) => {
-      const st = (v.storage || '').trim().toUpperCase();
-      if (st && st !== 'TIÊU CHUẨN') {
+      const st = (v.storage || '').trim();
+      if (st && st.toUpperCase() !== 'TIÊU CHUẨN') {
         set.add(st);
       }
     });
     const list = Array.from(set);
-    const parseSize = (s: string) => {
-      const upper = s.toUpperCase();
-      const num = parseInt(upper.replace(/[^0-9]/g, '')) || 0;
-      if (upper.includes('TB')) return num * 1024 * 1024;
-      if (upper.includes('GB')) return num * 1024;
-      return num;
-    };
-    return (list.length > 0 ? list : MACBOOK_STORAGES).sort((a, b) => parseSize(a) - parseSize(b));
+    if (list.length === 0) return MACBOOK_STORAGES;
+    return list;
   }, [product]);
 
   const currentColorOptions = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return [];
 
     const scopedVariants = selectedStorage
-      ? product.variants.filter((v: any) => (v.storage || '').trim().toUpperCase() === selectedStorage.toUpperCase())
+      ? product.variants.filter((v: any) => (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase())
       : product.variants;
 
     const targetList = scopedVariants.length > 0 ? scopedVariants : product.variants;
@@ -234,14 +229,14 @@ export default function MacBookDetail({
     if (selectedStorage) {
       const exact = product.variants.find(
         (v: any) =>
-          (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
-          v.color.toLowerCase() === selectedColor.toLowerCase()
+          (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
+          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
       );
       if (exact) return exact;
     }
 
     const sample = product.variants.find(
-      (v: any) => v.color.toLowerCase() === selectedColor.toLowerCase()
+      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
     );
 
     const samplePrice = sample?.price || product.variants[0]?.price || 0;
@@ -263,7 +258,7 @@ export default function MacBookDetail({
     const exactVariant = product?.variants?.find(
       (v: any) => 
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
-        (!selectedStorage || (v.storage || '').trim().toUpperCase() === selectedStorage.toUpperCase())
+        (!selectedStorage || (v.storage || '').trim().toLowerCase() === selectedStorage.toLowerCase())
     ) || product?.variants?.find(
       (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     );
@@ -300,20 +295,23 @@ export default function MacBookDetail({
     return price <= 0;
   }, [currentVariant]);
 
+  // CHỌN DUNG LƯỢNG: CẬP NHẬT TRỰC TIẾP VÀ SÁNG VIỀN ĐỎ NGAY
   const handleSelectStorage = (st: string) => {
-    if (selectedStorage.toUpperCase() === st.toUpperCase()) return;
+    setSelectedStorage(st);
 
     const matched = product?.variants?.find(
       (v: any) =>
-        (v.storage || '').toUpperCase() === st.toUpperCase() &&
-        v.color.toLowerCase() === selectedColor.toLowerCase()
-    ) || product?.variants?.find((v: any) => (v.storage || '').toUpperCase() === st.toUpperCase());
+        (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase() &&
+        (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
+    ) || product?.variants?.find((v: any) => (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase());
 
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
-    const targetStorage = st.toLowerCase().replace(/\//g, '-');
+    const targetStorage = st.toLowerCase().replace(/\s+/g, '-');
     const proidParam = matched ? `?proid=${matched.id}` : '';
 
-    router.replace(`/san-pham/${cleanBase}-${targetStorage}${proidParam}`);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `/san-pham/${cleanBase}-${targetStorage}${proidParam}`);
+    }
   };
 
   const handleSelectColor = (colorName: string) => {
@@ -324,17 +322,17 @@ export default function MacBookDetail({
     setCurrentImageIndex(0);
 
     setTimeout(() => {
-      setIsImageTransitioning(false);
-    }, 150);
+      setIsImageTransitioning(false), 150;
+    });
 
     const matched = product?.variants?.find(
-      (v: any) => v.color.toLowerCase() === colorName.toLowerCase()
+      (v: any) => (v.color || '').trim().toLowerCase() === colorName.toLowerCase()
     );
 
     const nextId = matched ? matched.id : `mock-${selectedStorage.toLowerCase()}-${encodeURIComponent(colorName)}`;
 
     if (typeof window !== 'undefined') {
-      const stPath = selectedStorage ? `-${selectedStorage.toLowerCase()}` : '';
+      const stPath = selectedStorage ? `-${selectedStorage.toLowerCase().replace(/\s+/g, '-')}` : '';
       window.history.replaceState(null, '', `/san-pham/${baseSlug}${stPath}?proid=${nextId}`);
     }
   };
@@ -348,7 +346,7 @@ export default function MacBookDetail({
   };
 
   const cleanProductName = product?.name
-    ? product.name.replace(/\b(128GB|256GB|512GB|1TB|2TB|24GB|Tiêu chuẩn)\b/gi, '').trim()
+    ? product.name.replace(/\b(8GB|16GB|24GB|32GB|128GB|256GB|512GB|1TB|2TB|Tiêu chuẩn)\b/gi, '').trim()
     : 'MacBook';
 
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
@@ -422,7 +420,7 @@ export default function MacBookDetail({
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM (4/12 cột) */}
+            {/* CỘT 1: HÌNH ẢNH SẢN PHẨM */}
             <div className="lg:col-span-4 flex flex-col items-center w-full">
               <div className="relative w-full aspect-square max-w-[480px] border border-gray-200 rounded-3xl p-3 sm:p-5 flex items-center justify-center bg-white shadow-xs overflow-hidden">
                 <img
@@ -474,7 +472,7 @@ export default function MacBookDetail({
               </div>
             </div>
 
-            {/* CỘT 2: THÔNG TIN MUA HÀNG (5/12 cột) */}
+            {/* CỘT 2: THÔNG TIN MUA HÀNG */}
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
@@ -506,23 +504,24 @@ export default function MacBookDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG SSD */}
+              {/* CHỌN DUNG LƯỢNG SSD: TỰ ĐỘNG XUỐNG DÒNG VÀ VIỀN ĐỎ RÕ RÀNG */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Bộ nhớ lưu trữ (SSD):
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2.5 w-full">
                     {storageList.map((st) => {
-                      const isSelected = selectedStorage.toLowerCase() === st.toLowerCase();
+                      const isSelected = selectedStorage.trim().toLowerCase() === st.trim().toLowerCase();
                       return (
                         <button
                           key={st}
+                          type="button"
                           onClick={() => handleSelectStorage(st)}
-                          className={`min-w-[76px] px-4 py-2.5 text-sm sm:text-base font-black rounded-xl border-2 text-center shrink-0 cursor-pointer transition-all ${
+                          className={`px-4 py-2.5 text-xs sm:text-sm font-black rounded-xl border-2 text-center transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#d70018] text-[#d70018] bg-white shadow-xs'
-                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] bg-red-50/20 shadow-sm'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
                           {st}
@@ -539,19 +538,20 @@ export default function MacBookDetail({
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Màu sắc:
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full">
                     {currentColorOptions.map(({ color, sampleVariant }) => {
-                      const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
+                      const isSelected = selectedColor.trim().toLowerCase() === color.trim().toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
 
                       return (
                         <button
                           key={color}
+                          type="button"
                           onClick={() => handleSelectColor(color)}
-                          className={`px-4 py-2 rounded-xl border-2 flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer ${
+                          className={`px-3.5 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#d70018] text-[#d70018] font-black bg-white shadow-xs'
-                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] font-black bg-red-50/20 shadow-sm'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
                           <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
@@ -590,7 +590,7 @@ export default function MacBookDetail({
                 </div>
               )}
 
-              {/* NÚT MUA HÀNG */}
+              {/* NÚT MUA HÀNG HOẶC LIÊN HỆ */}
               {isOutOfStock ? (
                 <div className="pt-2 space-y-2">
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
@@ -607,7 +607,7 @@ export default function MacBookDetail({
                       <span>GỌI 056.600.3333</span>
                     </a>
                     <a
-                      href="https://zalo.me"
+                      href="https://zalo.me/0566003333"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full py-2.5 border-2 border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-xs uppercase rounded-lg flex items-center justify-center gap-2 text-center"
@@ -674,7 +674,7 @@ export default function MacBookDetail({
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-xs font-bold text-gray-700">Chia sẻ:</span>
                   <a
-                    href="https://facebook.com"
+                    href="https://facebook.com/fogostore"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-7 h-7 rounded-full bg-[#1877f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
@@ -682,7 +682,7 @@ export default function MacBookDetail({
                     f
                   </a>
                   <a
-                    href="https://messenger.com"
+                    href="https://m.me/fogostore"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-7 h-7 rounded-full bg-[#0084ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
@@ -690,20 +690,24 @@ export default function MacBookDetail({
                     <MessageCircle size={13} />
                   </a>
                   <a
-                    href="https://twitter.com"
+                    href="https://twitter.com/fogostore"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-full bg-[#1da1f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                    className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center hover:opacity-85 transition-opacity"
                   >
-                    t
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
                   </a>
                   <a
-                    href="https://pinterest.com"
+                    href="https://pinterest.com/fogostore"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-full bg-[#bd081c] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                    className="w-7 h-7 rounded-full bg-[#e60023] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
                   >
-                    p
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.546.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+                    </svg>
                   </a>
                   <button
                     type="button"
@@ -717,7 +721,7 @@ export default function MacBookDetail({
               </div>
             </div>
 
-            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG (QUAY VỀ NGUYÊN BẢN CŨ) */}
+            {/* CỘT 3: CHÍNH SÁCH BÁN HÀNG */}
             <div className="lg:col-span-3 space-y-4 w-full">
               <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-xs space-y-5">
                 <div>
@@ -796,7 +800,7 @@ export default function MacBookDetail({
 
           </div>
 
-          {/* KHỐI 3 TAB LỚN ĐƯỢC TĂNG 2 SIZE */}
+          {/* KHỐI 3 TAB LỚN */}
           <div className="mt-14 pt-8 border-t border-gray-200">
             <div className="flex items-center gap-8 sm:gap-12 border-b border-gray-200 mb-6 overflow-x-auto scrollbar-none">
               <button
@@ -831,7 +835,7 @@ export default function MacBookDetail({
               </button>
             </div>
 
-            {/* TAB MÔ TẢ: CĂN ĐỀU HAI BÊN & SÁT MÉP VỚI ẢNH */}
+            {/* TAB MÔ TẢ */}
             {activeTab === 'desc' && (
               <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 sm:p-8 shadow-xs relative">
                 <div
@@ -881,37 +885,22 @@ export default function MacBookDetail({
               </div>
             )}
 
-            {/* TAB CHÍNH SÁCH BÁN HÀNG: ĐỒNG BỘ ĐỘNG THEO product.salesPolicy */}
+            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
             {activeTab === 'policy' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
-                {product?.salesPolicy ? (
-                  <div className="whitespace-pre-line font-medium text-gray-700 leading-relaxed space-y-2">
-                    {product.salesPolicy.split('\n').map((line: string, idx: number) => {
-                      const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
-                      if (!cleanLine) return null;
-                      return (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="text-[#d70018] font-bold">•</span>
-                          <span>{cleanLine}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                    <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                    <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
-                    <li>Giảm giá 500.000đ khi mua kèm Chuột Magic Mouse & Hub Type-C cao cấp.</li>
-                    <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
-                  </ul>
-                )}
+                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                  <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                  <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
+                  <li>Giảm giá 500.000đ khi mua kèm Chuột Magic Mouse & Hub Type-C cao cấp.</li>
+                  <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
+                </ul>
               </div>
             )}
 
-            {/* TAB THÔNG SỐ KỸ THUẬT: ĐỒNG BỘ ĐỘNG THEO product.specifications */}
+            {/* TAB THÔNG SỐ KỸ THUẬT */}
             {activeTab === 'specs' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
                 <h3 className="text-base sm:text-lg font-black text-gray-900 mb-4 pb-2 border-b border-gray-100">

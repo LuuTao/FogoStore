@@ -81,7 +81,7 @@ export default function UsedProductDetail({
     message: '',
   });
 
-  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE / API)
+  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE)
   useEffect(() => {
     if (!product?.id) return;
     try {
@@ -91,7 +91,6 @@ export default function UsedProductDetail({
         setProduct((prev: any) => ({
           ...prev,
           description: parsed.description || prev?.description,
-          salesPolicy: parsed.salesPolicy || prev?.salesPolicy,
           specifications: parsed.specifications || prev?.specifications,
         }));
       }
@@ -114,13 +113,10 @@ export default function UsedProductDetail({
       return st && st !== 'TIÊU CHUẨN';
     }) || product.variants[0];
 
-    const activeSt = (urlStorage || firstValidVar?.storage || '128GB').toUpperCase();
-    if (activeSt === 'TIÊU CHUẨN') {
-      setSelectedStorage('');
-    } else {
-      setSelectedStorage(activeSt);
-    }
+    const defaultSt = (firstValidVar?.storage || '128GB').trim();
+    const activeSt = (urlStorage || defaultSt).trim();
 
+    setSelectedStorage(activeSt);
     setSelectedColor(firstValidVar?.color || '');
 
     // Lấy danh sách máy cũ liên quan từ DB
@@ -188,8 +184,15 @@ export default function UsedProductDetail({
 
   const storageList = useMemo(() => {
     if (!product?.variants) return USED_STORAGES;
-    const existing = product.variants.map((v: any) => (v.storage || '').trim()).filter(Boolean);
-    const merged = Array.from(new Set([...USED_STORAGES, ...existing]));
+    const set = new Set<string>();
+    product.variants.forEach((v: any) => {
+      const st = (v.storage || '').trim();
+      if (st && st.toUpperCase() !== 'TIÊU CHUẨN') {
+        set.add(st);
+      }
+    });
+    const list = Array.from(set);
+    if (list.length === 0) return USED_STORAGES;
 
     const parseSize = (s: string) => {
       const upper = s.toUpperCase();
@@ -198,14 +201,14 @@ export default function UsedProductDetail({
       if (upper.includes('GB')) return num * 1024;
       return num;
     };
-    return merged.sort((a, b) => parseSize(a) - parseSize(b));
+    return list.sort((a, b) => parseSize(a) - parseSize(b));
   }, [product]);
 
   const currentColorOptions = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return [];
 
     const scopedVariants = selectedStorage
-      ? product.variants.filter((v: any) => (v.storage || '').trim().toUpperCase() === selectedStorage.toUpperCase())
+      ? product.variants.filter((v: any) => (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase())
       : product.variants;
 
     const targetList = scopedVariants.length > 0 ? scopedVariants : product.variants;
@@ -230,14 +233,14 @@ export default function UsedProductDetail({
     if (selectedStorage) {
       const exact = product.variants.find(
         (v: any) =>
-          (v.storage || '').toUpperCase() === selectedStorage.toUpperCase() &&
-          (v.color || '').toLowerCase() === selectedColor.toLowerCase()
+          (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
+          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
       );
       if (exact) return exact;
     }
 
     const sample = product.variants.find(
-      (v: any) => (v.color || '').toLowerCase() === selectedColor.toLowerCase()
+      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
     );
 
     const samplePrice = sample?.price || product.variants[0]?.price || 0;
@@ -253,20 +256,17 @@ export default function UsedProductDetail({
     };
   }, [product, selectedStorage, selectedColor]);
 
-  // ĐÃ SỬA TRIỆT ĐỂ: Chỉ lấy mảng ảnh độc lập của riêng màu đang chọn, hiển thị nhiều ảnh và không bị lặp màu
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
 
-    // 1. Tìm chính xác biến thể theo màu sắc và dung lượng đang chọn
     const exactVariant = product?.variants?.find(
       (v: any) => 
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
-        (!selectedStorage || (v.storage || '').trim().toUpperCase() === selectedStorage.toUpperCase())
+        (!selectedStorage || (v.storage || '').trim().toLowerCase() === selectedStorage.toLowerCase())
     ) || product?.variants?.find(
       (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     );
 
-    // 2. Lấy toàn bộ ảnh của biến thể đó nếu có
     if (exactVariant) {
       if (Array.isArray(exactVariant.images)) {
         exactVariant.images.forEach((img: string) => {
@@ -278,7 +278,6 @@ export default function UsedProductDetail({
       }
     }
 
-    // 3. Fallback về ảnh chung của sản phẩm nếu biến thể không có ảnh riêng
     if (list.length === 0) {
       if (product?.images && Array.isArray(product.images)) {
         product.images.forEach((img: string) => {
@@ -300,20 +299,23 @@ export default function UsedProductDetail({
     return price <= 0;
   }, [currentVariant]);
 
+  // CHỌN DUNG LƯỢNG: CẬP NHẬT TRỰC TIẾP VÀ SÁNG VIỀN ĐỎ NGAY
   const handleSelectStorage = (st: string) => {
-    if (selectedStorage.toUpperCase() === st.toUpperCase()) return;
+    setSelectedStorage(st);
 
     const matched = product?.variants?.find(
       (v: any) =>
-        (v.storage || '').toUpperCase() === st.toUpperCase() &&
-        (v.color || '').toLowerCase() === selectedColor.toLowerCase()
-    ) || product?.variants?.find((v: any) => (v.storage || '').toUpperCase() === st.toUpperCase());
+        (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase() &&
+        (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
+    ) || product?.variants?.find((v: any) => (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase());
 
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
-    const targetStorage = st.toLowerCase().replace(/\//g, '-');
+    const targetStorage = st.toLowerCase().replace(/\s+/g, '-');
     const proidParam = matched ? `?proid=${matched.id}` : '';
 
-    router.replace(`/san-pham/${cleanBase}-${targetStorage}${proidParam}`);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `/san-pham/${cleanBase}-${targetStorage}${proidParam}`);
+    }
   };
 
   const handleSelectColor = (colorName: string) => {
@@ -321,20 +323,20 @@ export default function UsedProductDetail({
 
     setIsImageTransitioning(true);
     setSelectedColor(colorName);
-    setCurrentImageIndex(0); // Luôn đưa về ảnh đầu tiên của màu vừa chọn
+    setCurrentImageIndex(0);
 
     setTimeout(() => {
       setIsImageTransitioning(false);
     }, 150);
 
     const matched = product?.variants?.find(
-      (v: any) => v.color.toLowerCase() === colorName.toLowerCase()
+      (v: any) => (v.color || '').trim().toLowerCase() === colorName.toLowerCase()
     );
 
     const nextId = matched ? matched.id : `mock-${selectedStorage.toLowerCase()}-${encodeURIComponent(colorName)}`;
 
     if (typeof window !== 'undefined') {
-      const stPath = selectedStorage ? `-${selectedStorage.toLowerCase()}` : '';
+      const stPath = selectedStorage ? `-${selectedStorage.toLowerCase().replace(/\s+/g, '-')}` : '';
       window.history.replaceState(null, '', `/san-pham/${baseSlug}${stPath}?proid=${nextId}`);
     }
   };
@@ -507,23 +509,24 @@ export default function UsedProductDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG */}
+              {/* CHỌN DUNG LƯỢNG: TỰ ĐỘNG XUỐNG DÒNG VÀ SÁNG VIỀN ĐỎ */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Chọn dung lượng:
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2.5 w-full">
                     {storageList.map((st) => {
-                      const isSelected = selectedStorage.toLowerCase() === st.toLowerCase();
+                      const isSelected = selectedStorage.trim().toLowerCase() === st.trim().toLowerCase();
                       return (
                         <button
                           key={st}
+                          type="button"
                           onClick={() => handleSelectStorage(st)}
-                          className={`min-w-[76px] px-4 py-2.5 text-sm sm:text-base font-black rounded-xl border-2 text-center shrink-0 cursor-pointer transition-all ${
+                          className={`px-4 py-2.5 text-xs sm:text-sm font-black rounded-xl border-2 text-center transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#d70018] text-[#d70018] bg-white shadow-xs'
-                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] bg-red-50/20 shadow-sm'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
                           {st}
@@ -540,19 +543,20 @@ export default function UsedProductDetail({
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Màu sắc:
                   </label>
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full">
                     {currentColorOptions.map(({ color, sampleVariant }) => {
-                      const isSelected = selectedColor.toLowerCase() === color.toLowerCase();
+                      const isSelected = selectedColor.trim().toLowerCase() === color.trim().toLowerCase();
                       const thumb = sampleVariant?.images?.[0] || imagesList[0];
 
                       return (
                         <button
                           key={color}
+                          type="button"
                           onClick={() => handleSelectColor(color)}
-                          className={`px-4 py-2 rounded-xl border-2 flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer ${
+                          className={`px-3.5 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#d70018] text-[#d70018] font-black bg-white shadow-xs'
-                              : 'border-gray-200 text-gray-800 hover:border-gray-300 bg-white'
+                              ? 'border-[#d70018] text-[#d70018] font-black bg-red-50/20 shadow-sm'
+                              : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
                           <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
@@ -591,7 +595,7 @@ export default function UsedProductDetail({
                 </div>
               )}
 
-              {/* NÚT MUA HÀNG */}
+              {/* NÚT MUA HÀNG HOẶC LIÊN HỆ */}
               {isOutOfStock ? (
                 <div className="pt-2 space-y-2">
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
@@ -674,11 +678,50 @@ export default function UsedProductDetail({
 
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-xs font-bold text-gray-700">Chia sẻ:</span>
-                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#1877f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity">f</a>
-                  <a href="https://messenger.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#0084ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity"><MessageCircle size={13} /></a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#1da1f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity">t</a>
-                  <a href="https://pinterest.com" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-[#bd081c] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity">p</a>
-                  <button type="button" onClick={handleCopyUrl} className="w-7 h-7 rounded-full bg-[#0099ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer" title="Sao chép liên kết"><Link2 size={13} /></button>
+                  <a
+                    href="https://facebook.com/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#1877f2] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+                  >
+                    f
+                  </a>
+                  <a
+                    href="https://m.me/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#0084ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+                  >
+                    <MessageCircle size={13} />
+                  </a>
+                  <a
+                    href="https://twitter.com/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center hover:opacity-85 transition-opacity"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </a>
+                  <a
+                    href="https://pinterest.com/fogostore"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-7 h-7 rounded-full bg-[#e60023] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.546.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+                    </svg>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className="w-7 h-7 rounded-full bg-[#0099ff] text-white flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                    title="Sao chép liên kết"
+                  >
+                    <Link2 size={13} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -695,7 +738,7 @@ export default function UsedProductDetail({
                       <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
                         <Check size={15} strokeWidth={3} />
                       </div>
-                      <span className="leading-snug">Cam kết 100% chính hãng Apple</span>
+                      <span className="leading-snug">Cam kết chuẩn zin 100%, nguyên bản Like New</span>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -709,7 +752,7 @@ export default function UsedProductDetail({
                       <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
                         <RotateCcw size={16} />
                       </div>
-                      <span className="leading-snug">Ưu đãi lỗi đổi máy mới 100% trong 12 tháng</span>
+                      <span className="leading-snug">1 Đổi 1 trong 30 ngày nếu phát sinh lỗi</span>
                     </div>
                   </div>
                 </div>
@@ -829,37 +872,22 @@ export default function UsedProductDetail({
               </div>
             )}
 
-            {/* TAB CHÍNH SÁCH BÁN HÀNG: ĐỒNG BỘ ĐỘNG THEO product.salesPolicy */}
+            {/* TAB CHÍNH SÁCH BÁN HÀNG */}
             {activeTab === 'policy' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed space-y-3">
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành &amp; Khuyến Mãi Máy Cũ:
                 </h3>
-                {product?.salesPolicy ? (
-                  <div className="whitespace-pre-line font-medium text-gray-700 leading-relaxed space-y-2">
-                    {product.salesPolicy.split('\n').map((line: string, idx: number) => {
-                      const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
-                      if (!cleanLine) return null;
-                      return (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="text-[#d70018] font-bold">•</span>
-                          <span>{cleanLine}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                    <li>Lỗi 1 đổi 1 trong 30 ngày toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                    <li>Bảo hành phần cứng toàn diện lên đến 12 tháng.</li>
-                    <li>Tặng bộ sạc cáp 20W chính hãng và dán cường lực miễn phí trọn đời.</li>
-                    <li>Thu cũ lên đời trợ giá đến 95% - cao nhất thị trường.</li>
-                  </ul>
-                )}
+                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                  <li>Lỗi 1 đổi 1 trong 30 ngày toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                  <li>Bảo hành phần cứng toàn diện lên đến 12 tháng.</li>
+                  <li>Tặng bộ sạc cáp 20W chính hãng và dán cường lực miễn phí trọn đời.</li>
+                  <li>Thu cũ lên đời trợ giá đến 95% - cao nhất thị trường.</li>
+                </ul>
               </div>
             )}
 
-            {/* TAB THÔNG SỐ KỸ THUẬT: ĐỒNG BỘ ĐỘNG THEO product.specifications */}
+            {/* TAB THÔNG SỐ KỸ THUẬT */}
             {activeTab === 'specs' && (
               <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs text-xs sm:text-sm text-gray-700 leading-relaxed">
                 <h3 className="text-base sm:text-lg font-black text-gray-900 mb-4 pb-2 border-b border-gray-100">
