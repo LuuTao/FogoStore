@@ -188,14 +188,29 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName.trim()) {
+    const cleanName = customerName.trim();
+    const cleanPhone = customerPhone.trim().replace(/\s+/g, '');
+    const cleanEmail = customerEmail.trim();
+
+    if (!cleanName) {
       setToast({ show: true, type: 'error', message: 'Vui lòng điền họ và tên người nhận hàng.' });
       return;
     }
 
-    if (!customerPhone.trim()) {
-      setToast({ show: true, type: 'error', message: 'Vui lòng điền số điện thoại nhận hàng.' });
+    // Kiểm tra định dạng số điện thoại Việt Nam chuẩn
+    const phoneRegex = /^(0|84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      setToast({ show: true, type: 'error', message: 'Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 số di động.' });
       return;
+    }
+
+    // Kiểm tra định dạng email nếu người dùng nhập
+    if (cleanEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        setToast({ show: true, type: 'error', message: 'Địa chỉ email không đúng định dạng.' });
+        return;
+      }
     }
 
     if (deliveryMethod === 'delivery' && !streetAddress.trim()) {
@@ -210,7 +225,6 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    // Lấy ID người dùng hoặc tự sinh ID Guest cho khách vãng lai
     const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
     let userId: string | null = null;
     if (rawUser) {
@@ -229,9 +243,9 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           userId: userId || undefined,
           isGuest: !userId,
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
-          customerEmail: customerEmail.trim() || undefined,
+          customerName: cleanName,
+          customerPhone: cleanPhone,
+          customerEmail: cleanEmail || undefined,
           gender: customerGender,
           deliveryMethod: deliveryMethod === 'delivery' ? 'Giao hàng tận nơi' : 'Nhận tại cửa hàng',
           province,
@@ -256,7 +270,11 @@ export default function CheckoutPage() {
           discountAmount,
           shippingFee,
           needVat,
-          vatInfo: needVat ? { companyName, taxCode, companyAddress } : undefined,
+          vatInfo: needVat ? {
+            companyName: companyName.trim(),
+            taxCode: taxCode.trim(),
+            companyAddress: companyAddress.trim()
+          } : undefined,
         }),
       });
 
@@ -274,7 +292,6 @@ export default function CheckoutPage() {
         message: `Đặt hàng thành công! Mã đơn: ${orderCode}`,
       });
 
-      // Nếu chọn hình thức thanh toán VietQR / MoMo -> Bật Modal QR Code
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
         setCreatedOrderCode(orderCode);
         setCreatedTotalAmount(finalPrice);
@@ -345,7 +362,6 @@ export default function CheckoutPage() {
             <div className="w-16" />
           </div>
 
-          {/* Thanh thông báo trạng thái tài khoản */}
           {currentUser ? (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-2.5 rounded-lg mb-6 flex items-center justify-between shadow-2xs">
               <div className="flex items-center gap-2">

@@ -1,8 +1,10 @@
 // src/services/clientApi.ts
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com/api').replace(/\/$/, '');
+// Chuẩn hóa Base URL, loại bỏ /api hoặc dấu / ở cuối nếu có sẵn để tránh bị trùng lặp /api/api
+const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com';
+const API_BASE = RAW_URL.replace(/\/api\/?$/, '').replace(/\/$/, '') + '/api';
 
-// 1. Hàm lấy Token an toàn từ mọi nguồn lưu trữ
+// 1. Hàm lấy Token an toàn từ các khóa lưu trữ
 export const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   try {
@@ -22,7 +24,7 @@ export const getAuthToken = (): string | null => {
       return parsed.token || parsed.accessToken || null;
     }
   } catch (e) {
-    console.warn('Lỗi đọc token:', e);
+    console.warn('[Auth Warning] Lỗi đọc token từ localStorage:', e);
   }
   return null;
 };
@@ -41,17 +43,24 @@ export const clearAuthSession = () => {
   window.dispatchEvent(new Event('fogo_auth_cleared'));
 };
 
-// 3. Wrapper gọi API chuyên nghiệp chống lỗi ủy quyền
+// 3. Wrapper gọi API chuyên nghiệp
 export async function clientFetch<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<{ success: boolean; data?: T; error?: string; status: number }> {
   const token = getAuthToken();
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  // Chuẩn hóa endpoint: xử lý nếu endpoint truyền vào đã có hoặc chưa có /api
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (cleanEndpoint.startsWith('/api/')) {
+    cleanEndpoint = cleanEndpoint.replace(/^\/api/, '');
+  }
   const url = `${API_BASE}${cleanEndpoint}`;
 
+  const isFormData = options.body instanceof FormData;
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
   };
 
@@ -60,30 +69,45 @@ export async function clientFetch<T = any>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Cấu hình Timeout sau 25 giây (tránh treo giao diện nếu server Render khởi động lại)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
   try {
     const response = await fetch(url, {
       ...options,
       headers,
+      signal: options.signal || controller.signal,
     });
 
-    // XỬ LÝ TRIỆT ĐỂ LỖI ỦY QUYỀN (401 / 403)
-    if (response.status === 401 || response.status === 403) {
-      console.warn(`[Auth Warning] Token hết hạn hoặc không hợp lệ tại ${endpoint}`);
+    clearTimeout(timeoutId);
+
+    // 401 Unauthorized: Phiên đăng nhập hết hạn -> Dọn session và yêu cầu đăng nhập lại
+    if (response.status === 401) {
+      console.warn(`[Auth Warning] Token hết hạn tại ${endpoint}`);
       clearAuthSession();
       
-      // Bắn sự kiện để mở modal đăng nhập mà không làm crash web
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('fogo_auth_required'));
       }
 
       return {
         success: false,
-        status: response.status,
+        status: 401,
         error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
       };
     }
 
-    // Nếu endpoint không tồn tại (404)
+    // 403 Forbidden: Không có quyền truy cập chức năng này (không xóa session của user)
+    if (response.status === 403) {
+      return {
+        success: false,
+        status: 403,
+        error: 'Bạn không có quyền thực hiện thao tác này.',
+      };
+    }
+
+    // 404 Not Found: Đường dẫn không tồn tại
     if (response.status === 404) {
       return {
         success: false,
@@ -92,6 +116,7 @@ export async function clientFetch<T = any>(
       };
     }
 
+    // Parse kết quả trả về
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       const json = await response.json();
@@ -108,6 +133,16 @@ export async function clientFetch<T = any>(
       status: response.status,
     };
   } catch (err: any) {
+    clearTimeout(timeoutId);
+    
+    if (err.name === 'AbortError') {
+      return {
+        success: false,
+        status: 408,
+        error: 'Kết nối máy chủ quá thời gian (Timeout). Vui lòng thử lại!',
+      };
+    }
+
     console.error(`[Fetch Error] Lỗi mạng khi gọi ${endpoint}:`, err);
     return {
       success: false,
@@ -126,21 +161,21 @@ export const clientApi = {
     clientFetch<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
     }),
 
   put: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
     clientFetch<T>(endpoint, {
       ...options,
       method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
     }),
 
   patch: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
     clientFetch<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
     }),
 
   delete: <T = any>(endpoint: string, options?: RequestInit) =>

@@ -27,8 +27,36 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'product.hstatic.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'theme.hstatic.net',
+      },
     ],
   },
+  // 1. Cấu hình Security Headers bảo vệ trang web
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          // Chống MIME-sniffing
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          // Chống lồng iframe trái phép (Clickjacking)
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          // Chặn script độc hại trên các trình duyệt cũ
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          // Giới hạn rò rỉ URL nguồn khi điều hướng sang trang khác
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Chặn quyền truy cập thiết bị không dùng đến
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
+  // 2. Chuyển hướng API an toàn sang Render Backend
   async rewrites() {
     return [
       {
