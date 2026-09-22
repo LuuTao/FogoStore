@@ -25,6 +25,7 @@ import {
   ChevronDown,
   GripVertical,
   LayoutGrid,
+  Grid,
 } from 'lucide-react';
 
 interface Props {
@@ -35,8 +36,8 @@ interface Props {
 type BannerGroup =
   | 'hero_banners'       // Banner Lớn Đầu Trang
   | 'promo_cards'        // 2 Banner Nhỏ Đè Hero
-  | 'category_banners'   // [MỚI] 4 Banner Category (Render 350x250 / Intrinsic 700x500)
-  | 'all_categories'     // Tất cả danh mục
+  | 'category_banners'   // 4 Banner Category (Render 350x250)
+  | 'all_categories'     // [ĐÃ KHÔI PHỤC] 20 Danh Mục Tròn Trang Chủ
   | 'iphone_banners'     // Banner Trang iPhone
   | 'ipad_banners'       // Banner Trang iPad
   | 'macbook_banners'    // Banner Trang MacBook
@@ -93,7 +94,6 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
           width = 1920;
           height = 540;
         } else if (targetGroup === 'category_banners') {
-          // Chuẩn Intrinsic 700x500 (Tỷ lệ 7:5 Render 350x250)
           width = 700;
           height = 500;
         } else if (targetGroup === 'promo_cards') {
@@ -169,7 +169,7 @@ const INITIAL_ITEMS: ItemConfig[] = [
     group: 'promo_cards',
     imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=300&q=80',
   },
-  // 4 mục mặc định cho 4 Banner Category (350x250px)
+  // 4 mục Banner Category
   {
     id: 'cat-banner-1',
     name: 'MacBook Air M5',
@@ -206,6 +206,28 @@ const INITIAL_ITEMS: ItemConfig[] = [
     subtitle: 'Chuẩn Zin Apple',
     tag: 'ƯU ĐÃI',
   },
+
+  // DANH SÁCH MỤC TRÒN CATEGORY TRANG CHỦ (ALL_CATEGORIES)
+  { id: 'cat-circle-1', name: 'iPhone 18 Pro Max', link: '/iphone', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300' },
+  { id: 'cat-circle-2', name: 'iPhone 17 Pro Max', link: '/iphone', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=300' },
+  { id: 'cat-circle-3', name: 'iPhone 17', link: '/iphone', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300' },
+  { id: 'cat-circle-4', name: 'iPhone 17 Air', link: '/iphone', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300' },
+  { id: 'cat-circle-5', name: 'iPhone 16 Series', link: '/iphone', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1512499617640-c74ae3a79d37?w=300' },
+  { id: 'cat-circle-6', name: 'Ốp lưng iPhone', link: '/phu-kien', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=300' },
+  { id: 'cat-circle-7', name: 'Kính Cường Lực', link: '/phu-kien', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=300' },
+  { id: 'cat-circle-8', name: 'iPad Pro', link: '/ipad', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300' },
+  { id: 'cat-circle-9', name: 'Apple Watch', link: '/watch', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300' },
+  { id: 'cat-circle-10', name: 'MacBook Pro', link: '/macbook', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300' },
+  { id: 'cat-circle-11', name: 'MacBook Neo (2026)', link: '/macbook', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=300' },
+  { id: 'cat-circle-12', name: 'MacBook Air', link: '/macbook', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=300' },
+  { id: 'cat-circle-13', name: 'iPad Air M4', link: '/ipad', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?w=300' },
+  { id: 'cat-circle-14', name: 'iPad Mini', link: '/ipad', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=300' },
+  { id: 'cat-circle-15', name: 'Watch Ultra', link: '/watch', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=300' },
+  { id: 'cat-circle-16', name: 'Phụ kiện iPad', link: '/phu-kien', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=300' },
+  { id: 'cat-circle-17', name: 'Phụ kiện Mac', link: '/phu-kien', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300' },
+  { id: 'cat-circle-18', name: 'iPhone Cũ Giá Rẻ', link: '/hang-cu', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=300' },
+  { id: 'cat-circle-19', name: 'iPad Cũ 99%', link: '/hang-cu', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300' },
+  { id: 'cat-circle-20', name: 'MacBook Cũ 99%', link: '/hang-cu', group: 'all_categories', imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300' },
 ];
 
 export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
@@ -253,9 +275,15 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
             priceText: b.priceText || '',
           }));
 
-          setItems(mapped);
+          // Hợp nhất dữ liệu tránh trường hợp DB chưa có nhóm all_categories
+          const hasCategories = mapped.some((it) => it.group === 'all_categories');
+          const finalItems = hasCategories
+            ? mapped
+            : [...mapped, ...INITIAL_ITEMS.filter((i) => i.group === 'all_categories')];
+
+          setItems(finalItems);
           try {
-            localStorage.setItem('fogo_banners_config', JSON.stringify(mapped));
+            localStorage.setItem('fogo_banners_config', JSON.stringify(finalItems));
           } catch (_) {}
           return;
         }
@@ -292,9 +320,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
 
   const currentItems = items.filter((it) => it.group === activeGroup);
 
-  // =========================================================
   // LOGIC DI CHUYỂN THỨ TỰ (MOVE UP / MOVE DOWN)
-  // =========================================================
   const handleMoveItem = (indexInGroup: number, direction: 'up' | 'down') => {
     const targetIdx = direction === 'up' ? indexInGroup - 1 : indexInGroup + 1;
     if (targetIdx < 0 || targetIdx >= currentItems.length) return;
@@ -316,9 +342,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
     }
   };
 
-  // =========================================================
   // LOGIC KÉO THẢ (HTML5 DRAG & DROP)
-  // =========================================================
   const handleDropItem = (fromIdxInGroup: number, toIdxInGroup: number) => {
     if (fromIdxInGroup === toIdxInGroup) return;
 
@@ -406,7 +430,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   };
 
   const handleResetDefault = () => {
-    if (!confirm('Khôi phục toàn bộ cấu hình Banner về mặc định?')) return;
+    if (!confirm('Khôi phục toàn bộ cấu hình Banner & Danh mục về mặc định?')) return;
     setItems(INITIAL_ITEMS);
     try {
       localStorage.removeItem('fogo_banners_config');
@@ -563,12 +587,13 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         </div>
       </div>
 
-      {/* TABS DANH MỤC */}
+      {/* TABS DANH MỤC - ĐÃ BỔ SUNG TAB ALL_CATEGORIES */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-gray-200 text-xs">
         {[
           { id: 'hero_banners', label: 'Banner Lớn (Hero)', icon: Sliders },
           { id: 'promo_cards', label: '2 Banner Nhỏ Đè Hero', icon: CreditCard },
           { id: 'category_banners', label: '4 Banner Category (350x250)', icon: LayoutGrid },
+          { id: 'all_categories', label: 'Tất Cả Danh Mục (Icon Tròn)', icon: Grid },
           { id: 'iphone_banners', label: 'Banner iPhone', icon: Smartphone },
           { id: 'ipad_banners', label: 'Banner iPad', icon: Tablet },
           { id: 'macbook_banners', label: 'Banner MacBook', icon: Laptop },
@@ -603,7 +628,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         })}
       </div>
 
-      {/* DANH SÁCH BANNER (TÍCH HỢP NÚT DI CHUYỂN & KÉO THẢ) */}
+      {/* DANH SÁCH BANNER / MỤC */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         {currentItems.length === 0 ? (
           <div className="text-center py-12 text-gray-400 text-xs border border-dashed rounded-lg">
@@ -626,28 +651,32 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
               >
                 {/* Khu vực ảnh & thông tin */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* Tay cầm kéo thả */}
                   <GripVertical
                     size={18}
                     className="text-gray-300 group-hover:text-gray-600 cursor-grab active:cursor-grabbing shrink-0"
                     title="Kéo thả để sắp xếp vị trí"
                   />
 
-                  {/* Số thứ tự */}
                   <span className="w-6 text-center text-xs font-black text-gray-400 group-hover:text-gray-800 shrink-0">
                     #{idx + 1}
                   </span>
 
-                  {/* Thumbnail hiển thị chuẩn tỉ lệ 7:5 khi ở category_banners */}
+                  {/* Thumbnail hiển thị chuẩn cho icon tròn hoặc banner chữ nhật */}
                   <div
                     className={`rounded bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center ${
-                      activeGroup === 'category_banners' ? 'w-24 aspect-[7/5]' : 'w-28 h-14'
+                      activeGroup === 'all_categories'
+                        ? 'w-14 h-14 rounded-full p-1 bg-white'
+                        : activeGroup === 'category_banners'
+                        ? 'w-24 aspect-[7/5]'
+                        : 'w-28 h-14'
                     }`}
                   >
                     <img
                       src={resolveImageUrl(item.imageUrl)}
                       alt={item.name}
-                      className="w-full h-full object-cover pointer-events-none"
+                      className={`w-full h-full pointer-events-none ${
+                        activeGroup === 'all_categories' ? 'object-contain rounded-full' : 'object-cover'
+                      }`}
                     />
                   </div>
 
@@ -668,7 +697,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
 
                 {/* Các nút điều khiển thứ tự & thao tác */}
                 <div className="flex items-center gap-1 shrink-0 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0">
-                  {/* Di chuyển lên */}
                   <button
                     type="button"
                     disabled={idx === 0}
@@ -679,7 +707,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                     <ChevronUp size={16} />
                   </button>
 
-                  {/* Di chuyển xuống */}
                   <button
                     type="button"
                     disabled={idx === currentItems.length - 1}
@@ -692,7 +719,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
 
                   <div className="h-4 w-px bg-gray-200 mx-1" />
 
-                  {/* Sửa */}
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(item)}
@@ -702,7 +728,6 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                     <Edit2 size={14} />
                   </button>
 
-                  {/* Xóa */}
                   <button
                     type="button"
                     onClick={() => handleDelete(item.id)}
@@ -748,6 +773,9 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                   <label className="font-bold text-gray-700 block">Hình ảnh (Đường dẫn hoặc tải trực tiếp) *</label>
                   {activeGroup === 'category_banners' && (
                     <span className="text-[10px] text-blue-600 font-bold">Chuẩn: 700x500px (Render 350x250px)</span>
+                  )}
+                  {activeGroup === 'all_categories' && (
+                    <span className="text-[10px] text-emerald-600 font-bold">Chuẩn: 300x300px (Icon Tròn)</span>
                   )}
                 </div>
                 <div className="flex gap-2">

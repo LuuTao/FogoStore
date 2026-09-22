@@ -76,15 +76,12 @@ export const CategoryGrid: React.FC = () => {
           );
           if (adminCats.length > 0) {
             setCategories(
-              adminCats.map((it: any, index: number) => {
-                const fallback = QUICK_CATEGORIES[index] || {};
-                return {
-                  id: it.id || fallback.id || index,
-                  name: it.name || it.title || fallback.name || '',
-                  href: it.link || it.linkUrl || fallback.href || '/iphone',
-                  imageUrl: resolveImageUrl(it.imageUrl) || fallback.imageUrl,
-                };
-              })
+              adminCats.map((it: any, index: number) => ({
+                id: it.id || `cat-${index}`,
+                name: it.name || it.title || 'Danh mục',
+                href: it.link || it.linkUrl || '/',
+                imageUrl: resolveImageUrl(it.imageUrl),
+              }))
             );
           }
         }
@@ -119,15 +116,12 @@ export const CategoryGrid: React.FC = () => {
           );
           if (liveCats.length > 0) {
             setCategories(
-              liveCats.map((it: any, index: number) => {
-                const fallback = QUICK_CATEGORIES[index] || {};
-                return {
-                  id: it.id || fallback.id || index,
-                  name: it.name || it.title || fallback.name || '',
-                  href: it.link || it.linkUrl || fallback.href || '/iphone',
-                  imageUrl: resolveImageUrl(it.imageUrl) || fallback.imageUrl,
-                };
-              })
+              liveCats.map((it: any, index: number) => ({
+                id: it.id || `cat-${index}`,
+                name: it.name || it.title || 'Danh mục',
+                href: it.link || it.linkUrl || '/',
+                imageUrl: resolveImageUrl(it.imageUrl),
+              }))
             );
           }
         }
@@ -148,7 +142,7 @@ export const CategoryGrid: React.FC = () => {
     <div className="max-w-7xl mx-auto px-2 sm:px-4 mt-2 sm:mt-3 select-none space-y-3 sm:space-y-4">
 
       {/* ========================================================================= */}
-      {/* PHẦN 2: THANH 3 CAM KẾT - ĐÃ GIẢM 3 SIZE CHỮ VÀ ICON TRÊN MOBILE         */}
+      {/* PHẦN 2: THANH 3 CAM KẾT                                                    */}
       {/* ========================================================================= */}
       <div className="w-full pt-1 pb-1.5 px-1 sm:px-3">
         <div className="grid grid-cols-3 items-center justify-items-center gap-1 sm:gap-4 md:gap-8 max-w-4xl mx-auto text-gray-950">
@@ -207,7 +201,7 @@ export const CategoryGrid: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / 350x250px)                */}
+      {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / 350x250px)                 */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
         {categoryBanners.map((item) => (
