@@ -449,9 +449,14 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
       let syncError = '';
 
       try {
+        const adminToken = localStorage.getItem('fogo_admin_token') || ''; // hoặc cookie token
+
         const res1 = await fetch(`${API_URL}/api/admin/banners/sync`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`, // Bắt buộc gửi token
+          },
           body: JSON.stringify({ items: payloadItems }),
         });
         if (res1.ok) syncSuccess = true;
