@@ -593,14 +593,14 @@ export default function IPhoneDetail({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <a
-                      href="tel:0566003333"
+                      href="tel:056.600.3333"
                       className="w-full py-2.5 bg-[#d70018] hover:bg-[#b50014] text-white font-black text-xs uppercase rounded-lg shadow flex items-center justify-center gap-2 text-center"
                     >
                       <PhoneCall size={16} />
                       <span>GỌI 056.600.3333</span>
                     </a>
                     <a
-                      href="https://zalo.me"
+                      href="https://zalo.me/0566003333"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full py-2.5 border-2 border-[#0068ff] text-[#0068ff] hover:bg-blue-50 font-black text-xs uppercase rounded-lg flex items-center justify-center gap-2 text-center"
