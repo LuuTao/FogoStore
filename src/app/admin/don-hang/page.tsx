@@ -9,7 +9,7 @@ import {
   Phone, 
   Loader2,
   RefreshCw,
-  Eye,
+  Eye, 
   MapPin,
   Trash2,
   CheckSquare,
@@ -25,7 +25,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export const STATUS_LABELS: Record<string, { label: string; bg: string; text: string; border: string }> = {
   CONFIRMED: {
@@ -93,6 +93,18 @@ export default function AdminOrdersPage() {
   const [editForm, setEditForm] = useState({ customerName: '', customerPhone: '', address: '', note: '' });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
+  // State Modal xác nhận xóa hiện đại giữa màn hình
+  const [confirmDeleteModal, setConfirmDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'bulk';
+    orderId?: string;
+    orderCode?: string;
+    count?: number;
+  }>({
+    isOpen: false,
+    type: 'single',
+  });
+
   const showAlert = (message: string, type: 'success' | 'error') => {
     setAlertInfo({ show: true, message, type });
     setTimeout(() => {
@@ -100,10 +112,28 @@ export default function AdminOrdersPage() {
     }, 4000);
   };
 
+  const getAdminToken = () => {
+    if (typeof window === 'undefined') return '';
+    return (
+      localStorage.getItem('fogo_admin_token') ||
+      localStorage.getItem('admin_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('accessToken') ||
+      ''
+    );
+  };
+
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      let res = await fetch(`${API_URL}/api/admin/orders`, { cache: 'no-store' });
+      const token = getAdminToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      let res = await fetch(`${API_URL}/api/admin/orders`, { 
+        headers,
+        cache: 'no-store' 
+      });
       if (!res.ok) {
         res = await fetch(`${API_URL}/api/orders`, { cache: 'no-store' });
       }
@@ -125,7 +155,6 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  // Tự động tính toán tổng số đơn và chi tiêu của từng khách hàng theo số điện thoại
   const customerRankMap = useMemo(() => {
     const map = new Map<string, { totalOrders: number; totalSpent: number; rank: 'NEW' | 'RETURNING' | 'LOYAL' | 'VIP' }>();
 
@@ -196,6 +225,12 @@ export default function AdminOrdersPage() {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
+      const token = getAdminToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const payload: { orderStatus: string; paymentStatus?: string } = {
         orderStatus: newStatus,
       };
@@ -206,21 +241,21 @@ export default function AdminOrdersPage() {
 
       let res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         res = await fetch(`${API_URL}/api/orders/${orderId}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(payload),
         });
       }
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showAlert('Cập nhật trạng thái đơn hàng và doanh thu thành công!', 'success');
+        showAlert('Cập nhật trạng thái đơn hàng thành công!', 'success');
         setOrders((prev) =>
           prev.map((ord) => 
             ord.id === orderId 
@@ -233,7 +268,7 @@ export default function AdminOrdersPage() {
           )
         );
       } else {
-        showAlert('Cập nhật thất bại: ' + (data.error || 'Lỗi server'), 'error');
+        showAlert('Cập nhật thất bại: ' + (data.error || data.message || 'Lỗi server'), 'error');
       }
     } catch {
       showAlert('Không thể kết nối máy chủ!', 'error');
@@ -259,9 +294,15 @@ export default function AdminOrdersPage() {
 
     try {
       setIsSubmittingEdit(true);
+      const token = getAdminToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch(`${API_URL}/api/orders/${editingOrder.orderCode || editingOrder.id}/update`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(editForm),
       });
 
@@ -280,50 +321,79 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleDeleteSingle = async (orderId: string, orderCode: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${orderCode}?`)) return;
-
-    try {
-      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        showAlert(`Đã xóa thành công đơn hàng #${orderCode}!`, 'success');
-        setSelectedIds((prev) => prev.filter((id) => id !== orderId));
-        setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
-      } else {
-        const data = await res.json();
-        showAlert(data.error || 'Xóa đơn hàng thất bại', 'error');
-      }
-    } catch {
-      showAlert('Không thể kết nối máy chủ khi xóa đơn!', 'error');
-    }
+  // Mở modal xác nhận xóa đơn lẻ
+  const triggerDeleteSingle = (orderId: string, orderCode: string) => {
+    setConfirmDeleteModal({
+      isOpen: true,
+      type: 'single',
+      orderId,
+      orderCode,
+    });
   };
 
-  const handleDeleteBulk = async () => {
+  // Mở modal xác nhận xóa hàng loạt
+  const triggerDeleteBulk = () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} đơn hàng đã chọn? Hành động này không thể hoàn tác!`)) return;
+    setConfirmDeleteModal({
+      isOpen: true,
+      type: 'bulk',
+      count: selectedIds.length,
+    });
+  };
 
-    try {
-      setIsDeleting(true);
-      const res = await fetch(`${API_URL}/api/admin/orders/bulk-delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
+  // Thực hiện xóa khi bấm nút Xác nhận trong Modal
+  const handleExecuteDelete = async () => {
+    const token = getAdminToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      if (res.ok) {
-        showAlert(`Đã xóa thành công ${selectedIds.length} đơn hàng đã chọn!`, 'success');
-        setOrders((prev) => prev.filter((ord) => !selectedIds.includes(ord.id)));
-        setSelectedIds([]);
-      } else {
-        const data = await res.json();
-        showAlert(data.error || 'Xóa hàng loạt thất bại', 'error');
+    if (confirmDeleteModal.type === 'single' && confirmDeleteModal.orderId) {
+      try {
+        setIsDeleting(true);
+        const res = await fetch(`${API_URL}/api/admin/orders/${confirmDeleteModal.orderId}`, {
+          method: 'DELETE',
+          headers,
+        });
+        if (res.ok) {
+          showAlert(`Đã xóa thành công đơn hàng #${confirmDeleteModal.orderCode}!`, 'success');
+          setSelectedIds((prev) => prev.filter((id) => id !== confirmDeleteModal.orderId));
+          setOrders((prev) => prev.filter((ord) => ord.id !== confirmDeleteModal.orderId));
+        } else {
+          const data = await res.json();
+          showAlert(data.error || data.message || 'Xóa đơn hàng thất bại', 'error');
+        }
+      } catch {
+        showAlert('Không thể kết nối máy chủ khi xóa đơn!', 'error');
+      } finally {
+        setIsDeleting(false);
+        setConfirmDeleteModal({ isOpen: false, type: 'single' });
       }
-    } catch {
-      showAlert('Lỗi kết nối khi xóa hàng loạt đơn hàng!', 'error');
-    } finally {
-      setIsDeleting(false);
+    } else if (confirmDeleteModal.type === 'bulk') {
+      try {
+        setIsDeleting(true);
+        const res = await fetch(`${API_URL}/api/admin/orders/bulk-delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ ids: selectedIds }),
+        });
+
+        if (res.ok) {
+          showAlert(`Đã xóa thành công ${selectedIds.length} đơn hàng đã chọn!`, 'success');
+          setOrders((prev) => prev.filter((ord) => !selectedIds.includes(ord.id)));
+          setSelectedIds([]);
+        } else {
+          const data = await res.json();
+          showAlert(data.error || data.message || 'Xóa hàng loạt thất bại', 'error');
+        }
+      } catch {
+        showAlert('Lỗi kết nối khi xóa hàng loạt đơn hàng!', 'error');
+      } finally {
+        setIsDeleting(false);
+        setConfirmDeleteModal({ isOpen: false, type: 'bulk' });
+      }
     }
   };
 
@@ -343,7 +413,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Bộ lọc kết hợp: Trạng thái, từ khóa tìm kiếm và Ngày/Tháng/Năm
   const filteredOrders = orders.filter((ord) => {
     const matchStatus = filterStatus === 'ALL' || ord.orderStatus === filterStatus;
     
@@ -354,7 +423,6 @@ export default function AdminOrdersPage() {
       ord.customerName?.toLowerCase().includes(kw) ||
       ord.customerPhone?.includes(kw);
 
-    // Lọc theo ngày/tháng/năm (filterDate định dạng 'YYYY-MM-DD')
     let matchDate = true;
     if (filterDate && ord.createdAt) {
       const orderDateStr = new Date(ord.createdAt).toISOString().split('T')[0];
@@ -382,7 +450,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-6 max-w-full overflow-hidden select-none relative">
-      {/* THÔNG BÁO BANNER TRỰC QUAN */}
+      {/* THÔNG BÁO BANNER */}
       {alertInfo && (
         <div
           className={`p-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-md transition-all animate-in fade-in slide-in-from-top-2 ${
@@ -417,7 +485,7 @@ export default function AdminOrdersPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Ô TÌM KIẾM TỪ KHÓA */}
+          {/* Ô TÌM KIẾM */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -429,7 +497,7 @@ export default function AdminOrdersPage() {
             />
           </div>
 
-          {/* CHỨC NĂNG CHỌN NGÀY / THÁNG / NĂM VỚI ICON LỊCH */}
+          {/* CHỌN NGÀY / THÁNG / NĂM */}
           <div className="relative flex items-center bg-white border border-gray-300 rounded-md px-2.5 py-1 text-xs">
             <Calendar size={14} className="text-[#d70018] mr-1.5 shrink-0" />
             <input
@@ -496,11 +564,11 @@ export default function AdminOrdersPage() {
           <button
             type="button"
             disabled={isDeleting}
-            onClick={handleDeleteBulk}
+            onClick={triggerDeleteBulk}
             className="bg-[#d70018] hover:bg-[#b50014] text-white px-3.5 py-1.5 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
           >
             <Trash2 size={13} />
-            <span>{isDeleting ? 'Đang xóa...' : 'Xóa các đơn đã chọn'}</span>
+            <span>Xóa các đơn đã chọn</span>
           </button>
         </div>
       )}
@@ -686,7 +754,7 @@ export default function AdminOrdersPage() {
 
                           <button
                             type="button"
-                            onClick={() => handleDeleteSingle(ord.id, ord.orderCode)}
+                            onClick={() => triggerDeleteSingle(ord.id, ord.orderCode)}
                             className="p-1.5 bg-gray-100 hover:bg-red-600 hover:text-white rounded text-gray-600 inline-flex items-center justify-center transition-colors cursor-pointer"
                             title="Xóa đơn hàng"
                           >
@@ -702,6 +770,64 @@ export default function AdminOrdersPage() {
           </table>
         </div>
       </div>
+
+      {/* MODAL XÁC NHẬN XÓA HIỆN ĐẠI NGAY GIỮA MÀN HÌNH */}
+      {confirmDeleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden p-6 text-center space-y-4 border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 bg-red-100 text-[#d70018] rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <AlertTriangle size={28} />
+            </div>
+
+            <div>
+              <h3 className="text-base font-black text-gray-900 tracking-tight">
+                {confirmDeleteModal.type === 'single'
+                  ? 'Xác nhận xóa đơn hàng?'
+                  : `Xóa ${confirmDeleteModal.count} đơn hàng đã chọn?`}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                {confirmDeleteModal.type === 'single' ? (
+                  <>
+                    Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng{' '}
+                    <strong className="text-gray-800">#{confirmDeleteModal.orderCode}</strong> khỏi hệ thống? Hành động này không thể hoàn tác.
+                  </>
+                ) : (
+                  'Toàn bộ các đơn hàng đã được chọn sẽ bị xóa vĩnh viễn khỏi cơ sở dữ liệu. Bạn có chắc chắn muốn tiếp tục?'
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setConfirmDeleteModal({ isOpen: false, type: 'single' })}
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-100 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleExecuteDelete}
+                className="flex-1 py-2.5 rounded-xl bg-[#d70018] hover:bg-[#b50014] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Đang xóa...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={15} />
+                    <span>Xác nhận xóa</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CHỈNH SỬA THÔNG TIN ĐƠN HÀNG */}
       {isEditModalOpen && (
