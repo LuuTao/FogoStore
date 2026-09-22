@@ -225,19 +225,25 @@ export default function AdminOrdersPage() {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
+      const currentOrder = orders.find((o) => o.id === orderId);
+      const rawMethod = (currentOrder?.paymentMethod || '').toLowerCase();
+      const isQrMethod = ['vnpay-qr', 'momo', 'qr', 'bank'].includes(rawMethod);
+
+      // Quy tắc thanh toán:
+      // - Chuyển khoản QR: Luôn là PAID
+      // - Tiền mặt (COD): Chỉ khi chọn Hoàn tất (COMPLETED) mới là PAID, còn lại là UNPAID
+      const expectedPaymentStatus = (isQrMethod || newStatus === 'COMPLETED') ? 'PAID' : 'UNPAID';
+
       const token = getAdminToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const payload: { orderStatus: string; paymentStatus?: string } = {
+      const payload = {
         orderStatus: newStatus,
+        paymentStatus: expectedPaymentStatus,
       };
-
-      if (newStatus === 'COMPLETED') {
-        payload.paymentStatus = 'PAID';
-      }
 
       let res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -262,13 +268,13 @@ export default function AdminOrdersPage() {
               ? { 
                   ...ord, 
                   orderStatus: newStatus, 
-                  paymentStatus: newStatus === 'COMPLETED' ? 'PAID' : ord.paymentStatus 
+                  paymentStatus: expectedPaymentStatus 
                 } 
               : ord
           )
         );
       } else {
-        showAlert('Cập nhật thất bại: ' + (data.error || data.message || 'Lỗi server'), 'error');
+        showAlert(data.message || 'Cập nhật thất bại', 'error');
       }
     } catch {
       showAlert('Không thể kết nối máy chủ!', 'error');
@@ -321,7 +327,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Mở modal xác nhận xóa đơn lẻ
   const triggerDeleteSingle = (orderId: string, orderCode: string) => {
     setConfirmDeleteModal({
       isOpen: true,
@@ -331,7 +336,6 @@ export default function AdminOrdersPage() {
     });
   };
 
-  // Mở modal xác nhận xóa hàng loạt
   const triggerDeleteBulk = () => {
     if (selectedIds.length === 0) return;
     setConfirmDeleteModal({
@@ -341,7 +345,6 @@ export default function AdminOrdersPage() {
     });
   };
 
-  // Thực hiện xóa khi bấm nút Xác nhận trong Modal
   const handleExecuteDelete = async () => {
     const token = getAdminToken();
     const headers: Record<string, string> = {};
@@ -450,7 +453,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-6 max-w-full overflow-hidden select-none relative">
-      {/* THÔNG BÁO BANNER */}
+      {/* THÔNG BÁO BANNER TRÊN ĐẦU */}
       {alertInfo && (
         <div
           className={`p-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-md transition-all animate-in fade-in slide-in-from-top-2 ${
@@ -573,7 +576,7 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
-      {/* Bảng đơn hàng */}
+      {/* Bảng danh sách đơn hàng */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
@@ -622,7 +625,13 @@ export default function AdminOrdersPage() {
                     border: 'border-gray-200',
                   };
                   const isSelected = selectedIds.includes(ord.id);
-                  const isPaid = ord.paymentStatus === 'PAID';
+
+                  // QUY TẮC THANH TOÁN CHUẨN XÁC:
+                  // 1. Chuyển khoản QR: Luôn là Đã chuyển tiền (true)
+                  // 2. Tiền mặt (COD): Chỉ là Đã chuyển tiền khi trạng thái là Hoàn tất (COMPLETED) hoặc DB lưu PAID
+                  const rawMethod = (ord.paymentMethod || '').toLowerCase();
+                  const isQrMethod = ['vnpay-qr', 'momo', 'qr', 'bank'].includes(rawMethod);
+                  const isPaid = isQrMethod || ord.orderStatus === 'COMPLETED' || ord.paymentStatus === 'PAID';
 
                   return (
                     <tr key={ord.id} className={`hover:bg-gray-50/70 transition-colors ${isSelected ? 'bg-red-50/30' : ''}`}>
@@ -695,12 +704,13 @@ export default function AdminOrdersPage() {
                         {formatVnd(ord.totalAmount)}
                       </td>
 
+                      {/* CỘT PHƯƠNG THỨC THANH TOÁN */}
                       <td className="py-3.5 px-4 text-center">
                         <span className="font-semibold text-gray-700 uppercase text-[11px] block">
-                          {ord.paymentMethod === 'cod' || ord.paymentMethod === 'COD' ? 'Tiền mặt (COD)' : ord.paymentMethod}
+                          {isQrMethod ? 'Chuyển khoản QR' : 'Tiền mặt (COD)'}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 inline-block ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded mt-1 inline-block ${
                             isPaid
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : 'bg-amber-50 text-amber-700 border border-amber-200'
