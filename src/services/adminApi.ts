@@ -1,10 +1,25 @@
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Hàm helper tạo header có kèm token xác thực admin
+// Hàm helper tự động quét tất cả các loại token admin lưu trong trình duyệt
 export const getAuthHeaders = (isFormData: boolean = false) => {
   let token = '';
   if (typeof window !== 'undefined') {
-    token = localStorage.getItem('fogo_admin_token') || localStorage.getItem('admin_token') || '';
+    token =
+      localStorage.getItem('fogo_admin_token') ||
+      localStorage.getItem('admin_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('accessToken') ||
+      '';
+
+    if (!token) {
+      try {
+        const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
+        if (rawUser) {
+          const u = JSON.parse(rawUser);
+          token = u.token || u.accessToken || '';
+        }
+      } catch (e) {}
+    }
   }
 
   const headers: Record<string, string> = {};
@@ -18,7 +33,7 @@ export const getAuthHeaders = (isFormData: boolean = false) => {
 };
 
 // -------------------------------------------------------------
-// SẢN PHẨM (PRODUCTS)
+// SẢN PHẨM & TỒN KHO
 // -------------------------------------------------------------
 export const adminGetProducts = async () => {
   const res = await fetch(`${API_URL}/api/admin/products`, {
@@ -55,7 +70,7 @@ export const adminDeleteProduct = async (id: string) => {
 };
 
 // -------------------------------------------------------------
-// ĐƠN HÀNG (ORDERS)
+// ĐƠN HÀNG
 // -------------------------------------------------------------
 export const adminGetOrders = async () => {
   const res = await fetch(`${API_URL}/api/admin/orders`, {
@@ -83,7 +98,7 @@ export const adminDeleteOrder = async (orderId: string) => {
 };
 
 // -------------------------------------------------------------
-// BANNER & DANH MỤC (BANNERS)
+// BANNERS
 // -------------------------------------------------------------
 export const adminGetBanners = async () => {
   const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, {
@@ -103,7 +118,7 @@ export const adminSyncBanners = async (items: any[]) => {
 };
 
 // -------------------------------------------------------------
-// BÀI VIẾT / BLOG (POSTS)
+// BÀI VIẾT
 // -------------------------------------------------------------
 export const adminGetPosts = async () => {
   const res = await fetch(`${API_URL}/api/admin/posts`, {
@@ -140,7 +155,7 @@ export const adminDeletePost = async (id: string) => {
 };
 
 // -------------------------------------------------------------
-// THỐNG KÊ (ANALYTICS & STATS)
+// THỐNG KÊ
 // -------------------------------------------------------------
 export const adminGetStats = async () => {
   const res = await fetch(`${API_URL}/api/admin/stats`, {
