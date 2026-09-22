@@ -29,6 +29,7 @@ const MENU_ITEMS = [
   { href: '/admin/menu', label: 'Quản Lý Menu', icon: ImageIcon },
   { href: '/admin/manage-seo', label: 'Quản Lý SEO', icon: ImageIcon },
   { href: '/admin/manage-specifications', label: 'Quản Lý Thông Số Kỹ Thuật', icon: ImageIcon },
+  { href: '/admin/bao-mat', label: 'Bảo Mật & Log Nguy Cơ', icon: ImageIcon },
 ];
 
 export default function AdminSidebar({
