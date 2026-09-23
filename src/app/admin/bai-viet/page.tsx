@@ -8,7 +8,6 @@ import {
   Plus,
   Trash2,
   Edit3,
-  Eye,
   CheckSquare,
   Square,
   AlertTriangle,
@@ -20,6 +19,8 @@ import {
   XCircle,
   ArrowUpDown,
   ExternalLink,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface Post {
@@ -41,14 +42,11 @@ export default function AdminPostsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'NEWEST' | 'OLDEST' | 'TITLE_AZ' | 'TITLE_ZA'>('NEWEST');
 
-  // Quản lý checkbox xóa nhiều
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Banner thông báo
   const [alertInfo, setAlertInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Modal Thêm / Chỉnh sửa
+  // State Modal Thêm / Chỉnh sửa
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [formData, setFormData] = useState({
@@ -59,8 +57,9 @@ export default function AdminPostsPage() {
     content: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingThumb, setIsUploadingThumb] = useState(false);
 
-  // Modal xác nhận xóa sang trọng ở giữa màn hình
+  // State Modal xóa
   const [confirmDeleteModal, setConfirmDeleteModal] = useState<{
     isOpen: boolean;
     type: 'single' | 'bulk';
@@ -88,7 +87,6 @@ export default function AdminPostsPage() {
     );
   };
 
-  // 1. Tải danh sách bài viết
   const fetchPosts = async () => {
     setLoading(true);
     try {
@@ -100,7 +98,7 @@ export default function AdminPostsPage() {
         setPosts([]);
       }
     } catch {
-      showAlert('Không thể tải danh sách bài viết!', 'error');
+      showAlert('Không thể nạp danh sách bài viết!', 'error');
       setPosts([]);
     } finally {
       setLoading(false);
@@ -111,14 +109,19 @@ export default function AdminPostsPage() {
     fetchPosts();
   }, []);
 
-  // 2. Mở Modal Thêm mới
+  const getSafeImageUrl = (url?: string | null) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/uploads')) return `${API_URL}${url}`;
+    return url;
+  };
+
   const handleOpenCreate = () => {
     setEditingPost(null);
     setFormData({ title: '', slug: '', thumbnail: '', summary: '', content: '' });
     setIsModalOpen(true);
   };
 
-  // 3. Mở Modal Chỉnh sửa
   const handleOpenEdit = (post: Post) => {
     setEditingPost(post);
     setFormData({
@@ -131,7 +134,39 @@ export default function AdminPostsPage() {
     setIsModalOpen(true);
   };
 
-  // 4. Lưu Thêm / Sửa
+  // Upload file ảnh thumbnail từ máy
+  const handleUploadImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const data = new FormData();
+    data.append('image', file);
+
+    setIsUploadingThumb(true);
+    try {
+      const token = getAdminToken();
+      const res = await fetch(`${API_URL}/api/admin/upload-image`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: data,
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFormData((prev) => ({ ...prev, thumbnail: `${API_URL}${json.imageUrl}` }));
+        showAlert('Tải ảnh đại diện lên thành công!', 'success');
+      } else {
+        showAlert(json.message || 'Không thể tải ảnh lên', 'error');
+      }
+    } catch {
+      showAlert('Lỗi kết nối khi tải ảnh!', 'error');
+    } finally {
+      setIsUploadingThumb(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -158,7 +193,7 @@ export default function AdminPostsPage() {
         setIsModalOpen(false);
         fetchPosts();
       } else {
-        showAlert(json.message || json.error || 'Thao tác không thành công!', 'error');
+        showAlert(json.message || json.error || 'Cập nhật thất bại!', 'error');
       }
     } catch {
       showAlert('Lỗi kết nối máy chủ!', 'error');
@@ -167,7 +202,6 @@ export default function AdminPostsPage() {
     }
   };
 
-  // 5. Thực hiện xóa từ Modal
   const handleExecuteDelete = async () => {
     setIsDeleting(true);
     const token = getAdminToken();
@@ -182,7 +216,7 @@ export default function AdminPostsPage() {
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          showAlert(`Đã xóa bài viết "${confirmDeleteModal.title}"!`, 'success');
+          showAlert(`Đã xóa bài viết thành công!`, 'success');
           setSelectedIds((prev) => prev.filter((id) => id !== confirmDeleteModal.id));
           setPosts((prev) => prev.filter((p) => p.id !== confirmDeleteModal.id));
         } else {
@@ -200,21 +234,20 @@ export default function AdminPostsPage() {
           setPosts((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
           setSelectedIds([]);
         } else {
-          showAlert(json.message || 'Xóa hàng loạt thất bại!', 'error');
+          showAlert(json.message || 'Xóa thất bại!', 'error');
         }
       }
     } catch {
-      showAlert('Lỗi kết nối khi xóa bài viết!', 'error');
+      showAlert('Lỗi kết nối khi xóa!', 'error');
     } finally {
       setIsDeleting(false);
       setConfirmDeleteModal({ isOpen: false, type: 'single' });
     }
   };
 
-  // 6. Lọc và sắp xếp bài viết
   const filteredPosts = useMemo(() => {
-    let result = posts.filter((p) => {
-      const term = searchTerm.trim().toLowerCase();
+    const term = searchTerm.trim().toLowerCase();
+    const result = posts.filter((p) => {
       return (
         !term ||
         p.title.toLowerCase().includes(term) ||
@@ -235,16 +268,13 @@ export default function AdminPostsPage() {
   }, [posts, searchTerm, sortBy]);
 
   const isAllSelected = filteredPosts.length > 0 && selectedIds.length === filteredPosts.length;
-  const toggleSelectAll = () => {
-    setSelectedIds(isAllSelected ? [] : filteredPosts.map((p) => p.id));
-  };
+  const toggleSelectAll = () => setSelectedIds(isAllSelected ? [] : filteredPosts.map((p) => p.id));
   const toggleSelectItem = (id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   };
 
   return (
     <div className="space-y-6 max-w-full overflow-hidden select-none relative p-2 sm:p-6">
-      {/* THÔNG BÁO BANNER */}
       {alertInfo && (
         <div
           className={`p-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-md transition-all animate-in fade-in slide-in-from-top-2 ${
@@ -267,7 +297,7 @@ export default function AdminPostsPage() {
         </div>
       )}
 
-      {/* TIÊU ĐỀ & CÔNG CỤ TÌM KIẾM, SẮP XẾP */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
@@ -275,12 +305,11 @@ export default function AdminPostsPage() {
             <span>Quản Lý Tin Tức & Bài Viết</span>
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Tổng cộng: <b>{posts.length}</b> bài viết trên hệ thống Fogo Store
+            Tổng cộng: <b>{posts.length}</b> bài viết trên hệ thống Fogo Store[cite: 13]
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Ô tìm kiếm */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -292,7 +321,6 @@ export default function AdminPostsPage() {
             />
           </div>
 
-          {/* Bộ lọc sắp xếp */}
           <div className="relative flex items-center bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs shadow-2xs">
             <ArrowUpDown size={14} className="text-gray-400 mr-1.5 shrink-0" />
             <select
@@ -307,7 +335,6 @@ export default function AdminPostsPage() {
             </select>
           </div>
 
-          {/* Nút Làm mới */}
           <button
             type="button"
             onClick={fetchPosts}
@@ -317,7 +344,6 @@ export default function AdminPostsPage() {
             <RotateCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          {/* Nút Đăng bài mới */}
           <button
             type="button"
             onClick={handleOpenCreate}
@@ -329,7 +355,7 @@ export default function AdminPostsPage() {
         </div>
       </div>
 
-      {/* THANH XÓA HÀNG LOẠT NỔI BẬT */}
+      {/* Thanh xóa nhiều */}
       {selectedIds.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between text-xs animate-in fade-in duration-150">
           <div className="flex items-center gap-2 text-red-800 font-bold">
@@ -349,7 +375,7 @@ export default function AdminPostsPage() {
         </div>
       )}
 
-      {/* BẢNG DANH SÁCH BÀI VIẾT */}
+      {/* Bảng danh sách bài viết */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
@@ -372,7 +398,7 @@ export default function AdminPostsPage() {
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500">
                     <Loader2 size={24} className="animate-spin text-[#d70018] mx-auto mb-2" />
-                    <span>Đang nạp dữ liệu bài viết...</span>
+                    <span>Đang tải danh sách bài viết...</span>
                   </td>
                 </tr>
               ) : filteredPosts.length === 0 ? (
@@ -401,7 +427,7 @@ export default function AdminPostsPage() {
                       <td className="py-3.5 px-4">
                         <div className="w-14 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
                           {post.thumbnail ? (
-                            <img src={post.thumbnail} alt="" className="w-full h-full object-cover" />
+                            <img src={getSafeImageUrl(post.thumbnail)} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <FileText size={16} className="text-gray-400" />
                           )}
@@ -418,11 +444,7 @@ export default function AdminPostsPage() {
                       </td>
 
                       <td className="py-3.5 px-4 text-gray-500 text-[11px]">
-                        {new Date(post.createdAt).toLocaleDateString('vi-VN', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
+                        {new Date(post.createdAt).toLocaleDateString('vi-VN')}
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
@@ -464,7 +486,7 @@ export default function AdminPostsPage() {
         </div>
       </div>
 
-      {/* MODAL THÊM / CHỈNH SỬA BÀI VIẾT */}
+      {/* MODAL THÊM / CẬP NHẬT BÀI VIẾT TÍCH HỢP UPLOAD ẢNH */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden p-6 space-y-4 max-h-[90vh] flex flex-col">
@@ -477,13 +499,13 @@ export default function AdminPostsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-3.5 text-xs overflow-y-auto pr-1 flex-1">
+            <form onSubmit={handleSubmitForm} className="space-y-4 text-xs overflow-y-auto pr-1 flex-1">
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Tiêu đề bài viết (*):</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: Đánh giá iPhone 16 Pro Max sau 1 tháng sử dụng"
+                  placeholder="Ví dụ: Đánh giá iPhone 16 Pro Max sau 1 tháng trải nghiệm..."
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full border rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#d70018]"
@@ -501,22 +523,45 @@ export default function AdminPostsPage() {
                 />
               </div>
 
+              {/* Tải ảnh đại diện trực tiếp hoặc nhập URL */}
               <div>
-                <label className="block font-bold text-gray-700 mb-1">Link Ảnh đại diện (Thumbnail URL):</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/anh-bai-viet.jpg"
-                  value={formData.thumbnail}
-                  onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                  className="w-full border rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#d70018]"
-                />
+                <label className="block font-bold text-gray-700 mb-1">Ảnh đại diện (Thumbnail):</label>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <div className="w-24 h-16 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                    {formData.thumbnail ? (
+                      <img src={getSafeImageUrl(formData.thumbnail)} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={22} className="text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 w-full space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Dán link ảnh hoặc tải ảnh từ máy tính..."
+                      value={formData.thumbnail}
+                      onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
+                      className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#d70018]"
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors">
+                      {isUploadingThumb ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                      <span>{isUploadingThumb ? 'Đang tải ảnh...' : 'Tải ảnh từ máy tính'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleUploadImageFile}
+                        disabled={isUploadingThumb}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Tóm tắt ngắn (SEO Description):</label>
                 <textarea
                   rows={2}
-                  placeholder="Đoạn văn ngắn hiển thị trên thẻ bài viết và tìm kiếm Google..."
+                  placeholder="Đoạn văn ngắn tóm tắt nội dung bài viết..."
                   value={formData.summary}
                   onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                   className="w-full border rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#d70018]"
@@ -556,7 +601,7 @@ export default function AdminPostsPage() {
         </div>
       )}
 
-      {/* MODAL XÁC NHẬN XÓA HIỆN ĐẠI GIỮA MÀN HÌNH */}
+      {/* Modal xác nhận xóa */}
       {confirmDeleteModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden p-6 text-center space-y-4 border border-gray-100 animate-in zoom-in-95 duration-200">
@@ -571,14 +616,7 @@ export default function AdminPostsPage() {
                   : `Xóa ${confirmDeleteModal.count} bài viết đã chọn?`}
               </h3>
               <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                {confirmDeleteModal.type === 'single' ? (
-                  <>
-                    Bạn có chắc chắn muốn xóa bài viết{' '}
-                    <strong className="text-gray-800">"{confirmDeleteModal.title}"</strong> khỏi hệ thống? Hành động này không thể hoàn tác.
-                  </>
-                ) : (
-                  'Toàn bộ các bài viết đã chọn sẽ bị xóa vĩnh viễn khỏi cơ sở dữ liệu. Bạn có chắc chắn muốn tiếp tục?'
-                )}
+                Bài viết sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu và website. Bạn có chắc chắn muốn tiếp tục?
               </p>
             </div>
 
