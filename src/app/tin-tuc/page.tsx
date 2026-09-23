@@ -5,11 +5,7 @@ import Link from 'next/link';
 import { 
   ChevronRight, 
   ChevronDown, 
-  FileText, 
-  Menu as MenuIcon,
-  ShieldCheck,
-  RotateCcw,
-  Truck
+  FileText 
 } from 'lucide-react';
 
 import { Header } from '@/components/layout/Header';
@@ -75,10 +71,7 @@ export default function NewsListingPage() {
     fetchPosts();
   }, []);
 
-  // 4 bài viết mới nhất cho Sidebar
   const recentPosts = useMemo(() => posts.slice(0, 4), [posts]);
-
-  // Phân trang danh sách bài viết
   const totalPages = Math.ceil(posts.length / postsPerPage) || 1;
   const currentPosts = useMemo(() => {
     const start = (currentPage - 1) * postsPerPage;
@@ -87,37 +80,12 @@ export default function NewsListingPage() {
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen text-gray-800 flex flex-col font-sans select-none">
-      {/* 1. HEADER CHÍNH GỐC */}
       <Header />
-
-      {/* 2. NAVBAR ĐỎ GỐC CÓ DROPDOWN HOVER */}
       <Navbar />
 
-      {/* 3. SUB-HEADER CAM KẾT CHUẨN GIAO DIỆN FOGO */}
-      <div className="bg-white border-b border-gray-200 py-2.5 text-[11px] text-gray-600 hidden sm:block shadow-2xs">
-        <div className="max-w-[1380px] mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-gray-800 uppercase tracking-tight">
-            <MenuIcon size={15} className="text-[#d70018]" />
-            <span>DANH MỤC SẢN PHẨM</span>
-          </div>
-          <div className="flex items-center gap-7 font-medium">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-emerald-600" /> Đảm bảo chất lượng
-            </span>
-            <span className="flex items-center gap-1.5">
-              <RotateCcw size={14} className="text-blue-600" /> Thu cũ đổi mới
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Truck size={14} className="text-amber-600" /> Miễn phí vận chuyển
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. KHUNG NỘI DUNG CHÍNH (BỐ CỤC 2 CỘT 8 - 4) */}
-      <main className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-5 w-full flex-1">
-        {/* Breadcrumb to hơn 2px */}
-        <nav className="flex items-center gap-1.5 text-[13px] sm:text-sm text-gray-500 mb-3">
+      <main className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-1.5 text-[13px] sm:text-sm text-gray-500 mb-4">
           <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">
             Trang chủ
           </Link>
@@ -125,15 +93,12 @@ export default function NewsListingPage() {
           <span className="text-gray-900 font-semibold">Tin tức</span>
         </nav>
 
-        {/* Tiêu đề mục */}
-        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mb-5">
+        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mb-6">
           Tin tức
         </h1>
 
-        {/* Lưới 2 cột chính */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* CỘT TRÁI: DANH SÁCH BÀI VIẾT (8 CỘT - LƯỚI 2 BÀI/HÀNG) */}
+          {/* CỘT TRÁI: DANH SÁCH BÀI VIẾT (8 CỘT) */}
           <div className="lg:col-span-8">
             {loading ? (
               <div className="py-24 text-center">
@@ -147,11 +112,9 @@ export default function NewsListingPage() {
               </div>
             ) : (
               <div className="space-y-8">
-                {/* Lưới bài viết 2 cột */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {currentPosts.map((post) => (
                     <article key={post.id} className="bg-white rounded-lg border border-gray-200/90 shadow-2xs overflow-hidden flex flex-col group hover:shadow-md transition-shadow">
-                      {/* Ảnh bài viết */}
                       <Link href={`/tin-tuc/${post.slug}`} className="block aspect-[16/10] overflow-hidden bg-gray-100 relative">
                         <img
                           src={getSafeImageUrl(post.thumbnail)}
@@ -163,7 +126,6 @@ export default function NewsListingPage() {
                         />
                       </Link>
 
-                      {/* Thông tin bài viết */}
                       <div className="p-4 flex-1 flex flex-col justify-between space-y-2.5">
                         <div className="space-y-1.5">
                           <h2 className="text-sm sm:text-base font-black text-gray-900 group-hover:text-[#d70018] transition-colors line-clamp-2 leading-snug">
@@ -174,7 +136,6 @@ export default function NewsListingPage() {
                           </p>
                         </div>
 
-                        {/* Tác giả & Ngày đăng */}
                         <div className="pt-2 text-[11px] text-gray-400">
                           <span>bởi Fogo Team</span>
                           <span className="mx-1.5">•</span>
@@ -185,7 +146,6 @@ export default function NewsListingPage() {
                   ))}
                 </div>
 
-                {/* Phân trang */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-1.5 pt-4">
                     {Array.from({ length: totalPages }).map((_, idx) => {
@@ -214,10 +174,9 @@ export default function NewsListingPage() {
             )}
           </div>
 
-          {/* CỘT PHẢI: STICKY SIDEBAR (LƯỚT TRANG ĐI THEO) */}
+          {/* CỘT PHẢI: STICKY SIDEBAR (4 CỘT) */}
           <div className="lg:col-span-4 space-y-6 sticky top-24">
-            
-            {/* WIDGET 1: BÀI VIẾT MỚI NHẤT (TO HƠN 2PX) */}
+            {/* WIDGET 1: BÀI VIẾT MỚI NHẤT */}
             <div className="bg-white rounded-xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
@@ -254,46 +213,43 @@ export default function NewsListingPage() {
               </div>
             </div>
 
-            {/* WIDGET 2: DANH MỤC BÀI VIẾT */}
+            {/* WIDGET 2: DANH MỤC PAGE (TĂNG 3PX) */}
             <div className="bg-white rounded-xl border border-gray-200/90 shadow-xs overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
-                <h3 className="text-sm font-black text-gray-900 tracking-tight">
-                  Danh mục bài viết
+              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-white">
+                <h3 className="text-[17px] font-black text-gray-900 tracking-tight">
+                  Danh mục page
                 </h3>
-                <span className="text-gray-400 text-xs">▼</span>
+                <span className="text-gray-400 text-sm">▼</span>
               </div>
 
-              <ul className="divide-y divide-gray-100 text-[13px] font-medium text-gray-700">
+              <ul className="divide-y divide-gray-100 text-[16px] font-medium text-gray-700">
                 <li>
-                  <Link href="/" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                  <Link href="/" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                     <span>Trang chủ</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/san-pham" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                  <Link href="/san-pham" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                     <span>Sản phẩm</span>
-                    <span className="text-gray-400 text-sm font-normal">+</span>
+                    <span className="text-gray-400 text-base font-normal">+</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/tin-tuc" className="px-4 py-3 flex items-center justify-between text-[#d70018] font-bold bg-red-50/30">
+                  <Link href="/tin-tuc" className="px-5 py-3.5 flex items-center justify-between text-[#d70018] font-bold bg-red-50/30">
                     <span>Blog</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/gioi-thieu" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                  <Link href="/gioi-thieu" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                     <span>Giới thiệu</span>
                   </Link>
                 </li>
               </ul>
             </div>
-
           </div>
-
         </div>
       </main>
 
-      {/* 5. FOOTER CHÍNH GỐC */}
       <Footer />
     </div>
   );

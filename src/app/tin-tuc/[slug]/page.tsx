@@ -87,7 +87,6 @@ export default function PostDetailPage() {
     }
   }, [slug]);
 
-  // Bóc tách Heading 2 và Heading 3 tạo Mục Lục
   const tocItems = useMemo<TocItem[]>(() => {
     if (!post?.content) return [];
     const regex = /<(h[23])[^>]*>(.*?)<\/\1>/gi;
@@ -110,7 +109,6 @@ export default function PostDetailPage() {
     return items;
   }, [post]);
 
-  // Tự động chèn ID vào các thẻ heading để scroll khi bấm mục lục
   const processedContent = useMemo(() => {
     if (!post?.content) return '';
     let index = 0;
@@ -133,16 +131,10 @@ export default function PostDetailPage() {
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen text-gray-800 flex flex-col font-sans">
-      {/* 1. HEADER CHÍNH GỐC */}
       <Header />
-
-      {/* 2. NAVBAR ĐỎ GỐC */}
       <Navbar />
 
-      {/* 3. KHUNG NỘI DUNG CHÍNH (MAX WIDTH 1440PX) */}
       <main className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 w-full flex-1">
-        
-        {/* BREADCRUMB: Đã tăng 2px và tự động xuống dòng trên mobile */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[13px] sm:text-sm text-gray-500 mb-4 sm:mb-6 leading-relaxed">
           <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">
             Trang chủ
@@ -173,11 +165,8 @@ export default function PostDetailPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
-            
-            {/* CỘT TRÁI: BÀI VIẾT CHÍNH (9 CỘT RỘNG RÃI) */}
+            {/* CỘT NỘI DUNG BÀI VIẾT (9 CỘT) */}
             <div className="lg:col-span-9 bg-white p-4 sm:p-8 lg:p-10 rounded-2xl border border-gray-200/80 shadow-xs space-y-6">
-              
-              {/* Tiêu đề & Tác giả */}
               <div className="space-y-3">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-tight">
                   {post.title}
@@ -196,7 +185,6 @@ export default function PostDetailPage() {
                 </div>
               </div>
 
-              {/* Bảng mục lục tự động */}
               {tocItems.length > 0 && (
                 <div className="bg-[#fdfefe] border border-gray-200 rounded-xl p-4 sm:p-5 shadow-2xs">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 mb-3">
@@ -228,13 +216,11 @@ export default function PostDetailPage() {
                 </div>
               )}
 
-              {/* Nội dung chi tiết bài viết */}
               <div
                 className="prose prose-sm sm:prose-base max-w-none text-gray-800 leading-relaxed space-y-4 pt-2 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-gray-900 [&>h2]:mt-8 [&>h2]:mb-3 [&>h2]:scroll-mt-28 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:text-gray-800 [&>h3]:mt-6 [&>h3]:mb-2 [&>h3]:scroll-mt-28 [&>p]:text-sm sm:[&>p]:text-base [&>p]:leading-relaxed [&>p]:text-gray-700 [&>img]:rounded-xl [&>img]:mx-auto [&>img]:my-5 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-sm [&>ul]:space-y-1.5"
                 dangerouslySetInnerHTML={{ __html: processedContent || `<p>${post.summary || ''}</p>` }}
               />
 
-              {/* Tags */}
               <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 text-xs sm:text-sm text-gray-600">
                 <span className="font-bold flex items-center gap-1 text-gray-800">
                   <Tag size={14} className="text-[#d70018]" /> Tags:
@@ -245,7 +231,6 @@ export default function PostDetailPage() {
                 <span className="hover:text-[#d70018] cursor-pointer">#TinCôngNghệ</span>
               </div>
 
-              {/* Bài viết liên quan */}
               {relatedPosts.length > 0 && (
                 <div className="pt-6 border-t border-gray-100 space-y-4">
                   <h3 className="text-lg font-black text-gray-900 tracking-tight">Bài viết liên quan</h3>
@@ -270,10 +255,9 @@ export default function PostDetailPage() {
               )}
             </div>
 
-            {/* CỘT PHẢI: STICKY SIDEBAR (LƯỚT TRANG VẪN ĐI THEO) */}
+            {/* CỘT PHẢI: STICKY SIDEBAR (3 CỘT) */}
             <div className="lg:col-span-3 space-y-5 sticky top-24">
-              
-              {/* WIDGET 1: BÀI VIẾT MỚI NHẤT (TO HƠN 2PX) */}
+              {/* WIDGET 1: BÀI VIẾT MỚI NHẤT */}
               <div className="bg-white rounded-xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                   <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
@@ -298,7 +282,6 @@ export default function PostDetailPage() {
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        {/* Tiêu đề bài viết tăng cỡ chữ thêm 2px */}
                         <h4 className="text-sm font-bold text-gray-900 group-hover:text-[#d70018] line-clamp-2 leading-snug transition-colors">
                           {rp.title}
                         </h4>
@@ -311,47 +294,44 @@ export default function PostDetailPage() {
                 </div>
               </div>
 
-              {/* WIDGET 2: DANH MỤC PAGE CHUẨN MẪU */}
+              {/* WIDGET 2: DANH MỤC PAGE (TĂNG 3PX) */}
               <div className="bg-white rounded-xl border border-gray-200/90 shadow-xs overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
-                  <h3 className="text-sm font-black text-gray-900 tracking-tight">
+                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-white">
+                  <h3 className="text-[17px] font-black text-gray-900 tracking-tight">
                     Danh mục page
                   </h3>
-                  <span className="text-gray-400 text-xs">▼</span>
+                  <span className="text-gray-400 text-sm">▼</span>
                 </div>
 
-                <ul className="divide-y divide-gray-100 text-[13px] font-medium text-gray-700">
+                <ul className="divide-y divide-gray-100 text-[16px] font-medium text-gray-700">
                   <li>
-                    <Link href="/" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                    <Link href="/" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                       <span>Trang chủ</span>
                     </Link>
                   </li>
                   <li>
-                    <Link href="/san-pham" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                    <Link href="/san-pham" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                       <span>Sản phẩm</span>
-                      <span className="text-gray-400 text-sm font-normal">+</span>
+                      <span className="text-gray-400 text-base font-normal">+</span>
                     </Link>
                   </li>
                   <li>
-                    <Link href="/tin-tuc" className="px-4 py-3 flex items-center justify-between text-[#d70018] font-bold bg-red-50/30">
+                    <Link href="/tin-tuc" className="px-5 py-3.5 flex items-center justify-between text-[#d70018] font-bold bg-red-50/30">
                       <span>Blog</span>
                     </Link>
                   </li>
                   <li>
-                    <Link href="/gioi-thieu" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                    <Link href="/gioi-thieu" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                       <span>Giới thiệu</span>
                     </Link>
                   </li>
                 </ul>
               </div>
-
             </div>
-
           </div>
         )}
       </main>
 
-      {/* 4. FOOTER GỐC */}
       <Footer />
     </div>
   );

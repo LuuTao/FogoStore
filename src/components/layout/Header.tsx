@@ -22,8 +22,6 @@ import { useAuth } from '@/context/AuthContext';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
-// Dữ liệu danh mục chuẩn cho toàn bộ Mobile Menu
-// Dữ liệu danh mục chuẩn cho toàn bộ Mobile Menu đồng bộ dạng query ?series=
 const OFFICIAL_MENU_DATA = [
   {
     id: 'iphone',
@@ -245,7 +243,7 @@ export const Header: React.FC = () => {
           }
         }
       } catch (err) {
-        // Dự phòng fallback
+        // Fallback
       }
     };
     fetchMenuData();
@@ -260,7 +258,7 @@ export const Header: React.FC = () => {
           setProductsCache(json.data);
         }
       } catch (e) {
-        console.error('Lỗi khi nạp dữ liệu tìm kiếm:', e);
+        console.error('Lỗi nạp sản phẩm tìm kiếm:', e);
       }
     };
     loadProducts();
@@ -656,7 +654,7 @@ export const Header: React.FC = () => {
         </div>
       </header>
 
-      {/* DRAWER MENU MOBILE CHUẨN ĐỒNG BỘ */}
+      {/* DRAWER MENU MOBILE: ĐÃ TĂNG 2PX CHUẨN ĐẸP TO RÕ */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
@@ -664,9 +662,9 @@ export const Header: React.FC = () => {
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
-          <div className="relative w-[300px] sm:w-[340px] max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-300">
+          <div className="relative w-[310px] sm:w-[350px] max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-300">
             <div className="flex items-center justify-between px-4 py-3.5 bg-[#d70018] text-white shadow-xs">
-              <span className="font-extrabold text-base tracking-wide uppercase">Danh Mục Sản Phẩm</span>
+              <span className="font-extrabold text-[17px] tracking-wide uppercase">Danh Mục Sản Phẩm</span>
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -689,14 +687,15 @@ export const Header: React.FC = () => {
                 return (
                   <div key={item.id} className="py-0.5">
                     <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+                      {/* Tên danh mục chính tăng từ 13px lên 15px */}
                       <Link
                         href={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-2 text-[13px] font-bold text-gray-800 hover:text-[#d70018] transition-colors flex-1"
+                        className="flex items-center gap-2 text-[15px] font-bold text-gray-800 hover:text-[#d70018] transition-colors flex-1"
                       >
                         <span>{item.title}</span>
                         {item.badge && (
-                          <span className="bg-[#d70018] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded">
+                          <span className="bg-[#d70018] text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded">
                             {item.badge}
                           </span>
                         )}
@@ -709,7 +708,7 @@ export const Header: React.FC = () => {
                           className="p-1 text-gray-400 hover:text-[#d70018] cursor-pointer"
                         >
                           <ChevronDown
-                            size={18}
+                            size={19}
                             className={`transition-transform duration-200 ${isExpanded ? 'rotate-180 text-[#d70018]' : ''}`}
                           />
                         </button>
@@ -717,7 +716,7 @@ export const Header: React.FC = () => {
                     </div>
 
                     {hasSub && isExpanded && (
-                      <div className="bg-[#fafafb] px-5 py-2.5 space-y-3.5 border-t border-gray-100/80">
+                      <div className="bg-[#fafafb] px-5 py-3 space-y-4 border-t border-gray-100/80">
                         {uniqueGroups.map((group, gIdx) => {
                           const rawItems = group.items || [];
                           const uniqueItems = rawItems.filter(
@@ -726,23 +725,25 @@ export const Header: React.FC = () => {
                           );
 
                           return (
-                            <div key={gIdx} className="space-y-1.5">
+                            <div key={gIdx} className="space-y-2">
+                              {/* Tên nhóm dòng sản phẩm tăng từ 11.5px lên 13.5px */}
                               <Link
                                 href={group.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className="block font-black text-gray-800 text-[11.5px] uppercase tracking-wide hover:text-[#d70018]"
+                                className="block font-black text-gray-900 text-[13.5px] uppercase tracking-wide hover:text-[#d70018]"
                               >
                                 {group.groupTitle}
                               </Link>
 
                               {uniqueItems.length > 0 && (
-                                <div className="space-y-1 pl-2.5 border-l-2 border-red-200">
+                                <div className="space-y-1.5 pl-3 border-l-2 border-red-300">
                                   {uniqueItems.map((sub, sIdx) => (
                                     <Link
                                       key={sIdx}
                                       href={sub.href}
                                       onClick={() => setIsMobileMenuOpen(false)}
-                                      className="block py-0.5 text-gray-600 hover:text-[#d70018] font-medium text-[11px] transition-colors"
+                                      /* Tên sản phẩm con tăng từ 11px lên 13px */
+                                      className="block py-1 text-gray-700 hover:text-[#d70018] font-medium text-[13px] transition-colors"
                                     >
                                       {sub.name}
                                     </Link>
