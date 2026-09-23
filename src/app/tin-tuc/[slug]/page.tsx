@@ -9,16 +9,16 @@ import {
   User, 
   Tag, 
   ChevronDown, 
-  FileText, 
-  Search,
-  PhoneCall,
-  ShoppingBag,
-  FileCheck,
+  FileText,
+  ShieldCheck,
   RotateCcw,
   Truck,
-  Menu,
-  ShieldCheck
+  Menu
 } from 'lucide-react';
+
+// Import trực tiếp Header & Footer gốc của hệ thống
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 
 interface Post {
   id: string;
@@ -91,7 +91,7 @@ export default function PostDetailPage() {
     }
   }, [slug]);
 
-  // Bóc tách danh sách Heading 2 và Heading 3 tạo Mục Lục
+  // 1. Tự động bóc tách danh sách Heading 2 và Heading 3 (Hỗ trợ từ file Word/HTML)
   const tocItems = useMemo<TocItem[]>(() => {
     if (!post?.content) return [];
     const regex = /<(h[23])[^>]*>(.*?)<\/\1>/gi;
@@ -114,7 +114,7 @@ export default function PostDetailPage() {
     return items;
   }, [post]);
 
-  // Chèn ID tự động vào các heading để click mục lục là cuộn tới
+  // 2. Tự động đánh id vào các heading trong nội dung
   const processedContent = useMemo(() => {
     if (!post?.content) return '';
     let index = 0;
@@ -137,122 +137,41 @@ export default function PostDetailPage() {
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen text-gray-800 flex flex-col font-sans">
-      {/* ========================================================
-          1. HEADER CHUẨN FOGO STORE
-      ======================================================== */}
-      {/* Top Banner Đỏ */}
-      <div className="bg-[#d70018] text-white py-1.5 px-4 text-center text-xs font-black tracking-wider flex items-center justify-between max-w-7xl mx-auto w-full">
-        <Link href="/" className="font-extrabold tracking-tight text-sm uppercase">FOGO STORE</Link>
-        <span className="hidden sm:inline font-bold">THE BEST APPLE RETAIL STORE IN HCM</span>
-        <a href="tel:0566003333" className="font-extrabold text-sm hover:underline">056.600.3333</a>
+      {/* 1. HEADER GỐC CỦA BẠN */}
+      <Header />
+
+      {/* 2. THANH SUB-HEADER CAM KẾT (DƯỚI MENU ĐỎ) */}
+      <div className="bg-gray-50 border-b border-gray-200 py-2 text-[11px] text-gray-600 hidden sm:block">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 font-bold text-gray-800">
+            <Menu size={14} className="text-[#d70018]" />
+            <span>DANH MỤC SẢN PHẨM</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-emerald-600" /> Đảm bảo chất lượng
+            </span>
+            <span className="flex items-center gap-1.5">
+              <RotateCcw size={14} className="text-blue-600" /> Thu cũ đổi mới
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Truck size={14} className="text-amber-600" /> Miễn phí vận chuyển
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#d70018] to-amber-500 flex items-center justify-center text-white font-black text-xl italic shadow-xs">
-              Fs
-            </div>
-            <span className="font-black text-xl tracking-tight text-gray-900 hidden sm:inline">
-              FOGO <span className="text-[#d70018]">STORE</span>
-            </span>
-          </Link>
-
-          {/* Search Box */}
-          <div className="flex-1 max-w-xl relative">
-            <input 
-              type="text"
-              placeholder="Bạn cần tìm gì hôm nay..."
-              className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-[#d70018]"
-            />
-            <button className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#d70018]">
-              <Search size={16} />
-            </button>
-          </div>
-
-          {/* Contact & Actions */}
-          <div className="hidden lg:flex items-center gap-5 text-xs">
-            <a href="tel:0566003333" className="flex items-center gap-2 text-gray-700 hover:text-[#d70018]">
-              <PhoneCall size={18} className="text-[#d70018]" />
-              <div>
-                <p className="text-[10px] text-gray-400">Hotline</p>
-                <p className="font-bold">056.600.3333</p>
-              </div>
-            </a>
-
-            <Link href="/gio-hang" className="flex items-center gap-2 text-gray-700 hover:text-[#d70018]">
-              <ShoppingBag size={18} className="text-[#d70018]" />
-              <div>
-                <p className="text-[10px] text-gray-400">Xem giỏ</p>
-                <p className="font-bold">Giỏ hàng (0)</p>
-              </div>
-            </Link>
-
-            <Link href="/tra-cuu" className="flex items-center gap-2 text-gray-700 hover:text-[#d70018]">
-              <FileCheck size={18} className="text-[#d70018]" />
-              <div>
-                <p className="text-[10px] text-gray-400">Tra cứu</p>
-                <p className="font-bold">Đơn hàng</p>
-              </div>
-            </Link>
-
-            <Link href="/admin/dang-nhap" className="flex items-center gap-2 text-gray-700 hover:text-[#d70018]">
-              <User size={18} className="text-[#d70018]" />
-              <div>
-                <p className="text-[10px] text-gray-400">FoGo Super Admin</p>
-                <p className="font-bold">Quản trị viên</p>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* Thanh Menu Đỏ Danh Mục Sản Phẩm */}
-        <div className="bg-[#d70018] text-white text-xs font-bold">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto whitespace-nowrap">
-            <div className="flex items-center">
-              <Link href="/iphone" className="px-4 py-2.5 hover:bg-red-700 flex items-center gap-1.5 border-r border-red-600">
-                iPhone <span className="bg-white text-[#d70018] text-[9px] px-1 py-0.2 rounded font-black">HOT</span>
-              </Link>
-              <Link href="/ipad" className="px-4 py-2.5 hover:bg-red-700 flex items-center gap-1.5 border-r border-red-600">
-                iPad <span className="bg-white text-[#d70018] text-[9px] px-1 py-0.2 rounded font-black">NEW</span>
-              </Link>
-              <Link href="/macbook" className="px-4 py-2.5 hover:bg-red-700 flex items-center gap-1.5 border-r border-red-600">
-                MacBook <span className="bg-white text-[#d70018] text-[9px] px-1 py-0.2 rounded font-black">NEW</span>
-              </Link>
-              <Link href="/hang-cu" className="px-4 py-2.5 hover:bg-red-700 border-r border-red-600">Hàng Cũ</Link>
-              <Link href="/watch" className="px-4 py-2.5 hover:bg-red-700 border-r border-red-600">Watch</Link>
-              <Link href="/phu-kien" className="px-4 py-2.5 hover:bg-red-700">Phụ kiện</Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Sub-Header Cam Kết Fogo Store */}
-        <div className="bg-gray-50 border-b border-gray-200 py-2 text-[11px] text-gray-600 hidden sm:block">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-            <div className="flex items-center gap-1 font-bold text-gray-800">
-              <Menu size={14} className="text-[#d70018]" />
-              <span>DANH MỤC SẢN PHẨM</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <span className="flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-600" /> Đảm bảo chất lượng</span>
-              <span className="flex items-center gap-1.5"><RotateCcw size={14} className="text-blue-600" /> Thu cũ đổi mới</span>
-              <span className="flex items-center gap-1.5"><Truck size={14} className="text-amber-600" /> Miễn phí vận chuyển</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* ========================================================
-          2. NỘI DUNG CHÍNH (BREADCRUMB, CONTENT & SIDEBAR)
-      ======================================================== */}
+      {/* 3. NỘI DUNG CHÍNH (ĐẢM BẢO 2 CỘT 8 - 4 LUÔN NẰM NGANG) */}
       <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-[11px] text-gray-500 mb-4 overflow-hidden truncate">
-          <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">Trang chủ</Link>
+          <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">
+            Trang chủ
+          </Link>
           <ChevronRight size={12} className="shrink-0 text-gray-400" />
-          <Link href="/tin-tuc" className="hover:text-[#d70018] transition-colors shrink-0">Tin tức</Link>
+          <Link href="/tin-tuc" className="hover:text-[#d70018] transition-colors shrink-0">
+            Tin tức
+          </Link>
           <ChevronRight size={12} className="shrink-0 text-gray-400" />
           <span className="text-gray-800 font-semibold truncate">{post?.title || 'Đang tải bài viết...'}</span>
         </nav>
@@ -273,8 +192,10 @@ export default function PostDetailPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* CỘT BÀI VIẾT (8 CỘT) */}
+            
+            {/* CỘT NỘI DUNG BÀI VIẾT (8 CỘT) */}
             <div className="lg:col-span-8 bg-white p-5 sm:p-8 rounded-xl border border-gray-200/80 shadow-xs space-y-6">
+              
               {/* Tiêu đề & tác giả */}
               <div className="space-y-2">
                 <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">
@@ -293,13 +214,6 @@ export default function PostDetailPage() {
                   </span>
                 </div>
               </div>
-
-              {/* Ảnh đại diện lớn */}
-              {post.thumbnail && (
-                <div className="w-full rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
-                  <img src={getSafeImageUrl(post.thumbnail)} alt={post.title} className="w-full max-h-[460px] object-cover" />
-                </div>
-              )}
 
               {/* Bảng mục lục tự động */}
               {tocItems.length > 0 && (
@@ -389,9 +303,10 @@ export default function PostDetailPage() {
               )}
             </div>
 
-            {/* CỘT BÊN PHẢI (4 CỘT) */}
+            {/* CỘT SIDEBAR BÊN PHẢI (4 CỘT) */}
             <div className="lg:col-span-4 space-y-6">
-              {/* Widget: Bài viết mới nhất */}
+              
+              {/* Widget 1: Bài viết mới nhất */}
               <div className="bg-white rounded-xl border border-gray-200/80 p-4 sm:p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Bài viết mới nhất</h3>
@@ -426,7 +341,7 @@ export default function PostDetailPage() {
                 </div>
               </div>
 
-              {/* Widget: Danh mục page */}
+              {/* Widget 2: Danh mục bài viết */}
               <div className="bg-white rounded-xl border border-gray-200/80 p-4 sm:p-5 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Danh mục bài viết</h3>
@@ -457,67 +372,15 @@ export default function PostDetailPage() {
                   </li>
                 </ul>
               </div>
+
             </div>
+
           </div>
         )}
       </main>
 
-      {/* ========================================================
-          3. FOOTER CHUẨN FOGO STORE
-      ======================================================== */}
-      <footer className="bg-white border-t border-gray-200 mt-14 pt-10 pb-6 text-xs text-gray-600">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 mb-8">
-          {/* Cột 1 */}
-          <div className="space-y-3">
-            <h4 className="font-black text-gray-900 text-sm tracking-tight">Về Fogo Store</h4>
-            <p className="text-[11px] leading-relaxed text-gray-500">
-              Sự hài lòng của khách hàng chính là sản phẩm của Fogo Store. Hệ thống bán lẻ sản phẩm Apple chính hãng uy tín tại TP.HCM.
-            </p>
-          </div>
-
-          {/* Cột 2 */}
-          <div className="space-y-2">
-            <h4 className="font-black text-gray-900 text-sm tracking-tight">Thông tin liên hệ</h4>
-            <p className="text-[11px] text-gray-500">298 Trần Hưng Đạo, P. Nguyễn Cư Trinh, Quận 1, TP.HCM</p>
-            <p className="text-[11px] text-gray-500">Hotline: 056.600.3333</p>
-            <p className="text-[11px] text-gray-500">Email: cskh@fogostore.vn</p>
-          </div>
-
-          {/* Cột 3 */}
-          <div className="space-y-2">
-            <h4 className="font-black text-gray-900 text-sm tracking-tight">Hỗ trợ khách hàng</h4>
-            <ul className="space-y-1 text-[11px] text-gray-500">
-              <li><Link href="/tim-kiem" className="hover:text-[#d70018]">Tìm kiếm</Link></li>
-              <li><Link href="/gioi-thieu" className="hover:text-[#d70018]">Giới thiệu</Link></li>
-              <li><Link href="/tin-tuc" className="hover:text-[#d70018]">Tin tức công nghệ</Link></li>
-            </ul>
-          </div>
-
-          {/* Cột 4 */}
-          <div className="space-y-2">
-            <h4 className="font-black text-gray-900 text-sm tracking-tight">Liên kết</h4>
-            <ul className="space-y-1 text-[11px] text-gray-500">
-              <li><Link href="/iphone" className="hover:text-[#d70018]">iPhone</Link></li>
-              <li><Link href="/ipad" className="hover:text-[#d70018]">iPad</Link></li>
-              <li><Link href="/macbook" className="hover:text-[#d70018]">MacBook</Link></li>
-            </ul>
-          </div>
-
-          {/* Cột 5 */}
-          <div className="space-y-2">
-            <h4 className="font-black text-gray-900 text-sm tracking-tight">Chính sách</h4>
-            <ul className="space-y-1 text-[11px] text-gray-500">
-              <li><Link href="/chinh-sach-bao-hanh" className="hover:text-[#d70018]">Chính sách bảo hành</Link></li>
-              <li><Link href="/chinh-sach-doi-tra" className="hover:text-[#d70018]">Chính sách đổi trả</Link></li>
-              <li><Link href="/chinh-sach-van-chuyen" className="hover:text-[#d70018]">Chính sách vận chuyển</Link></li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-100 pt-5 text-center text-[11px] text-gray-400">
-          <p>© 2026 Fogo Store. Tất cả các quyền được bảo lưu.</p>
-        </div>
-      </footer>
+      {/* 4. FOOTER GỐC CỦA BẠN (CÓ LOGO BỘ CÔNG THƯƠNG, NÚT ZALO & MESSENGER) */}
+      <Footer />
     </div>
   );
 }
