@@ -244,8 +244,8 @@ export default function WarrantyPolicyPage() {
                     <span>Sản phẩm</span>
                     <span className="text-gray-400 text-lg font-normal">+</span>
                   </div>
-                  <Link href="/blogs" className="block p-4 hover:text-[#d70018] transition-colors">
-                    Blog
+                  <Link href="/tin-tuc" className="block p-4 hover:text-[#d70018] transition-colors">
+                    Tin tức
                   </Link>
                   <Link href="/pages/gioi-thieu" className="block p-4 hover:text-[#d70018] transition-colors">
                     Giới thiệu
