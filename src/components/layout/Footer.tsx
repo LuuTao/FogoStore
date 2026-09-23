@@ -22,22 +22,22 @@ export const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="w-full bg-white mt-16 border-t-4 border-[#d70018] select-none text-gray-700 text-sm md:text-base">
-      <div className="max-w-7xl mx-auto px-4 py-6 md:py-14">
+    <footer className="w-full bg-white mt-16 border-t-4 border-[#d70018] select-none text-gray-700 text-sm md:text-[15px]">
+      <div className="max-w-7xl mx-auto px-4 py-8 md:py-14">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-0 md:gap-8 lg:gap-10">
           
           {/* ========================================================= */}
-          {/* CỘT 1: VỀ FOGO STORE (LOGO NHỎ GỌN, SÁT LÊN TRÊN)         */}
+          {/* CỘT 1: VỀ FOGO STORE (LOGO SÁT LÊN TRÊN)                  */}
           {/* ========================================================= */}
           <div className="border-b border-dashed border-gray-200 md:border-none py-3.5 md:py-0">
             <button
               type="button"
               onClick={() => toggleSection('about')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-base md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Về Fogo Store</span>
               <ChevronDown
-                size={18}
+                size={20}
                 className={`text-gray-500 transition-transform duration-300 md:hidden ${
                   openSections.about ? 'rotate-180' : ''
                 }`}
@@ -46,16 +46,16 @@ export const Footer: React.FC = () => {
 
             {/* Nội dung xổ xuống */}
             <div
-              className={`pt-2.5 md:pt-3 space-y-2.5 ${
+              className={`pt-2 md:pt-2.5 space-y-2.5 ${
                 openSections.about ? 'block' : 'hidden md:block'
               }`}
             >
-              <p className="leading-relaxed text-gray-600 text-xs md:text-[13px]">
+              <p className="leading-relaxed text-gray-600 text-sm md:text-[15px]">
                 Sự hài lòng của khách hàng chính là sản phẩm của Fogo
               </p>
 
-              {/* Logo Đã thông báo Bộ Công Thương: nhỏ gọn, bỏ viền khung to, kéo sát lên */}
-              <div className="pt-0.5">
+              {/* Logo Đã thông báo Bộ Công Thương: kéo sát lên ngay dưới chữ */}
+              <div className="pt-0">
                 <a
                   href="http://online.gov.vn"
                   target="_blank"
@@ -121,11 +121,11 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => toggleSection('contact')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-base md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Thông tin liên hệ</span>
               <ChevronDown
-                size={18}
+                size={20}
                 className={`text-gray-500 transition-transform duration-300 md:hidden ${
                   openSections.contact ? 'rotate-180' : ''
                 }`}
@@ -133,22 +133,22 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-2.5 md:pt-3 space-y-2.5 md:space-y-3 leading-relaxed text-xs md:text-[13px] ${
+              className={`pt-2.5 md:pt-3 space-y-2.5 md:space-y-3 leading-relaxed text-sm md:text-[15px] ${
                 openSections.contact ? 'block' : 'hidden md:block'
               }`}
             >
               <li className="flex items-start gap-2">
-                <MapPin size={16} className="text-gray-900 shrink-0 mt-0.5" />
+                <MapPin size={17} className="text-gray-900 shrink-0 mt-0.5" />
                 <span>298 Trần Hưng Đạo, phường Nguyễn Cư Trinh, Quận 1, TP.HCM</span>
               </li>
               <li className="flex items-center gap-2">
-                <Phone size={15} className="text-gray-900 shrink-0" />
-                <a href="tel:0566003333" className=" text-gray-900 hover:text-[#d70018] transition-colors">
+                <Phone size={16} className="text-gray-900 shrink-0" />
+                <a href="tel:0566003333" className="text-gray-900 hover:text-[#d70018] transition-colors">
                   (+84)56.600.3333
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={15} className="text-gray-900 shrink-0" />
+                <Mail size={16} className="text-gray-900 shrink-0" />
                 <a href="mailto:fogostore9393@gmail.com" className="hover:text-[#d70018] transition-colors truncate">
                   fogostore9393@gmail.com
                 </a>
@@ -163,11 +163,11 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => toggleSection('support')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-base md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Hỗ trợ khách hàng</span>
               <ChevronDown
-                size={18}
+                size={20}
                 className={`text-gray-500 transition-transform duration-300 md:hidden ${
                   openSections.support ? 'rotate-180' : ''
                 }`}
@@ -175,40 +175,40 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-2.5 md:pt-3 space-y-2 text-xs md:text-[13px] ${
+              className={`pt-2.5 md:pt-3 space-y-2.5 text-sm md:text-[15px] ${
                 openSections.support ? 'block' : 'hidden md:block'
               }`}
             >
               <li>
                 <Link href="/tim-kiem" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5">
-                  <span className="text-[10px] text-gray-400">•</span> Tìm kiếm
+                  <span className="text-xs text-gray-400">•</span> Tìm kiếm
                 </Link>
               </li>
               <li>
                 <Link href="/gioi-thieu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5">
-                  <span className="text-[10px] text-gray-400">•</span> Giới thiệu
+                  <span className="text-xs text-gray-400">•</span> Giới thiệu
                 </Link>
               </li>
               <li>
                 <Link href="/lien-he" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5">
-                  <span className="text-[10px] text-gray-400">•</span> Liên hệ
+                  <span className="text-xs text-gray-400">•</span> Liên hệ
                 </Link>
               </li>
             </ul>
           </div>
 
           {/* ========================================================= */}
-          {/* CỘT 4: LIÊN KẾT                                           */}
+          {/* CỘT 4: LIÊN KẾT (ĐÃ BỎ KHUYẾN MÃI & NỔI BẬT)            */}
           {/* ========================================================= */}
           <div className="border-b border-dashed border-gray-200 md:border-none py-3.5 md:py-0">
             <button
               type="button"
               onClick={() => toggleSection('links')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-base md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Liên kết</span>
               <ChevronDown
-                size={18}
+                size={20}
                 className={`text-gray-500 transition-transform duration-300 md:hidden ${
                   openSections.links ? 'rotate-180' : ''
                 }`}
@@ -216,20 +216,18 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-2.5 md:pt-3 space-y-1.5 text-xs md:text-[13px] ${
+              className={`pt-2.5 md:pt-3 space-y-2 text-sm md:text-[15px] ${
                 openSections.links ? 'block' : 'hidden md:block'
               }`}
             >
-              <li><Link href="/iphone" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPhone</Link></li>
-              <li><Link href="/ipad" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPad</Link></li>
-              <li><Link href="/macbook" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Macbook</Link></li>
-              <li><Link href="/hang-cu/iphone-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPhone Cũ</Link></li>
-              <li><Link href="/hang-cu/ipad-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> iPad Cũ</Link></li>
-              <li><Link href="/hang-cu/macbook-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Macbook Cũ</Link></li>
-              <li><Link href="/watch" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Watch</Link></li>
-              <li><Link href="/phu-kien" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Phụ Kiện</Link></li>
-              <li><Link href="/khuyen-mai" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Sản phẩm khuyến mãi</Link></li>
-              <li><Link href="/noi-bat" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-[10px] text-gray-400">•</span> Sản phẩm nổi bật</Link></li>
+              <li><Link href="/iphone" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> iPhone</Link></li>
+              <li><Link href="/ipad" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> iPad</Link></li>
+              <li><Link href="/macbook" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> Macbook</Link></li>
+              <li><Link href="/hang-cu/iphone-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> iPhone Cũ</Link></li>
+              <li><Link href="/hang-cu/ipad-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> iPad Cũ</Link></li>
+              <li><Link href="/hang-cu/macbook-cu" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> Macbook Cũ</Link></li>
+              <li><Link href="/watch" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> Watch</Link></li>
+              <li><Link href="/phu-kien" className="hover:text-[#d70018] transition-colors font-medium flex items-center gap-1.5"><span className="text-xs text-gray-400">•</span> Phụ Kiện</Link></li>
             </ul>
           </div>
 
@@ -240,11 +238,11 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => toggleSection('policy')}
-              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-sm md:text-base lg:text-lg tracking-tight text-left cursor-pointer md:cursor-default"
+              className="w-full flex items-center justify-between font-bold md:font-black text-gray-900 text-base md:text-lg lg:text-xl tracking-tight text-left cursor-pointer md:cursor-default"
             >
               <span>Chính sách</span>
               <ChevronDown
-                size={18}
+                size={20}
                 className={`text-gray-500 transition-transform duration-300 md:hidden ${
                   openSections.policy ? 'rotate-180' : ''
                 }`}
@@ -252,25 +250,25 @@ export const Footer: React.FC = () => {
             </button>
 
             <ul
-              className={`pt-2.5 md:pt-3 space-y-2 leading-relaxed text-xs md:text-[13px] ${
+              className={`pt-2.5 md:pt-3 space-y-2.5 leading-relaxed text-sm md:text-[15px] ${
                 openSections.policy ? 'block' : 'hidden md:block'
               }`}
             >
               <li>
                 <Link href="/chinh-sach-bao-hanh" className="hover:text-[#d70018] transition-colors font-medium flex items-start gap-1.5">
-                  <span className="text-[10px] text-gray-400 mt-0.5">•</span>
+                  <span className="text-xs text-gray-400 mt-1">•</span>
                   <span>Chính sách bảo hành</span>
                 </Link>
               </li>
               <li>
                 <Link href="/chinh-sach-bao-hanh-linh-kien-sua-chua-macbook" className="hover:text-[#d70018] transition-colors font-medium flex items-start gap-1.5">
-                  <span className="text-[10px] text-gray-400 mt-0.5">•</span>
+                  <span className="text-xs text-gray-400 mt-1">•</span>
                   <span>Chính Sách Bảo Hành Linh Kiện Sửa Chữa Macbook</span>
                 </Link>
               </li>
               <li>
                 <Link href="/chinh-sach-bao-hanh-fogo-care" className="hover:text-[#d70018] transition-colors font-medium flex items-start gap-1.5">
-                  <span className="text-[10px] text-gray-400 mt-0.5">•</span>
+                  <span className="text-xs text-gray-400 mt-1">•</span>
                   <span>Chính sách bảo hành Fogo Care</span>
                 </Link>
               </li>
@@ -280,8 +278,8 @@ export const Footer: React.FC = () => {
         </div>
       </div>
 
-      {/* Dải bản quyền dưới cùng */}
-      <div className="border-t border-gray-100 py-3.5 text-center text-xs text-gray-500 bg-gray-50 font-medium px-4">
+      {/* Dải bản quyền dưới cùng (chữ to hơn) */}
+      <div className="border-t border-gray-100 py-4 text-center text-sm text-gray-500 bg-gray-50 font-medium px-4">
         Copyright © 2026 Fogo Store - Apple Chính Hãng Giá Rẻ Vô Địch. Powered by Haravan
       </div>
 

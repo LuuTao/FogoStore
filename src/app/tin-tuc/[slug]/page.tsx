@@ -60,7 +60,7 @@ export default function PostDetailPage() {
         year: 'numeric',
       });
     } catch {
-      return '22/09/2026';
+      return '23/09/2026';
     }
   };
 
@@ -110,7 +110,7 @@ export default function PostDetailPage() {
     return items;
   }, [post]);
 
-  // Đánh id tự động vào các heading để cuộn mượt khi click
+  // Tự động chèn ID vào các thẻ heading để scroll khi bấm mục lục
   const processedContent = useMemo(() => {
     if (!post?.content) return '';
     let index = 0;
@@ -133,16 +133,16 @@ export default function PostDetailPage() {
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen text-gray-800 flex flex-col font-sans">
-      {/* 1. HEADER CHÍNH GỐC CỦA BẠN */}
+      {/* 1. HEADER CHÍNH GỐC */}
       <Header />
 
-      {/* 2. THANH NAVBAR ĐỎ CỦA BẠN */}
+      {/* 2. NAVBAR ĐỎ GỐC */}
       <Navbar />
 
-      {/* 3. KHUNG NỘI DUNG CHÍNH (ĐÃ MỞ RỘNG VÀ TỐI ƯU CẢ MOBILE LẪN DESKTOP) */}
+      {/* 3. KHUNG NỘI DUNG CHÍNH (MAX WIDTH 1440PX) */}
       <main className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 w-full flex-1">
         
-        {/* BREADCRUMB: Tăng 2px (từ 11px lên 13px) và tự động xuống dòng linh hoạt trên mobile */}
+        {/* BREADCRUMB: Đã tăng 2px và tự động xuống dòng trên mobile */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[13px] sm:text-sm text-gray-500 mb-4 sm:mb-6 leading-relaxed">
           <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">
             Trang chủ
@@ -172,10 +172,9 @@ export default function PostDetailPage() {
             </Link>
           </div>
         ) : (
-          /* BỐ CỤC MỚI: 9 CỘT CHO BÀI VIẾT (RỘNG RÃI) - 3 CỘT CHO SIDEBAR */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
             
-            {/* CỘT NỘI DUNG BÀI VIẾT (RỘNG HƠN ĐÁNG KỂ) */}
+            {/* CỘT TRÁI: BÀI VIẾT CHÍNH (9 CỘT RỘNG RÃI) */}
             <div className="lg:col-span-9 bg-white p-4 sm:p-8 lg:p-10 rounded-2xl border border-gray-200/80 shadow-xs space-y-6">
               
               {/* Tiêu đề & Tác giả */}
@@ -271,35 +270,39 @@ export default function PostDetailPage() {
               )}
             </div>
 
-            {/* CỘT SIDEBAR BÊN PHẢI (3 CỘT) */}
-            <div className="lg:col-span-3 space-y-6">
-              {/* Widget: Bài viết mới nhất */}
-              <div className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
-                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Bài viết mới nhất</h3>
-                  <ChevronDown size={16} className="text-gray-400" />
+            {/* CỘT PHẢI: STICKY SIDEBAR (LƯỚT TRANG VẪN ĐI THEO) */}
+            <div className="lg:col-span-3 space-y-5 sticky top-24">
+              
+              {/* WIDGET 1: BÀI VIẾT MỚI NHẤT (TO HƠN 2PX) */}
+              <div className="bg-white rounded-xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
+                    Bài viết mới nhất
+                  </h3>
+                  <ChevronDown size={17} className="text-gray-400" />
                 </div>
 
-                <div className="space-y-3.5">
+                <div className="space-y-4">
                   {recentPosts.map((rp, index) => (
                     <Link key={rp.id} href={`/tin-tuc/${rp.slug}`} className="flex gap-3 group items-center">
                       <div className="relative shrink-0">
-                        <div className="w-18 h-14 sm:w-20 sm:h-14 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                        <div className="w-22 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                           <img
                             src={getSafeImageUrl(rp.thumbnail)}
                             alt={rp.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
-                        <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#d70018] text-white font-extrabold text-[9px] flex items-center justify-center shadow-xs">
+                        <span className="absolute -top-1.5 -left-1.5 w-4.5 h-4.5 rounded-full bg-[#d70018] text-white font-black text-[10px] flex items-center justify-center shadow-xs">
                           {index + 1}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-bold text-gray-800 group-hover:text-[#d70018] line-clamp-2 leading-snug">
+                        {/* Tiêu đề bài viết tăng cỡ chữ thêm 2px */}
+                        <h4 className="text-sm font-bold text-gray-900 group-hover:text-[#d70018] line-clamp-2 leading-snug transition-colors">
                           {rp.title}
                         </h4>
-                        <span className="text-[10px] text-gray-400 mt-1 block">
+                        <span className="text-[11px] text-gray-400 mt-1 block">
                           Tin tức • {formatDate(rp.createdAt)}
                         </span>
                       </div>
@@ -307,13 +310,48 @@ export default function PostDetailPage() {
                   ))}
                 </div>
               </div>
+
+              {/* WIDGET 2: DANH MỤC PAGE CHUẨN MẪU */}
+              <div className="bg-white rounded-xl border border-gray-200/90 shadow-xs overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
+                  <h3 className="text-sm font-black text-gray-900 tracking-tight">
+                    Danh mục page
+                  </h3>
+                  <span className="text-gray-400 text-xs">▼</span>
+                </div>
+
+                <ul className="divide-y divide-gray-100 text-[13px] font-medium text-gray-700">
+                  <li>
+                    <Link href="/" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                      <span>Trang chủ</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/san-pham" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                      <span>Sản phẩm</span>
+                      <span className="text-gray-400 text-sm font-normal">+</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/tin-tuc" className="px-4 py-3 flex items-center justify-between text-[#d70018] font-bold bg-red-50/30">
+                      <span>Blog</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/gioi-thieu" className="px-4 py-3 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                      <span>Giới thiệu</span>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
             </div>
 
           </div>
         )}
       </main>
 
-      {/* 4. FOOTER GỐC CỦA BẠN */}
+      {/* 4. FOOTER GỐC */}
       <Footer />
     </div>
   );
