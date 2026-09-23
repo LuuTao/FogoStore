@@ -4,7 +4,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   ChevronRight, 
-  ChevronDown, 
   FileText 
 } from 'lucide-react';
 
@@ -71,7 +70,10 @@ export default function NewsListingPage() {
     fetchPosts();
   }, []);
 
+  // Chỉ lấy đúng 4 bài mới nhất cho Widget Sidebar
   const recentPosts = useMemo(() => posts.slice(0, 4), [posts]);
+
+  // Phân trang danh sách bài viết
   const totalPages = Math.ceil(posts.length / postsPerPage) || 1;
   const currentPosts = useMemo(() => {
     const start = (currentPage - 1) * postsPerPage;
@@ -83,14 +85,14 @@ export default function NewsListingPage() {
       <Header />
       <Navbar />
 
-      <main className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-[13px] sm:text-sm text-gray-500 mb-4">
+      <main className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 w-full flex-1">
+        {/* Breadcrumb đồng bộ kiểu Trang chủ / Tin tức */}
+        <nav className="flex items-center gap-2 text-xs sm:text-[13px] text-gray-500 mb-5">
           <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">
             Trang chủ
           </Link>
-          <ChevronRight size={13} className="shrink-0 text-gray-400" />
-          <span className="text-gray-900 font-semibold">Tin tức</span>
+          <span className="text-gray-300">/</span>
+          <span className="text-gray-800 font-bold">Tin tức</span>
         </nav>
 
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mb-6">
@@ -176,13 +178,20 @@ export default function NewsListingPage() {
 
           {/* CỘT PHẢI: STICKY SIDEBAR (4 CỘT) */}
           <div className="lg:col-span-4 space-y-6 sticky top-24">
-            {/* WIDGET 1: BÀI VIẾT MỚI NHẤT */}
+            
+            {/* WIDGET 1: BÀI VIẾT MỚI NHẤT (CHỈ 4 BÀI + CÓ NÚT XEM THÊM KẾ BÊN) */}
             <div className="bg-white rounded-xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
                   Bài viết mới nhất
                 </h3>
-                <ChevronDown size={17} className="text-gray-400" />
+                <Link
+                  href="/tin-tuc"
+                  className="text-xs font-bold text-[#d70018] hover:underline transition-colors flex items-center gap-0.5"
+                >
+                  <span>Xem thêm</span>
+                  <ChevronRight size={14} />
+                </Link>
               </div>
 
               <div className="space-y-4">
@@ -213,7 +222,7 @@ export default function NewsListingPage() {
               </div>
             </div>
 
-            {/* WIDGET 2: DANH MỤC PAGE (TĂNG 3PX) */}
+            {/* WIDGET 2: DANH MỤC PAGE (SẢN PHẨM -> TRANG CHỦ, BLOG -> TIN TỨC) */}
             <div className="bg-white rounded-xl border border-gray-200/90 shadow-xs overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-white">
                 <h3 className="text-[17px] font-black text-gray-900 tracking-tight">
@@ -229,14 +238,14 @@ export default function NewsListingPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/san-pham" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                  <Link href="/" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                     <span>Sản phẩm</span>
                     <span className="text-gray-400 text-base font-normal">+</span>
                   </Link>
                 </li>
                 <li>
                   <Link href="/tin-tuc" className="px-5 py-3.5 flex items-center justify-between text-[#d70018] font-bold bg-red-50/30">
-                    <span>Blog</span>
+                    <span>Tin tức</span>
                   </Link>
                 </li>
                 <li>

@@ -8,7 +8,6 @@ import {
   Calendar, 
   User, 
   Tag, 
-  ChevronDown, 
   FileText 
 } from 'lucide-react';
 
@@ -126,7 +125,8 @@ export default function PostDetailPage() {
     }
   };
 
-  const recentPosts = useMemo(() => allPosts.slice(0, 5), [allPosts]);
+  // Chỉ lấy đúng 4 bài mới nhất cho Widget
+  const recentPosts = useMemo(() => allPosts.slice(0, 4), [allPosts]);
   const relatedPosts = useMemo(() => allPosts.filter((p) => p.slug !== slug).slice(0, 4), [allPosts, slug]);
 
   return (
@@ -134,17 +134,18 @@ export default function PostDetailPage() {
       <Header />
       <Navbar />
 
-      <main className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 w-full flex-1">
-        <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[13px] sm:text-sm text-gray-500 mb-4 sm:mb-6 leading-relaxed">
+      <main className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 w-full flex-1">
+        {/* Breadcrumb đồng bộ kiểu Trang chủ / Tin tức / Tiêu đề */}
+        <nav className="flex flex-wrap items-center gap-2 text-xs sm:text-[13px] text-gray-500 mb-5 leading-relaxed">
           <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">
             Trang chủ
           </Link>
-          <ChevronRight size={13} className="shrink-0 text-gray-400" />
+          <span className="text-gray-300">/</span>
           <Link href="/tin-tuc" className="hover:text-[#d70018] transition-colors shrink-0">
             Tin tức
           </Link>
-          <ChevronRight size={13} className="shrink-0 text-gray-400" />
-          <span className="text-gray-900 font-semibold break-words">
+          <span className="text-gray-300">/</span>
+          <span className="text-gray-800 font-bold break-words">
             {post?.title || 'Đang tải bài viết...'}
           </span>
         </nav>
@@ -165,7 +166,7 @@ export default function PostDetailPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
-            {/* CỘT NỘI DUNG BÀI VIẾT (9 CỘT) */}
+            {/* CỘT NỘI DUNG BÀI VIẾT (9 CỘT RỘNG RÃI) */}
             <div className="lg:col-span-9 bg-white p-4 sm:p-8 lg:p-10 rounded-2xl border border-gray-200/80 shadow-xs space-y-6">
               <div className="space-y-3">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-tight">
@@ -257,13 +258,19 @@ export default function PostDetailPage() {
 
             {/* CỘT PHẢI: STICKY SIDEBAR (3 CỘT) */}
             <div className="lg:col-span-3 space-y-5 sticky top-24">
-              {/* WIDGET 1: BÀI VIẾT MỚI NHẤT */}
+              {/* WIDGET 1: BÀI VIẾT MỚI NHẤT (CHỈ 4 BÀI + CÓ NÚT XEM THÊM KẾ BÊN) */}
               <div className="bg-white rounded-xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                   <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">
                     Bài viết mới nhất
                   </h3>
-                  <ChevronDown size={17} className="text-gray-400" />
+                  <Link
+                    href="/tin-tuc"
+                    className="text-xs font-bold text-[#d70018] hover:underline transition-colors flex items-center gap-0.5"
+                  >
+                    <span>Xem thêm</span>
+                    <ChevronRight size={14} />
+                  </Link>
                 </div>
 
                 <div className="space-y-4">
@@ -294,7 +301,7 @@ export default function PostDetailPage() {
                 </div>
               </div>
 
-              {/* WIDGET 2: DANH MỤC PAGE (TĂNG 3PX) */}
+              {/* WIDGET 2: DANH MỤC PAGE (SẢN PHẨM -> TRANG CHỦ, BLOG -> TIN TỨC) */}
               <div className="bg-white rounded-xl border border-gray-200/90 shadow-xs overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-white">
                   <h3 className="text-[17px] font-black text-gray-900 tracking-tight">
@@ -310,14 +317,14 @@ export default function PostDetailPage() {
                     </Link>
                   </li>
                   <li>
-                    <Link href="/san-pham" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
+                    <Link href="/" className="px-5 py-3.5 flex items-center justify-between hover:text-[#d70018] hover:bg-gray-50/60 transition-colors">
                       <span>Sản phẩm</span>
                       <span className="text-gray-400 text-base font-normal">+</span>
                     </Link>
                   </li>
                   <li>
                     <Link href="/tin-tuc" className="px-5 py-3.5 flex items-center justify-between text-[#d70018] font-bold bg-red-50/30">
-                      <span>Blog</span>
+                      <span>Tin tức</span>
                     </Link>
                   </li>
                   <li>
