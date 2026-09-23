@@ -9,14 +9,9 @@ import {
   User, 
   Tag, 
   ChevronDown, 
-  FileText,
-  ShieldCheck,
-  RotateCcw,
-  Truck,
-  Menu as MenuIcon
+  FileText 
 } from 'lucide-react';
 
-// Import trực tiếp 3 component gốc của hệ thống Fogo Store
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -92,7 +87,7 @@ export default function PostDetailPage() {
     }
   }, [slug]);
 
-  // Bóc tách danh sách Heading 2 và Heading 3 tạo Mục Lục
+  // Bóc tách Heading 2 và Heading 3 tạo Mục Lục
   const tocItems = useMemo<TocItem[]>(() => {
     if (!post?.content) return [];
     const regex = /<(h[23])[^>]*>(.*?)<\/\1>/gi;
@@ -115,7 +110,7 @@ export default function PostDetailPage() {
     return items;
   }, [post]);
 
-  // Tự động chèn ID vào các thẻ heading để scroll khi bấm mục lục
+  // Đánh id tự động vào các heading để cuộn mượt khi click
   const processedContent = useMemo(() => {
     if (!post?.content) return '';
     let index = 0;
@@ -134,50 +129,32 @@ export default function PostDetailPage() {
   };
 
   const recentPosts = useMemo(() => allPosts.slice(0, 5), [allPosts]);
-  const relatedPosts = useMemo(() => allPosts.filter((p) => p.slug !== slug).slice(0, 3), [allPosts, slug]);
+  const relatedPosts = useMemo(() => allPosts.filter((p) => p.slug !== slug).slice(0, 4), [allPosts, slug]);
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen text-gray-800 flex flex-col font-sans">
       {/* 1. HEADER CHÍNH GỐC CỦA BẠN */}
       <Header />
 
-      {/* 2. THANH NAVBAR ĐỎ CỦA BẠN (ĐẦY ĐỦ DROPDOWN ĐA CẤP HOVER) */}
+      {/* 2. THANH NAVBAR ĐỎ CỦA BẠN */}
       <Navbar />
 
-      {/* 3. THANH CAM KẾT (DƯỚI NAVBAR) */}
-      <div className="bg-white border-b border-gray-200 py-2 text-[11px] text-gray-600 hidden sm:block shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 font-bold text-gray-800">
-            <MenuIcon size={14} className="text-[#d70018]" />
-            <span>DANH MỤC SẢN PHẨM</span>
-          </div>
-          <div className="flex items-center gap-6 font-medium">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-emerald-600" /> Đảm bảo chất lượng
-            </span>
-            <span className="flex items-center gap-1.5">
-              <RotateCcw size={14} className="text-blue-600" /> Thu cũ đổi mới
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Truck size={14} className="text-amber-600" /> Miễn phí vận chuyển
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. NỘI DUNG CHÍNH (LAYOUT 2 CỘT: 8 CỘT BÀI VIẾT - 4 CỘT WIDGET) */}
-      <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-[11px] text-gray-500 mb-4 overflow-hidden truncate">
+      {/* 3. KHUNG NỘI DUNG CHÍNH (ĐÃ MỞ RỘNG VÀ TỐI ƯU CẢ MOBILE LẪN DESKTOP) */}
+      <main className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 w-full flex-1">
+        
+        {/* BREADCRUMB: Tăng 2px (từ 11px lên 13px) và tự động xuống dòng linh hoạt trên mobile */}
+        <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[13px] sm:text-sm text-gray-500 mb-4 sm:mb-6 leading-relaxed">
           <Link href="/" className="hover:text-[#d70018] transition-colors shrink-0">
             Trang chủ
           </Link>
-          <ChevronRight size={12} className="shrink-0 text-gray-400" />
+          <ChevronRight size={13} className="shrink-0 text-gray-400" />
           <Link href="/tin-tuc" className="hover:text-[#d70018] transition-colors shrink-0">
             Tin tức
           </Link>
-          <ChevronRight size={12} className="shrink-0 text-gray-400" />
-          <span className="text-gray-800 font-semibold truncate">{post?.title || 'Đang tải bài viết...'}</span>
+          <ChevronRight size={13} className="shrink-0 text-gray-400" />
+          <span className="text-gray-900 font-semibold break-words">
+            {post?.title || 'Đang tải bài viết...'}
+          </span>
         </nav>
 
         {loading ? (
@@ -195,25 +172,26 @@ export default function PostDetailPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          /* BỐ CỤC MỚI: 9 CỘT CHO BÀI VIẾT (RỘNG RÃI) - 3 CỘT CHO SIDEBAR */
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
             
-            {/* CỘT NỘI DUNG BÀI VIẾT (8 CỘT) */}
-            <div className="lg:col-span-8 bg-white p-5 sm:p-8 rounded-xl border border-gray-200/80 shadow-xs space-y-6">
+            {/* CỘT NỘI DUNG BÀI VIẾT (RỘNG HƠN ĐÁNG KỂ) */}
+            <div className="lg:col-span-9 bg-white p-4 sm:p-8 lg:p-10 rounded-2xl border border-gray-200/80 shadow-xs space-y-6">
               
               {/* Tiêu đề & Tác giả */}
-              <div className="space-y-2">
-                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">
+              <div className="space-y-3">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-tight">
                   {post.title}
                 </h1>
-                <div className="flex items-center gap-3 text-xs text-gray-400">
-                  <span className="flex items-center gap-1 text-gray-600 font-medium">
-                    <User size={13} className="text-[#d70018]" />
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-[13px] text-gray-400">
+                  <span className="flex items-center gap-1.5 text-gray-600 font-medium">
+                    <User size={14} className="text-[#d70018]" />
                     <span>bởi</span>
                     <strong className="text-gray-800">Fogo Store Team</strong>
                   </span>
                   <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Calendar size={13} className="text-gray-400" />
+                  <span className="flex items-center gap-1.5">
+                    <Calendar size={14} className="text-gray-400" />
                     <span>{formatDate(post.createdAt)}</span>
                   </span>
                 </div>
@@ -233,7 +211,7 @@ export default function PostDetailPage() {
                     </button>
                   </div>
                   {showToc && (
-                    <ul className="space-y-2 text-xs font-medium text-gray-700">
+                    <ul className="space-y-2 text-xs sm:text-[13px] font-medium text-gray-700">
                       {tocItems.map((item) => (
                         <li
                           key={item.id}
@@ -242,8 +220,8 @@ export default function PostDetailPage() {
                             item.level === 'h3' ? 'ml-4 text-gray-600' : 'font-semibold text-gray-800'
                           }`}
                         >
-                          <span className="text-[#d70018] font-bold">•</span>
-                          <span>{item.text}</span>
+                          <span className="text-[#d70018] font-bold shrink-0">•</span>
+                          <span className="leading-snug">{item.text}</span>
                         </li>
                       ))}
                     </ul>
@@ -253,14 +231,14 @@ export default function PostDetailPage() {
 
               {/* Nội dung chi tiết bài viết */}
               <div
-                className="prose prose-sm sm:prose-base max-w-none text-gray-800 leading-relaxed space-y-4 pt-2 [&>h2]:text-lg [&>h2]:font-bold [&>h2]:text-gray-900 [&>h2]:mt-8 [&>h2]:mb-3 [&>h2]:scroll-mt-32 [&>h3]:text-base [&>h3]:font-bold [&>h3]:text-gray-800 [&>h3]:mt-5 [&>h3]:mb-2 [&>h3]:scroll-mt-32 [&>p]:text-xs [&>p]:sm:text-sm [&>p]:leading-relaxed [&>p]:text-gray-700 [&>img]:rounded-xl [&>img]:mx-auto [&>img]:my-4 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-xs [&>ul]:space-y-1"
+                className="prose prose-sm sm:prose-base max-w-none text-gray-800 leading-relaxed space-y-4 pt-2 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-gray-900 [&>h2]:mt-8 [&>h2]:mb-3 [&>h2]:scroll-mt-28 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:text-gray-800 [&>h3]:mt-6 [&>h3]:mb-2 [&>h3]:scroll-mt-28 [&>p]:text-sm sm:[&>p]:text-base [&>p]:leading-relaxed [&>p]:text-gray-700 [&>img]:rounded-xl [&>img]:mx-auto [&>img]:my-5 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-sm [&>ul]:space-y-1.5"
                 dangerouslySetInnerHTML={{ __html: processedContent || `<p>${post.summary || ''}</p>` }}
               />
 
               {/* Tags */}
-              <div className="flex items-center gap-2 pt-4 border-t border-gray-100 text-xs text-gray-600">
+              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 text-xs sm:text-sm text-gray-600">
                 <span className="font-bold flex items-center gap-1 text-gray-800">
-                  <Tag size={13} className="text-[#d70018]" /> Tags:
+                  <Tag size={14} className="text-[#d70018]" /> Tags:
                 </span>
                 <span className="hover:text-[#d70018] cursor-pointer">#iPhone</span>,
                 <span className="hover:text-[#d70018] cursor-pointer">#iPad</span>,
@@ -271,8 +249,8 @@ export default function PostDetailPage() {
               {/* Bài viết liên quan */}
               {relatedPosts.length > 0 && (
                 <div className="pt-6 border-t border-gray-100 space-y-4">
-                  <h3 className="text-base font-black text-gray-900 tracking-tight">Bài viết liên quan</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <h3 className="text-lg font-black text-gray-900 tracking-tight">Bài viết liên quan</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {relatedPosts.map((rel) => (
                       <Link key={rel.id} href={`/tin-tuc/${rel.slug}`} className="group block space-y-2">
                         <div className="aspect-16/10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
@@ -282,10 +260,10 @@ export default function PostDetailPage() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
-                        <h4 className="text-xs font-bold text-gray-800 group-hover:text-[#d70018] line-clamp-2 leading-snug">
+                        <h4 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-[#d70018] line-clamp-2 leading-snug">
                           {rel.title}
                         </h4>
-                        <p className="text-[10px] text-gray-400">{formatDate(rel.createdAt)}</p>
+                        <p className="text-[11px] text-gray-400">{formatDate(rel.createdAt)}</p>
                       </Link>
                     ))}
                   </div>
@@ -293,11 +271,10 @@ export default function PostDetailPage() {
               )}
             </div>
 
-            {/* CỘT SIDEBAR BÊN PHẢI (4 CỘT) */}
-            <div className="lg:col-span-4 space-y-6">
-              
-              {/* WIDGET DUY NHẤT: BÀI VIẾT MỚI NHẤT */}
-              <div className="bg-white rounded-xl border border-gray-200/80 p-4 sm:p-5 shadow-xs space-y-4">
+            {/* CỘT SIDEBAR BÊN PHẢI (3 CỘT) */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Widget: Bài viết mới nhất */}
+              <div className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Bài viết mới nhất</h3>
                   <ChevronDown size={16} className="text-gray-400" />
@@ -307,7 +284,7 @@ export default function PostDetailPage() {
                   {recentPosts.map((rp, index) => (
                     <Link key={rp.id} href={`/tin-tuc/${rp.slug}`} className="flex gap-3 group items-center">
                       <div className="relative shrink-0">
-                        <div className="w-20 h-14 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                        <div className="w-18 h-14 sm:w-20 sm:h-14 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
                           <img
                             src={getSafeImageUrl(rp.thumbnail)}
                             alt={rp.title}
@@ -330,14 +307,13 @@ export default function PostDetailPage() {
                   ))}
                 </div>
               </div>
-
             </div>
 
           </div>
         )}
       </main>
 
-      {/* 5. FOOTER CHÍNH GỐC CỦA BẠN (CÓ LOGO BỘ CÔNG THƯƠNG, ZALO, MESSENGER) */}
+      {/* 4. FOOTER GỐC CỦA BẠN */}
       <Footer />
     </div>
   );
