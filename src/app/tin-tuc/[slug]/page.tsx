@@ -86,6 +86,19 @@ export default function PostDetailPage() {
     }
   }, [slug]);
 
+  // Tự động tìm ảnh đại diện: nếu thumbnail rỗng thì trích xuất thẻ <img> đầu tiên trong nội dung
+  const featuredImageUrl = useMemo(() => {
+    if (post?.thumbnail) return getSafeImageUrl(post.thumbnail);
+    if (post?.content) {
+      const match = post.content.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (match && match[1]) {
+        return getSafeImageUrl(match[1]);
+      }
+    }
+    return null;
+  }, [post]);
+
+  // Bóc tách Heading 2 và Heading 3 để tạo Mục Lục
   const tocItems = useMemo<TocItem[]>(() => {
     if (!post?.content) return [];
     const regex = /<(h[23])[^>]*>(.*?)<\/\1>/gi;
@@ -108,6 +121,7 @@ export default function PostDetailPage() {
     return items;
   }, [post]);
 
+  // Đánh id tự động vào các heading để cuộn mượt khi click
   const processedContent = useMemo(() => {
     if (!post?.content) return '';
     let index = 0;
@@ -175,6 +189,8 @@ export default function PostDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* CỘT NỘI DUNG BÀI VIẾT (8 CỘT) */}
               <div className="lg:col-span-8 bg-white p-4 sm:p-7 rounded-2xl border border-gray-200/90 shadow-xs space-y-6">
+                
+                {/* 1. TIÊU ĐỀ & NGÀY ĐĂNG */}
                 <div className="space-y-3">
                   <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-tight">
                     {post.title}
@@ -193,6 +209,21 @@ export default function PostDetailPage() {
                   </div>
                 </div>
 
+                {/* 2. ẢNH ĐẠI DIỆN (AVATAR/THUMBNAIL) NẰM NGAY DƯỚI TIÊU ĐỀ */}
+                {featuredImageUrl && (
+                  <div className="w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shadow-2xs">
+                    <img
+                      src={featuredImageUrl}
+                      alt={post.title}
+                      className="w-full max-h-[500px] object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/800x450?text=Fogo+Store';
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* 3. BẢNG MỤC LỤC CÁC NỘI DUNG CHÍNH */}
                 {tocItems.length > 0 && (
                   <div className="bg-[#fdfefe] border border-gray-200 rounded-xl p-4 sm:p-5 shadow-2xs">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 mb-3">
@@ -224,11 +255,13 @@ export default function PostDetailPage() {
                   </div>
                 )}
 
+                {/* 4. NỘI DUNG BÀI VIẾT */}
                 <div
                   className="prose prose-sm sm:prose-base max-w-none text-gray-800 leading-relaxed space-y-4 pt-2 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-gray-900 [&>h2]:mt-8 [&>h2]:mb-3 [&>h2]:scroll-mt-28 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:text-gray-800 [&>h3]:mt-6 [&>h3]:mb-2 [&>h3]:scroll-mt-28 [&>p]:text-sm sm:[&>p]:text-base [&>p]:leading-relaxed [&>p]:text-gray-700 [&>img]:rounded-xl [&>img]:mx-auto [&>img]:my-5 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-sm [&>ul]:space-y-1.5"
                   dangerouslySetInnerHTML={{ __html: processedContent || `<p>${post.summary || ''}</p>` }}
                 />
 
+                {/* 5. TAGS */}
                 <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 text-xs sm:text-sm text-gray-600">
                   <span className="font-bold flex items-center gap-1 text-gray-800">
                     <Tag size={14} className="text-[#d70018]" /> Tags:
@@ -239,6 +272,7 @@ export default function PostDetailPage() {
                   <span className="hover:text-[#d70018] cursor-pointer">#TinCôngNghệ</span>
                 </div>
 
+                {/* 6. BÀI VIẾT LIÊN QUAN */}
                 {relatedPosts.length > 0 && (
                   <div className="pt-6 border-t border-gray-100 space-y-4">
                     <h3 className="text-lg font-black text-gray-900 tracking-tight">Bài viết liên quan</h3>
