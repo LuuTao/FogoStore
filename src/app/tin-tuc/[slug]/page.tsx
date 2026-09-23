@@ -13,11 +13,12 @@ import {
   ShieldCheck,
   RotateCcw,
   Truck,
-  Menu
+  Menu as MenuIcon
 } from 'lucide-react';
 
-// Import trực tiếp Header & Footer gốc của hệ thống
+// Import trực tiếp 3 component gốc của hệ thống Fogo Store
 import { Header } from '@/components/layout/Header';
+import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
 interface Post {
@@ -91,7 +92,7 @@ export default function PostDetailPage() {
     }
   }, [slug]);
 
-  // 1. Tự động bóc tách danh sách Heading 2 và Heading 3 (Hỗ trợ từ file Word/HTML)
+  // Bóc tách danh sách Heading 2 và Heading 3 tạo Mục Lục
   const tocItems = useMemo<TocItem[]>(() => {
     if (!post?.content) return [];
     const regex = /<(h[23])[^>]*>(.*?)<\/\1>/gi;
@@ -114,7 +115,7 @@ export default function PostDetailPage() {
     return items;
   }, [post]);
 
-  // 2. Tự động đánh id vào các heading trong nội dung
+  // Tự động chèn ID vào các thẻ heading để scroll khi bấm mục lục
   const processedContent = useMemo(() => {
     if (!post?.content) return '';
     let index = 0;
@@ -132,22 +133,25 @@ export default function PostDetailPage() {
     }
   };
 
-  const recentPosts = useMemo(() => allPosts.slice(0, 4), [allPosts]);
+  const recentPosts = useMemo(() => allPosts.slice(0, 5), [allPosts]);
   const relatedPosts = useMemo(() => allPosts.filter((p) => p.slug !== slug).slice(0, 3), [allPosts, slug]);
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen text-gray-800 flex flex-col font-sans">
-      {/* 1. HEADER GỐC CỦA BẠN */}
+      {/* 1. HEADER CHÍNH GỐC CỦA BẠN */}
       <Header />
 
-      {/* 2. THANH SUB-HEADER CAM KẾT (DƯỚI MENU ĐỎ) */}
-      <div className="bg-gray-50 border-b border-gray-200 py-2 text-[11px] text-gray-600 hidden sm:block">
+      {/* 2. THANH NAVBAR ĐỎ CỦA BẠN (ĐẦY ĐỦ DROPDOWN ĐA CẤP HOVER) */}
+      <Navbar />
+
+      {/* 3. THANH CAM KẾT (DƯỚI NAVBAR) */}
+      <div className="bg-white border-b border-gray-200 py-2 text-[11px] text-gray-600 hidden sm:block shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-1.5 font-bold text-gray-800">
-            <Menu size={14} className="text-[#d70018]" />
+            <MenuIcon size={14} className="text-[#d70018]" />
             <span>DANH MỤC SẢN PHẨM</span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 font-medium">
             <span className="flex items-center gap-1.5">
               <ShieldCheck size={14} className="text-emerald-600" /> Đảm bảo chất lượng
             </span>
@@ -161,7 +165,7 @@ export default function PostDetailPage() {
         </div>
       </div>
 
-      {/* 3. NỘI DUNG CHÍNH (ĐẢM BẢO 2 CỘT 8 - 4 LUÔN NẰM NGANG) */}
+      {/* 4. NỘI DUNG CHÍNH (LAYOUT 2 CỘT: 8 CỘT BÀI VIẾT - 4 CỘT WIDGET) */}
       <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-[11px] text-gray-500 mb-4 overflow-hidden truncate">
@@ -196,7 +200,7 @@ export default function PostDetailPage() {
             {/* CỘT NỘI DUNG BÀI VIẾT (8 CỘT) */}
             <div className="lg:col-span-8 bg-white p-5 sm:p-8 rounded-xl border border-gray-200/80 shadow-xs space-y-6">
               
-              {/* Tiêu đề & tác giả */}
+              {/* Tiêu đề & Tác giả */}
               <div className="space-y-2">
                 <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">
                   {post.title}
@@ -247,28 +251,14 @@ export default function PostDetailPage() {
                 </div>
               )}
 
-              {/* Nội dung bài viết */}
+              {/* Nội dung chi tiết bài viết */}
               <div
-                className="prose prose-sm sm:prose-base max-w-none text-gray-800 leading-relaxed space-y-4 pt-2 [&>h2]:text-lg [&>h2]:font-bold [&>h2]:text-gray-900 [&>h2]:mt-8 [&>h2]:mb-3 [&>h2]:scroll-mt-28 [&>h3]:text-base [&>h3]:font-bold [&>h3]:text-gray-800 [&>h3]:mt-5 [&>h3]:mb-2 [&>h3]:scroll-mt-28 [&>p]:text-xs [&>p]:sm:text-sm [&>p]:leading-relaxed [&>p]:text-gray-700 [&>img]:rounded-xl [&>img]:mx-auto [&>img]:my-4 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-xs [&>ul]:space-y-1"
+                className="prose prose-sm sm:prose-base max-w-none text-gray-800 leading-relaxed space-y-4 pt-2 [&>h2]:text-lg [&>h2]:font-bold [&>h2]:text-gray-900 [&>h2]:mt-8 [&>h2]:mb-3 [&>h2]:scroll-mt-32 [&>h3]:text-base [&>h3]:font-bold [&>h3]:text-gray-800 [&>h3]:mt-5 [&>h3]:mb-2 [&>h3]:scroll-mt-32 [&>p]:text-xs [&>p]:sm:text-sm [&>p]:leading-relaxed [&>p]:text-gray-700 [&>img]:rounded-xl [&>img]:mx-auto [&>img]:my-4 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-xs [&>ul]:space-y-1"
                 dangerouslySetInnerHTML={{ __html: processedContent || `<p>${post.summary || ''}</p>` }}
               />
 
-              {/* Banner CTA */}
-              <div className="bg-[#d70018] text-white p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-                <div>
-                  <p className="font-black text-sm sm:text-base uppercase tracking-tight">MUA SẢN PHẨM APPLE TẠI FOGO STORE CỰC ƯU ĐÃI</p>
-                  <p className="text-[11px] text-red-100">Bảo hành 12 tháng 1 đổi 1 • Trả góp 0% duyệt nhanh</p>
-                </div>
-                <Link
-                  href="/"
-                  className="px-4 py-2 bg-white text-[#d70018] rounded-lg font-bold text-xs hover:bg-gray-100 shrink-0 transition-colors shadow-2xs"
-                >
-                  Khám phá ngay
-                </Link>
-              </div>
-
               {/* Tags */}
-              <div className="flex items-center gap-2 pt-3 border-t border-gray-100 text-xs text-gray-600">
+              <div className="flex items-center gap-2 pt-4 border-t border-gray-100 text-xs text-gray-600">
                 <span className="font-bold flex items-center gap-1 text-gray-800">
                   <Tag size={13} className="text-[#d70018]" /> Tags:
                 </span>
@@ -306,7 +296,7 @@ export default function PostDetailPage() {
             {/* CỘT SIDEBAR BÊN PHẢI (4 CỘT) */}
             <div className="lg:col-span-4 space-y-6">
               
-              {/* Widget 1: Bài viết mới nhất */}
+              {/* WIDGET DUY NHẤT: BÀI VIẾT MỚI NHẤT */}
               <div className="bg-white rounded-xl border border-gray-200/80 p-4 sm:p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Bài viết mới nhất</h3>
@@ -341,45 +331,13 @@ export default function PostDetailPage() {
                 </div>
               </div>
 
-              {/* Widget 2: Danh mục bài viết */}
-              <div className="bg-white rounded-xl border border-gray-200/80 p-4 sm:p-5 shadow-xs space-y-3">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
-                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Danh mục bài viết</h3>
-                  <ChevronDown size={16} className="text-gray-400" />
-                </div>
-
-                <ul className="divide-y divide-gray-100 text-xs font-semibold text-gray-700">
-                  <li>
-                    <Link href="/" className="py-2.5 flex items-center justify-between hover:text-[#d70018] transition-colors">
-                      <span>Trang chủ</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/san-pham" className="py-2.5 flex items-center justify-between hover:text-[#d70018] transition-colors">
-                      <span>Sản phẩm</span>
-                      <span className="text-gray-400">+</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/tin-tuc" className="py-2.5 flex items-center justify-between text-[#d70018] font-bold">
-                      <span>Blog Tin tức</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/gioi-thieu" className="py-2.5 flex items-center justify-between hover:text-[#d70018] transition-colors">
-                      <span>Giới thiệu</span>
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
             </div>
 
           </div>
         )}
       </main>
 
-      {/* 4. FOOTER GỐC CỦA BẠN (CÓ LOGO BỘ CÔNG THƯƠNG, NÚT ZALO & MESSENGER) */}
+      {/* 5. FOOTER CHÍNH GỐC CỦA BẠN (CÓ LOGO BỘ CÔNG THƯƠNG, ZALO, MESSENGER) */}
       <Footer />
     </div>
   );
