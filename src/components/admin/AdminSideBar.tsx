@@ -24,7 +24,7 @@ const MENU_ITEMS = [
   { href: '/admin/don-hang', label: 'Quản Lý Đơn Hàng', icon: ShoppingCart },
   { href: '/admin/ton-kho', label: 'Quản Lý Tồn Kho', icon: Layers },
   { href: '/admin/nhap-excel', label: 'Nhập Sản Phẩm Excel', icon: FileSpreadsheet },
-  { href: '/admin/bai-viet', label: 'Bài Viết & SEO Blog', icon: FileText },
+  { href: '/admin/bai-viet', label: 'Quản Lý Bài Viết SEO ', icon: FileText },
   { href: '/admin/banner', label: 'Quản Lý Banner', icon: ImageIcon },
   { href: '/admin/menu', label: 'Quản Lý Menu', icon: ImageIcon },
   { href: '/admin/manage-seo', label: 'Quản Lý SEO', icon: ImageIcon },
