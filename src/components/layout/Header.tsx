@@ -289,6 +289,7 @@ export const Header: React.FC = () => {
   }, []);
 
   // Logic tìm kiếm: CHẶN HÀNG ẢO, LOẠI BỎ HÀNG KHÔNG ẢNH/ẢNH RÁC VÀ KHỬ TRÙNG LẶP TÊN
+  // Logic tìm kiếm an toàn và chính xác
   useEffect(() => {
     const rawQuery = searchTerm.trim();
     if (!rawQuery) {
@@ -307,35 +308,36 @@ export const Header: React.FC = () => {
             // 1. Phải có ID và Tên hợp lệ
             if (!item.id || !item.name || item.name.trim() === '') return false;
 
-            // 2. Chặn hàng ảo: Bắt buộc phải có ảnh thực tế (không lấy chuỗi rỗng hoặc placeholder)
-            const firstVariant = item.variants?.[0] || {};
-            const rawImg =
-              firstVariant.images?.[0] ||
-              firstVariant.imageUrl ||
-              item.imageUrl ||
-              item.thumbnail ||
-              '';
-            if (!rawImg || rawImg.includes('placeholder.png')) return false;
-
-            // 3. Khớp từ khóa tìm kiếm
+            // 2. Khớp từ khóa tìm kiếm (Tên, Danh mục, Slug)
             const name = (item.name || '').toLowerCase();
             const cat = (item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
-            const brand = (item.brand || '').toLowerCase();
-            return name.includes(query) || cat.includes(query) || brand.includes(query);
+            const slug = (item.slug || '').toLowerCase();
+
+            return name.includes(query) || cat.includes(query) || slug.includes(query);
           })
-          // 4. Khử trùng lặp: Nếu trùng tên sản phẩm thì chỉ giữ lại 1 sản phẩm đại diện
+          // 3. Khử trùng lặp theo tên
           .filter((item: any, index: number, self: any[]) =>
             index === self.findIndex((t: any) => t.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
           )
           .slice(0, 6)
           .map((item: any) => {
             const firstVariant = item.variants?.[0] || {};
-            const rawImg =
-              firstVariant.images?.[0] ||
-              firstVariant.imageUrl ||
-              item.imageUrl ||
-              item.thumbnail ||
-              '/placeholder.png';
+            
+            // Xử lý lấy ảnh từ mọi vị trí khả dĩ
+            let rawImg = '';
+            if (Array.isArray(firstVariant.images) && firstVariant.images.length > 0) {
+              rawImg = firstVariant.images[0];
+            } else if (typeof firstVariant.images === 'string' && firstVariant.images) {
+              try {
+                const parsed = JSON.parse(firstVariant.images);
+                rawImg = Array.isArray(parsed) ? parsed[0] : parsed;
+              } catch {
+                rawImg = firstVariant.images;
+              }
+            } else {
+              rawImg = firstVariant.imageUrl || item.imageUrl || item.thumbnail || (Array.isArray(item.images) ? item.images[0] : '') || '/placeholder.png';
+            }
+
             const price = firstVariant.price !== undefined ? firstVariant.price : (item.price || 0);
 
             return {
@@ -355,7 +357,7 @@ export const Header: React.FC = () => {
         setShowDropdown(true);
         setIsSearching(false);
       } else {
-        // Fallback: Gọi API trực tiếp nếu cache chưa kịp tải nhưng vẫn qua bộ lọc chặt chẽ
+        // Fallback: Gọi trực tiếp API
         try {
           const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(query)}`);
           if (res.ok) {
