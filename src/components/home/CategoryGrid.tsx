@@ -7,16 +7,30 @@ import { QUICK_CATEGORIES } from '@/data/quickCategories';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
+/**
+ * Xử lý chính xác đường dẫn ảnh:
+ * - Nếu là ảnh nội bộ thư mục public (bắt đầu bằng '/'): GIỮ NGUYÊN để Next.js tự load từ máy khách
+ * - Nếu là URL online hoặc base64: GIỮ NGUYÊN
+ * - Chỉ nối API_URL khi là ảnh upload từ backend
+ */
 const resolveImageUrl = (url?: string | null): string => {
   if (!url) return '';
+  
+  // 1. Ảnh nội bộ trong thư mục public của Next.js
+  if (url.startsWith('/')) {
+    return url;
+  }
+
+  // 2. Ảnh từ cloud hoặc link web ngoài
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
     if (url.includes('localhost:')) {
       return url.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
     }
     return url;
   }
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${API_URL}${cleanPath}`;
+
+  // 3. Ảnh upload từ backend Render
+  return `${API_URL}/${url}`;
 };
 
 const DEFAULT_CATEGORY_BANNERS = [
@@ -51,7 +65,7 @@ export const CategoryGrid: React.FC = () => {
   const [categories, setCategories] = useState<any[]>(QUICK_CATEGORIES);
 
   const loadData = useCallback(async () => {
-    // 1. Đọc nhanh từ localStorage
+    // 1. Đọc nhanh từ localStorage nếu có cấu hình từ Admin
     try {
       const raw = localStorage.getItem('fogo_banners_config');
       if (raw) {
@@ -65,8 +79,8 @@ export const CategoryGrid: React.FC = () => {
               adminCatBanners.slice(0, 4).map((it: any, idx: number) => ({
                 id: it.id || `cb-${idx}`,
                 name: it.name || it.title || `banner${idx + 1}`,
-                link: it.link || it.linkUrl || '/',
-                imageUrl: resolveImageUrl(it.imageUrl),
+                link: it.link || it.linkUrl || DEFAULT_CATEGORY_BANNERS[idx]?.link || '/',
+                imageUrl: resolveImageUrl(it.imageUrl) || DEFAULT_CATEGORY_BANNERS[idx]?.imageUrl,
               }))
             );
           }
@@ -90,7 +104,7 @@ export const CategoryGrid: React.FC = () => {
       console.warn('Lỗi nạp cache localStorage:', e);
     }
 
-    // 2. Fetch mới nhất từ API Backend
+    // 2. Fetch mới nhất từ API Backend (nếu lỗi mạng thì vẫn giữ ảnh mặc định)
     try {
       const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
@@ -105,8 +119,8 @@ export const CategoryGrid: React.FC = () => {
               liveCatBanners.slice(0, 4).map((it: any, idx: number) => ({
                 id: it.id || `cb-${idx}`,
                 name: it.name || it.title || `banner${idx + 1}`,
-                link: it.link || it.linkUrl || '/',
-                imageUrl: resolveImageUrl(it.imageUrl),
+                link: it.link || it.linkUrl || DEFAULT_CATEGORY_BANNERS[idx]?.link || '/',
+                imageUrl: resolveImageUrl(it.imageUrl) || DEFAULT_CATEGORY_BANNERS[idx]?.imageUrl,
               }))
             );
           }
@@ -142,12 +156,33 @@ export const CategoryGrid: React.FC = () => {
     <div className="max-w-7xl mx-auto px-2 sm:px-4 mt-2 sm:mt-3 select-none space-y-3 sm:space-y-4">
 
       {/* ========================================================================= */}
-      {/* PHẦN 2: THANH 3 CAM KẾT                                                    */}
+      {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / 350x250px)                 */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
+        {categoryBanners.map((item) => (
+          <Link
+            key={item.id}
+            href={item.link || '/'}
+            className="group relative block w-full aspect-[7/5] rounded-xl overflow-hidden border border-gray-200/80 bg-gray-100 shadow-2xs hover:shadow-lg hover:border-[#d70018]/50 transition-all duration-300"
+          >
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              width={700}
+              height={500}
+              loading="lazy"
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 pointer-events-none"
+            />
+          </Link>
+        ))}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* PHẦN 2: THANH 3 CAM KẾT                                                   */}
       {/* ========================================================================= */}
       <div className="w-full pt-1 pb-1.5 px-1 sm:px-3">
         <div className="grid grid-cols-3 items-center justify-items-center gap-1 sm:gap-4 md:gap-8 max-w-4xl mx-auto text-gray-950">
           
-          {/* Cam kết 1 */}
           <div className="flex items-center gap-1 sm:gap-2 text-center sm:text-left">
             <Award className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-gray-900 shrink-0" strokeWidth={2.2} />
             <span className="text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-tight">
@@ -155,7 +190,6 @@ export const CategoryGrid: React.FC = () => {
             </span>
           </div>
 
-          {/* Cam kết 2 */}
           <div className="flex items-center gap-1 sm:gap-2 text-center sm:text-left">
             <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-gray-900 shrink-0" strokeWidth={2.2} />
             <span className="text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-tight">
@@ -163,7 +197,6 @@ export const CategoryGrid: React.FC = () => {
             </span>
           </div>
 
-          {/* Cam kết 3 */}
           <div className="flex items-center gap-1 sm:gap-2 text-center sm:text-left">
             <Truck className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-gray-900 shrink-0" strokeWidth={2.2} />
             <span className="text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-tight">
@@ -175,7 +208,7 @@ export const CategoryGrid: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* PHẦN 3: LƯỚI CATEGORIES ITEM NHỎ BO TRÒN GÓC TUYỆT ĐỐI                     */}
+      {/* PHẦN 3: LƯỚI CATEGORIES ITEM NHỎ BO TRÒN GÓC                              */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-xl p-3 sm:p-4 md:p-6 shadow-xs border border-gray-100">
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 sm:gap-2.5 md:gap-3">
@@ -187,7 +220,7 @@ export const CategoryGrid: React.FC = () => {
             >
               <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-[#f8f9fa] border border-gray-200 p-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300">
                 <img
-                  src={resolveImageUrl(item.imageUrl)}
+                  src={item.imageUrl}
                   alt={item.name}
                   className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
                 />
@@ -198,28 +231,6 @@ export const CategoryGrid: React.FC = () => {
             </Link>
           ))}
         </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* PHẦN 1: 4 BANNER CATEGORY CHỮ NHẬT (TỶ LỆ 7:5 / 350x250px)                 */}
-      {/* ========================================================================= */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
-        {categoryBanners.map((item) => (
-          <Link
-            key={item.id}
-            href={item.link || '/'}
-            className="group relative block w-full aspect-[7/5] rounded-xl overflow-hidden border border-gray-200/80 bg-gray-100 shadow-2xs hover:shadow-lg hover:border-[#d70018]/50 transition-all duration-300"
-          >
-            <img
-              src={resolveImageUrl(item.imageUrl)}
-              alt={item.name}
-              width={700}
-              height={500}
-              loading="lazy"
-              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 pointer-events-none"
-            />
-          </Link>
-        ))}
       </div>
       
     </div>
