@@ -24,25 +24,25 @@ const DEFAULT_CATEGORY_BANNERS = [
     id: 'cat-b1',
     name: 'banner1',
     link: '/iphone',
-    imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=700&h=500&q=80',
+    imageUrl: '/noi-bat/banneriphoe.webp',
   },
   {
     id: 'cat-b2',
     name: 'banner2',
     link: '/ipad',
-    imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=700&h=500&q=80',
+    imageUrl: '/noi-bat/banneripad.webp',
   },
   {
     id: 'cat-b3',
     name: 'banner3',
     link: '/macbook',
-    imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=700&h=500&q=80',
+    imageUrl: '/noi-bat/bannermacbook.webp',
   },
   {
     id: 'cat-b4',
     name: 'banner4',
     link: '/phu-kien',
-    imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=700&h=500&q=80',
+    imageUrl: '/noi-bat/bannerphukien.webp',
   },
 ];
 

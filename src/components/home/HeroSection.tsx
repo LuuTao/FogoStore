@@ -7,8 +7,74 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const API_URL = 'https://fogo-store-api.onrender.com';
 const API_BASE = `${API_URL}/api`;
 
-const DEFAULT_HERO_BANNERS = [];
-const DEFAULT_PROMO_CARDS = [];
+// =========================================================================
+// BANNER MẶC ĐỊNH SẴN SÀNG HIỂN THỊ TỨC THÌ (TRÁNH CHỜ LOAD MẠNG/COLD START)
+// =========================================================================
+const DEFAULT_HERO_BANNERS = [
+  {
+    id: 'default-hero-1',
+    title: 'Macbook Air M5',
+    imageUrl: '/banners/banner1.png', // Lấy trực tiếp từ public/banners/
+    link: '/macbook/macbook-air-m5',
+  },
+  {
+    id: 'default-hero-2',
+    title: 'iPad Gen 11',
+    imageUrl: '/banners/banner2.png',
+    link: '/ipad/ipad-gen-11',
+  },
+  {
+    id: 'default-hero-2',
+    title: 'iPhone 18 Series',
+    imageUrl: '/banners/banner3.png',
+    link: '/iphone/iphone-18-series',
+  },
+  {
+    id: 'default-hero-2',
+    title: 'Macbook Neo Series',
+    imageUrl: '/banners/banner4.png',
+    link: '/macbook/macbook-neo',
+  },
+];
+
+const DEFAULT_PROMO_CARDS = [
+  {
+    id: 'default-promo-1',
+    title: 'Macbook Air M5',
+    imageUrl: '/subbanners/subbaner1.png',
+    link: '/macbook/macbook-air-m5',
+  },
+  {
+    id: 'default-promo-2',
+    title: 'iPhone 18 Series',
+    imageUrl: '/subbanners/subbanner6.png',
+    link: '/iphone/iphone-18-series',
+  },
+  {
+    id: 'default-promo-3',
+    title: 'iPhone Duo Series',
+    imageUrl: '/subbanners/subbanner3.png',
+    link: '/iphone/iphone-duo-series',
+  },
+  {
+    id: 'default-promo-4',
+    title: 'iPhone Duo Series',
+    imageUrl: '/subbanners/subbanner4.png',
+    link: '/iphone/iphone-duo-series',
+  },
+  {
+    id: 'default-promo-2',
+    title: 'Thu cũ đổi mới',
+    imageUrl: '/subbanners/subbanner5.png',
+    link: '/hang-cu',
+  },
+  {
+    id: 'default-promo-2',
+    title: 'iPad Pro M5',
+    imageUrl: '/subbanners/subbanner2.png',
+    link: '/ipad/ipad-pro-m5',
+  },
+];
 
 const getFullImageUrl = (url?: string | null): string => {
   if (!url) return '';
@@ -23,12 +89,12 @@ const getFullImageUrl = (url?: string | null): string => {
 };
 
 export const HeroSection: React.FC = () => {
-  const [banners, setBanners] = useState<any[]>([]);
-  const [promoList, setPromoList] = useState<any[]>([]);
+  // Gán trực tiếp dữ liệu mặc định ngay khi khởi tạo State
+  const [banners, setBanners] = useState<any[]>(DEFAULT_HERO_BANNERS);
+  const [promoList, setPromoList] = useState<any[]>(DEFAULT_PROMO_CARDS);
   const [topIndex, setTopIndex] = useState(0);
   const [bottomIndex, setBottomIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   const topTouchStartX = useRef<number | null>(null);
   const bottomTouchStartX = useRef<number | null>(null);
@@ -81,9 +147,7 @@ export const HeroSection: React.FC = () => {
           }
         }
       } catch (err) {
-        console.error('Lỗi nạp banner:', err);
-      } finally {
-        if (isMounted) setLoading(false);
+        // Giữ nguyên banner mặc định khi mất mạng hoặc backend đang sleep
       }
     };
 
@@ -155,40 +219,14 @@ export const HeroSection: React.FC = () => {
     bottomTouchStartX.current = null;
   };
 
-  if (loading && banners.length === 0) {
-    return (
-      <div className="w-full relative pb-6 lg:pb-16 animate-pulse">
-        <div className="block lg:hidden px-3 pt-2">
-          <div className="w-full aspect-[16/7] bg-gray-200 rounded-xl" />
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <div className="h-[105px] bg-gray-300 rounded-lg" />
-            <div className="h-[105px] bg-gray-300 rounded-lg" />
-          </div>
-        </div>
-        <div className="hidden lg:block">
-          <div className="w-full aspect-[1920/540] max-h-[540px] bg-gray-200" />
-          <div className="max-w-7xl mx-auto px-4 relative -mt-16">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="h-[200px] bg-gray-300 rounded-md shadow-lg" />
-              <div className="h-[200px] bg-gray-300 rounded-md shadow-lg" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <section
       className="w-full select-none relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* ========================================================================= */}
-      {/* 1. GIAO DIỆN MOBILE (< 640px) - BANNER TRÊN & DƯỚI TO HƠN 3 SIZE          */}
-      {/* ========================================================================= */}
+      {/* 1. GIAO DIỆN MOBILE (< 640px) */}
       <div className="block sm:hidden px-2 pt-1 pb-3">
-        {/* Banner Trên: Tăng độ cao từ 540 lên tỉ lệ 16/7 (to hơn đáng kể, không bị dẹt) */}
         <div
           className="relative w-full aspect-[16/7] rounded-xl overflow-hidden bg-gray-100 shadow-md"
           onTouchStart={handleTopTouchStart}
@@ -226,7 +264,6 @@ export const HeroSection: React.FC = () => {
           )}
         </div>
 
-        {/* 2 Banner Dưới: Chiều cao h-[105px] (to hơn rõ rệt so với aspect-[3/1] cũ) */}
         {promoPairs.length > 0 && (
           <div className="mt-2.5 relative">
             <div
@@ -278,9 +315,7 @@ export const HeroSection: React.FC = () => {
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. GIAO DIỆN TABLET (640px -> 1023px)                                     */}
-      {/* ========================================================================= */}
+      {/* 2. GIAO DIỆN TABLET (640px -> 1023px) */}
       <div className="hidden sm:block lg:hidden px-4 pt-3 pb-6">
         <div
           className="relative w-full aspect-[1920/540] rounded-2xl overflow-hidden bg-gray-100 shadow-lg"
@@ -360,9 +395,7 @@ export const HeroSection: React.FC = () => {
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* 3. GIAO DIỆN DESKTOP (>= 1024px)                                          */}
-      {/* ========================================================================= */}
+      {/* 3. GIAO DIỆN DESKTOP (>= 1024px) */}
       <div className="hidden lg:block pb-16">
         <div className="relative w-full aspect-[1920/540] max-h-[540px] overflow-hidden bg-gray-100">
           <div

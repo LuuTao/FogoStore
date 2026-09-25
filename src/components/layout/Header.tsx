@@ -15,6 +15,8 @@ import {
   LogOut,
   ChevronDown,
   Loader2,
+  Crown,
+  HeartHandshake,
 } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useCart } from '@/context/CartContext';
@@ -499,7 +501,7 @@ export const Header: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-1 sm:gap-2 py-1 cursor-pointer text-[#d70018] hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-1.5 sm:gap-2 py-1 cursor-pointer text-[#d70018] hover:opacity-80 transition-opacity"
                   aria-label="Thông tin tài khoản"
                 >
                   <div className="w-8 h-8 rounded-full lg:rounded-sm bg-[#d70018]/10 flex items-center justify-center text-[#d70018]">
@@ -509,30 +511,70 @@ export const Header: React.FC = () => {
                     <span className="text-[14px] text-gray-700 font-bold truncate max-w-[140px]">
                       {user.fullName || 'Tài khoản'}
                     </span>
-                    <span className="text-[16px] font-black text-[#d70018]">
-                      {user.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên'}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[15px] font-black text-[#d70018]">
+                        {user.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên'}
+                      </span>
+
+                      {/* Tag Thân Thiết hoặc VIP bên cạnh chữ Thành viên */}
+                      {user.role !== 'ADMIN' && user.rank === 'VIP' && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-amber-500 to-yellow-400 text-white shadow-xs tracking-wider animate-pulse">
+                          <Crown size={10} strokeWidth={3} />
+                          VIP
+                        </span>
+                      )}
+
+                      {user.role !== 'ADMIN' && user.rank === 'LOYAL' && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-blue-600 text-white shadow-xs">
+                          <HeartHandshake size={10} strokeWidth={2.5} />
+                          Thân Thiết
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
 
                 {isUserMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                      <div className="pb-2.5 border-b border-gray-100">
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="pb-3 border-b border-gray-100">
                         <p className="text-xs text-gray-400 font-medium">Đang đăng nhập:</p>
                         <p className="text-sm font-bold text-gray-900 truncate mt-0.5">
                           {user.fullName || 'Người dùng'}
                         </p>
-                        <span
-                          className={`inline-block mt-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                            user.role === 'ADMIN'
-                              ? 'bg-red-50 text-[#d70018] border border-red-200'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {user.role === 'ADMIN' ? 'QUẢN TRỊ VIÊN' : 'THÀNH VIÊN'}
-                        </span>
+
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          <span
+                            className={`inline-block text-[11px] font-extrabold px-2 py-0.5 rounded-sm ${
+                              user.role === 'ADMIN'
+                                ? 'bg-red-50 text-[#d70018] border border-red-200'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {user.role === 'ADMIN' ? 'QUẢN TRỊ VIÊN' : 'THÀNH VIÊN'}
+                          </span>
+
+                          {user.role !== 'ADMIN' && user.rank === 'VIP' && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-sm bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-white shadow-xs tracking-wider">
+                              <Crown size={11} strokeWidth={3} />
+                              VIP
+                            </span>
+                          )}
+
+                          {user.role !== 'ADMIN' && user.rank === 'LOYAL' && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm bg-blue-600 text-white shadow-xs">
+                              <HeartHandshake size={11} strokeWidth={2.5} />
+                              THÂN THIẾT
+                            </span>
+                          )}
+                        </div>
+
+                        {user.role !== 'ADMIN' && (
+                          <p className="text-[11px] text-gray-500 mt-2 font-medium">
+                            Đã mua thành công: <b className="text-gray-800">{user.totalItemsPurchased || 0}</b> món
+                          </p>
+                        )}
                       </div>
 
                       <div className="py-2 space-y-1">
@@ -654,7 +696,7 @@ export const Header: React.FC = () => {
         </div>
       </header>
 
-      {/* DRAWER MENU MOBILE: ĐÃ TĂNG 2PX CHUẨN ĐẸP TO RÕ */}
+      {/* DRAWER MENU MOBILE */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
@@ -687,7 +729,6 @@ export const Header: React.FC = () => {
                 return (
                   <div key={item.id} className="py-0.5">
                     <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
-                      {/* Tên danh mục chính tăng từ 13px lên 15px */}
                       <Link
                         href={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
@@ -726,7 +767,6 @@ export const Header: React.FC = () => {
 
                           return (
                             <div key={gIdx} className="space-y-2">
-                              {/* Tên nhóm dòng sản phẩm tăng từ 11.5px lên 13.5px */}
                               <Link
                                 href={group.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
@@ -742,7 +782,6 @@ export const Header: React.FC = () => {
                                       key={sIdx}
                                       href={sub.href}
                                       onClick={() => setIsMobileMenuOpen(false)}
-                                      /* Tên sản phẩm con tăng từ 11px lên 13px */
                                       className="block py-1 text-gray-700 hover:text-[#d70018] font-medium text-[13px] transition-colors"
                                     >
                                       {sub.name}
