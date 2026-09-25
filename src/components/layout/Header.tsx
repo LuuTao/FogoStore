@@ -209,7 +209,6 @@ interface SearchItem {
   categoryName?: string;
 }
 
-// Xử lý chuẩn URL ảnh cho popup tìm kiếm
 const formatSearchImage = (url?: string | null): string => {
   if (!url) return '/placeholder.png';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('/')) {
@@ -260,7 +259,7 @@ export const Header: React.FC = () => {
     fetchMenuData();
   }, []);
 
-  // Nạp danh mục sản phẩm phục vụ tìm kiếm nhanh
+  // Nạp danh mục sản phẩm phục vụ tìm kiếm
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -289,9 +288,7 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
-  // Logic tìm kiếm thông minh kết hợp Client-Cache & Server-Fallback
-  // Lọc sản phẩm thực tế: Có tên thật, giá > 0 và trạng thái hoạt động
-  // Tìm kiếm thông minh: Có trong DB là hiển thị, giá 0đ sẽ hiện chữ "Liên hệ"
+  // Logic tìm kiếm: CHẶN HÀNG ẢO, LOẠI BỎ HÀNG KHÔNG ẢNH/ẢNH RÁC VÀ KHỬ TRÙNG LẶP TÊN
   useEffect(() => {
     const rawQuery = searchTerm.trim();
     if (!rawQuery) {
@@ -304,17 +301,32 @@ export const Header: React.FC = () => {
     setIsSearching(true);
 
     const timer = setTimeout(async () => {
-      if (productsCache.length > 0) {
-        const matched = productsCache
+      const processProducts = (rawList: any[]): SearchItem[] => {
+        return rawList
           .filter((item: any) => {
-            // Chỉ bỏ sản phẩm không có ID hoặc không có tên
+            // 1. Phải có ID và Tên hợp lệ
             if (!item.id || !item.name || item.name.trim() === '') return false;
 
+            // 2. Chặn hàng ảo: Bắt buộc phải có ảnh thực tế (không lấy chuỗi rỗng hoặc placeholder)
+            const firstVariant = item.variants?.[0] || {};
+            const rawImg =
+              firstVariant.images?.[0] ||
+              firstVariant.imageUrl ||
+              item.imageUrl ||
+              item.thumbnail ||
+              '';
+            if (!rawImg || rawImg.includes('placeholder.png')) return false;
+
+            // 3. Khớp từ khóa tìm kiếm
             const name = (item.name || '').toLowerCase();
             const cat = (item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
             const brand = (item.brand || '').toLowerCase();
             return name.includes(query) || cat.includes(query) || brand.includes(query);
           })
+          // 4. Khử trùng lặp: Nếu trùng tên sản phẩm thì chỉ giữ lại 1 sản phẩm đại diện
+          .filter((item: any, index: number, self: any[]) =>
+            index === self.findIndex((t: any) => t.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
+          )
           .slice(0, 6)
           .map((item: any) => {
             const firstVariant = item.variants?.[0] || {};
@@ -324,8 +336,6 @@ export const Header: React.FC = () => {
               item.imageUrl ||
               item.thumbnail ||
               '/placeholder.png';
-            
-            // Giữ nguyên giá trị giá (kể cả 0)
             const price = firstVariant.price !== undefined ? firstVariant.price : (item.price || 0);
 
             return {
@@ -337,30 +347,22 @@ export const Header: React.FC = () => {
               categoryName: item.category?.name || item.categoryName,
             };
           });
+      };
 
+      if (productsCache.length > 0) {
+        const matched = processProducts(productsCache);
         setSearchResults(matched);
         setShowDropdown(true);
         setIsSearching(false);
       } else {
-        // Fallback: Gọi API trực tiếp nếu cache chưa kịp tải
+        // Fallback: Gọi API trực tiếp nếu cache chưa kịp tải nhưng vẫn qua bộ lọc chặt chẽ
         try {
           const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(query)}`);
           if (res.ok) {
             const json = await res.json();
             const list = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
-            const mapped = list.slice(0, 6).map((item: any) => {
-              const firstVariant = item.variants?.[0] || {};
-              const rawImg = firstVariant.images?.[0] || item.imageUrl || '/placeholder.png';
-              return {
-                id: item.id,
-                name: item.name,
-                slug: item.slug || item.id,
-                price: firstVariant.price !== undefined ? firstVariant.price : (item.price || 0),
-                imageUrl: formatSearchImage(rawImg),
-                categoryName: item.category?.name,
-              };
-            });
-            setSearchResults(mapped);
+            const matched = processProducts(list);
+            setSearchResults(matched);
             setShowDropdown(true);
           }
         } catch (e) {
