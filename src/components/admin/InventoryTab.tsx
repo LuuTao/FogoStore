@@ -30,6 +30,7 @@ import {
   MinusSquare,
   Download,
   Loader2,
+  Globe,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -68,9 +69,11 @@ const PRESET_STORAGES = [
   'Tiêu chuẩn',
 ];
 
+const PRESET_ORIGINS = ['Việt Nam', 'Nhập Khẩu', 'VN/A', 'LL/A', 'ZA/A', 'Chính Hãng'];
+
 const PRESET_CHIPS = ['A18 Pro', 'A18', 'A17 Pro', 'A16 Bionic', 'M5', 'M4', 'M3', 'M2', 'M1', 'S10', 'S9'];
 
-const API_BASE = 'https://fogo-store-api.onrender.com';
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export default function InventoryTab({ inventory, onRefresh }: Props) {
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -94,7 +97,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const [loadingAction, setLoadingAction] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
-  // --- STATE CHỌN NHIỀU VÀ MODAL XÓA AN TOÀN ---
+  // Chọn nhiều và Modal xóa
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [deleteModal, setDeleteModal] = useState<{
     open: boolean;
@@ -110,7 +113,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     description: '',
   });
 
-  // Thông báo Toast góc màn hình
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -140,6 +142,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     {
       storage: '128GB',
       color: 'Titan Tự Nhiên',
+      origin: 'Việt Nam',
       price: 29990000,
       originalPrice: 31990000,
       stock: 20,
@@ -294,7 +297,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         const matchVar = variants.some(
           (v) =>
             (v.storage && v.storage.toLowerCase().includes(keyword)) ||
-            (v.color && v.color.toLowerCase().includes(keyword))
+            (v.color && v.color.toLowerCase().includes(keyword)) ||
+            (v.origin && v.origin.toLowerCase().includes(keyword))
         );
         if (!matchName && !matchVar) return false;
       }
@@ -327,7 +331,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     return result;
   }, [groupedProducts, selectedCategory, selectedStorage, selectedRam, selectedChip, stockStatusFilter, searchKeyword, sortBy]);
 
-  // Danh sách toàn bộ Product ID đang hiển thị trên giao diện
   const allVisibleProductIds = useMemo(() => {
     const ids: string[] = [];
     Object.values(groupedBySeries).forEach((list) => {
@@ -336,7 +339,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     return ids;
   }, [groupedBySeries]);
 
-  // Logic Toggle chọn Checkbox
   const toggleSelectProduct = (productId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedProductIds((prev) =>
@@ -388,7 +390,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     return <Smartphone size={16} className="text-[#d70018]" />;
   };
 
-  // Cập nhật tồn kho nhanh
   const handleQuickStockUpdate = async (variantId: string, newStock: number) => {
     try {
       const res = await fetch(`${API_BASE}/api/admin/variants/${variantId}`, {
@@ -408,9 +409,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     }
   };
 
-  // ==============================================================
-  // HÀM XUẤT VÀ TẢI FILE EXCEL VỀ MÁY TÍNH
-  // ==============================================================
+  // Xuất Excel có cột Xuất Xứ
   const handleDownloadExcel = () => {
     if (!inventory || inventory.length === 0) {
       showToast('Không có dữ liệu kho hàng để xuất file!', 'error');
@@ -422,7 +421,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       const dataRows: any[] = [];
       let stt = 1;
 
-      // Duyệt qua từng sản phẩm và biến thể trong cơ sở dữ liệu
       groupedProducts.forEach(({ product, variants }) => {
         const seriesName = getProductSeries(product.name, product.category?.name);
         const categoryName = product.category?.name || 'Apple';
@@ -440,6 +438,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
               'Danh Mục': categoryName,
               'Dung Lượng / Kích Thước': v.storage || 'Tiêu chuẩn',
               'Màu Sắc': v.color || 'Tiêu chuẩn',
+              'Xuất Xứ': v.origin || 'Việt Nam',
               'Giá Bán (VNĐ)': price > 0 ? price : 'Liên hệ',
               'Giá Gốc (VNĐ)': originalPrice > 0 ? originalPrice : '',
               'Tồn Kho (Máy)': stock,
@@ -448,7 +447,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             });
           });
         } else {
-          // Trường hợp sản phẩm chưa có biến thể nào
           dataRows.push({
             STT: stt++,
             'Dòng Series': seriesName,
@@ -456,6 +454,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             'Danh Mục': categoryName,
             'Dung Lượng / Kích Thước': 'Chưa tạo',
             'Màu Sắc': 'Chưa tạo',
+            'Xuất Xứ': 'Chưa tạo',
             'Giá Bán (VNĐ)': 'Liên hệ',
             'Giá Gốc (VNĐ)': '',
             'Tồn Kho (Máy)': 0,
@@ -465,28 +464,25 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         }
       });
 
-      // Tạo Sheet & Workbook
       const worksheet = XLSX.utils.json_to_sheet(dataRows);
-
-      // Căn độ rộng các cột
       worksheet['!cols'] = [
-        { wch: 6 },  // STT
-        { wch: 22 }, // Dòng Series
-        { wch: 45 }, // Tên Sản Phẩm
-        { wch: 15 }, // Danh Mục
-        { wch: 24 }, // Dung Lượng / Kích Thước
-        { wch: 18 }, // Màu Sắc
-        { wch: 18 }, // Giá Bán (VNĐ)
-        { wch: 18 }, // Giá Gốc (VNĐ)
-        { wch: 15 }, // Tồn Kho (Máy)
-        { wch: 16 }, // Trạng Thái
-        { wch: 38 }, // Mã Biến Thể / Slug
+        { wch: 6 },
+        { wch: 22 },
+        { wch: 45 },
+        { wch: 15 },
+        { wch: 24 },
+        { wch: 18 },
+        { wch: 15 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 15 },
+        { wch: 16 },
+        { wch: 38 },
       ];
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Ton_Kho_FoGoStore');
 
-      // Tải trực tiếp file Excel về máy tính
       const dateStr = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(workbook, `Bao_Cao_Ton_Kho_FoGoStore_${dateStr}.xlsx`);
       showToast('Đã tải thành công file Excel về máy tính!');
@@ -545,6 +541,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           price: Number(editingVariant.price),
           originalPrice: Number(editingVariant.originalPrice || editingVariant.price),
           stock: Number(editingVariant.stock),
+          origin: editingVariant.origin || 'Việt Nam',
         }),
       });
       const data = await res.json();
@@ -574,6 +571,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           productId: addingVariantProduct.id,
           storage: form.storage.value,
           color: form.color.value,
+          origin: form.origin?.value || 'Việt Nam',
           price: Number(form.price.value),
           originalPrice: Number(form.originalPrice.value || form.price.value),
           stock: Number(form.stock.value),
@@ -620,7 +618,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         setIsOpenAddProductModal(false);
         setNewProdName('');
         setVariantsList([
-          { storage: '128GB', color: 'Titan Tự Nhiên', price: 29990000, originalPrice: 31990000, stock: 20, images: [] },
+          { storage: '128GB', color: 'Titan Tự Nhiên', origin: 'Việt Nam', price: 29990000, originalPrice: 31990000, stock: 20, images: [] },
         ]);
         showToast('Đã đăng sản phẩm thành công!');
         onRefresh();
@@ -676,7 +674,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
 
   return (
     <div className="space-y-6 select-none relative">
-      {/* TOAST THÔNG BÁO GÓC PHẢI */}
+      {/* TOAST THÔNG BÁO */}
       {toast && (
         <div
           className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-bold transition-all transform animate-bounce ${
@@ -690,7 +688,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         </div>
       )}
 
-      {/* HEADER & CÁC NÚT THAO TÁC */}
+      {/* HEADER & NÚT THAO TÁC */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
@@ -701,7 +699,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          {/* NÚT TẢI FILE EXCEL VỀ MÁY */}
           <button
             type="button"
             onClick={handleDownloadExcel}
@@ -717,7 +714,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             <span>{isExportingExcel ? 'Đang tạo Excel...' : 'Xuất File Excel'}</span>
           </button>
 
-          {/* NÚT ĐĂNG SẢN PHẨM MỚI */}
           <button
             onClick={() => setIsOpenAddProductModal(true)}
             className="bg-[#d70018] hover:bg-red-700 active:scale-95 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
@@ -764,14 +760,14 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         </div>
       )}
 
-      {/* CỤM BỘ LỌC ĐA NĂNG */}
+      {/* BỘ LỌC ĐA NĂNG */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3 text-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Tìm kiếm máy, màu..."
+              placeholder="Tìm kiếm máy, màu, xuất xứ..."
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               className="w-full pl-9 pr-3 py-2 border rounded-lg outline-none focus:border-red-500 bg-gray-50/50"
@@ -918,7 +914,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
 
             return (
               <div key={seriesName} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                {/* TẦNG 1: HEADER DÒNG SERIES */}
+                {/* TẦNG 1: HEADER SERIES */}
                 <div
                   onClick={() => toggleSeries(seriesName)}
                   className="bg-slate-100/90 hover:bg-slate-200/80 p-3.5 px-4 flex items-center justify-between border-b border-gray-200 cursor-pointer select-none transition-colors"
@@ -928,7 +924,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                       {isSeriesOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </button>
 
-                    {/* Checkbox chọn nguyên nhóm Series */}
                     <button
                       type="button"
                       onClick={(e) => toggleSelectSeries(productList, e)}
@@ -956,7 +951,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                   </div>
                 </div>
 
-                {/* TẦNG 2: DANH SÁCH SUB-MODELS */}
+                {/* TẦNG 2: DANH SÁCH DÒNG MÁY CHA */}
                 {isSeriesOpen && (
                   <div className="divide-y divide-gray-200/80">
                     {productList.map(({ product, variants }) => {
@@ -970,7 +965,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                         <div key={product.id} className={isChecked ? 'bg-red-50/30' : ''}>
                           <div className="bg-slate-50/70 p-3.5 px-4 pl-4 flex items-center justify-between border-b border-gray-100">
                             <div className="flex items-center gap-3">
-                              {/* Checkbox chọn 1 dòng máy */}
                               <button
                                 type="button"
                                 onClick={(e) => toggleSelectProduct(product.id, e)}
@@ -1043,109 +1037,145 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                             </div>
                           </div>
 
-                          {/* TẦNG 3: BẢNG BIẾN THỂ */}
+                          {/* TẦNG 3: BẢNG BIẾN THỂ (CÓ CỘT XUẤT XỨ RIÊNG BIỆT) */}
                           {isExpanded && (
                             <div className="overflow-x-auto bg-gray-50/40 p-3 pl-10">
                               <div className="bg-white border rounded-lg overflow-hidden shadow-2xs">
                                 <table className="w-full text-left text-xs">
-                                  <thead className="bg-gray-100/70 text-gray-500 uppercase border-b border-gray-200 text-[10px]">
+                                  <thead className="bg-gray-100/70 text-gray-600 uppercase border-b border-gray-200 text-[10px] font-bold">
                                     <tr>
-                                      <th className="py-2.5 px-4">Ảnh ({'>'}1 ảnh)</th>
-                                      <th className="py-2.5 px-4">Dung Lượng / Kích Thước</th>
-                                      <th className="py-2.5 px-4">Màu Sắc</th>
-                                      <th className="py-2.5 px-4">Giá Bán</th>
-                                      <th className="py-2.5 px-4">Giá Gốc</th>
-                                      <th className="py-2.5 px-4">Tồn Kho (Nhập nhanh)</th>
-                                      <th className="py-2.5 px-4">Trạng Thái</th>
-                                      <th className="py-2.5 px-4 text-right">Thao Tác</th>
+                                      <th className="py-2.5 px-4 text-center">ẢNH (&gt;1 ẢNH)</th>
+                                      <th className="py-2.5 px-4">DUNG LƯỢNG / KÍCH THƯỚC</th>
+                                      <th className="py-2.5 px-4">MÀU SẮC</th>
+                                      <th className="py-2.5 px-4 text-center">XUẤT XỨ</th>
+                                      <th className="py-2.5 px-4 text-right">GIÁ BÁN</th>
+                                      <th className="py-2.5 px-4 text-right">GIÁ GỐC</th>
+                                      <th className="py-2.5 px-4 text-center">TỒN KHO (NHẬP NHANH)</th>
+                                      <th className="py-2.5 px-4 text-center">TRẠNG THÁI</th>
+                                      <th className="py-2.5 px-4 text-right">THAO TÁC</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
-                                    {variants.map((v) => (
-                                      <tr key={v.id} className="hover:bg-gray-50/80 transition-colors">
-                                        <td className="py-2 px-4">
-                                          <div className="flex items-center gap-1.5">
-                                            {v.images?.[0] ? (
-                                              <img
-                                                src={v.images[0]}
-                                                alt="Variant"
-                                                className="w-9 h-9 object-cover rounded border"
-                                              />
+                                    {variants.map((v) => {
+                                      const isVn = (v.origin || '').toLowerCase().includes('việt nam') || (v.origin || '').toLowerCase().includes('vn');
+
+                                      return (
+                                        <tr key={v.id} className="hover:bg-gray-50/80 transition-colors">
+                                          {/* CỘT 1: ẢNH */}
+                                          <td className="py-2 px-4 text-center">
+                                            <div className="flex items-center justify-center gap-1.5">
+                                              {v.images?.[0] ? (
+                                                <img
+                                                  src={v.images[0]}
+                                                  alt="Variant"
+                                                  className="w-9 h-9 object-contain rounded border mx-auto p-0.5 bg-white"
+                                                />
+                                              ) : (
+                                                <div className="w-9 h-9 bg-gray-100 rounded border flex items-center justify-center text-[9px] text-gray-400 mx-auto">
+                                                  No img
+                                                </div>
+                                              )}
+                                              {v.images?.length > 1 && (
+                                                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1 py-0.5 rounded border">
+                                                  +{v.images.length - 1}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </td>
+
+                                          {/* CỘT 2: DUNG LƯỢNG THỰC TẾ (128GB, 256GB, 512GB, 1TB...) */}
+                                          <td className="py-3 px-4 font-extrabold text-gray-900">
+                                            {v.storage || 'Tiêu chuẩn'}
+                                          </td>
+
+                                          {/* CỘT 3: MÀU SẮC THỰC TẾ (Lavender, Sage, Black, White...) */}
+                                          <td className="py-3 px-4">
+                                            <span className="bg-gray-100 border border-gray-200 px-2 py-0.5 rounded text-gray-800 font-semibold text-xs inline-block">
+                                              {v.color || 'Tiêu chuẩn'}
+                                            </span>
+                                          </td>
+
+                                          {/* CỘT 4: XUẤT XỨ (VIỆT NAM / NHẬP KHẨU) */}
+                                          <td className="py-3 px-4 text-center">
+                                            <span
+                                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${
+                                                isVn
+                                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                                              }`}
+                                            >
+                                              <Globe size={11} />
+                                              <span>{v.origin || 'Việt Nam'}</span>
+                                            </span>
+                                          </td>
+
+                                          {/* CỘT 5: GIÁ BÁN */}
+                                          <td className="py-3 px-4 text-right font-black text-emerald-600">
+                                            {v.price > 0 ? `${v.price.toLocaleString('vi-VN')} đ` : 'Liên hệ'}
+                                          </td>
+
+                                          {/* CỘT 6: GIÁ GỐC */}
+                                          <td className="py-3 px-4 text-right text-gray-400 line-through">
+                                            {(v.originalPrice || v.price) > 0 ? `${(v.originalPrice || v.price).toLocaleString('vi-VN')} đ` : ''}
+                                          </td>
+
+                                          {/* CỘT 7: TỒN KHO */}
+                                          <td className="py-3 px-4 text-center">
+                                            <input
+                                              type="number"
+                                              defaultValue={v.stock}
+                                              onBlur={(e) =>
+                                                handleQuickStockUpdate(v.id, Number(e.target.value))
+                                              }
+                                              className="w-16 border rounded-md px-1.5 py-1 text-center font-bold text-gray-800 outline-none focus:border-red-500 bg-white"
+                                            />
+                                          </td>
+
+                                          {/* CỘT 8: TRẠNG THÁI */}
+                                          <td className="py-3 px-4 text-center">
+                                            {v.stock === 0 ? (
+                                              <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                Hết hàng (0)
+                                              </span>
+                                            ) : v.stock <= 5 ? (
+                                              <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                <AlertTriangle size={11} /> Sắp hết ({v.stock})
+                                              </span>
                                             ) : (
-                                              <div className="w-9 h-9 bg-gray-100 rounded border flex items-center justify-center text-[9px] text-gray-400">
-                                                No img
-                                              </div>
-                                            )}
-                                            {v.images?.length > 1 && (
-                                              <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1 py-0.5 rounded border">
-                                                +{v.images.length - 1}
+                                              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                <CheckCircle2 size={11} /> Còn hàng ({v.stock})
                                               </span>
                                             )}
-                                          </div>
-                                        </td>
-                                        <td className="py-3 px-4 font-bold text-gray-800">{v.storage}</td>
-                                        <td className="py-3 px-4">
-                                          <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-medium">
-                                            {v.color}
-                                          </span>
-                                        </td>
-                                        <td className="py-3 px-4 font-black text-emerald-600">
-                                          {v.price > 0 ? `${v.price.toLocaleString('vi-VN')} đ` : 'Liên hệ'}
-                                        </td>
-                                        <td className="py-3 px-4 text-gray-400 line-through">
-                                          {(v.originalPrice || v.price) > 0 ? `${(v.originalPrice || v.price).toLocaleString('vi-VN')} đ` : ''}
-                                        </td>
-                                        <td className="py-3 px-4">
-                                          <input
-                                            type="number"
-                                            defaultValue={v.stock}
-                                            onBlur={(e) =>
-                                              handleQuickStockUpdate(v.id, Number(e.target.value))
-                                            }
-                                            className="w-20 border rounded-md px-2 py-1 text-center font-bold text-gray-800 outline-none focus:border-red-500 bg-white"
-                                          />
-                                        </td>
-                                        <td className="py-3 px-4">
-                                          {v.stock === 0 ? (
-                                            <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">
-                                              Hết hàng (0)
-                                            </span>
-                                          ) : v.stock <= 5 ? (
-                                            <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">
-                                              <AlertTriangle size={11} /> Sắp hết ({v.stock})
-                                            </span>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">
-                                              <CheckCircle2 size={11} /> Còn hàng ({v.stock})
-                                            </span>
-                                          )}
-                                        </td>
-                                        <td className="py-3 px-4 text-right space-x-1">
-                                          <button
-                                            onClick={() => setEditingVariant({ ...v, images: v.images || [] })}
-                                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
-                                            title="Sửa biến thể & Quản lý ảnh"
-                                          >
-                                            <Edit2 size={15} />
-                                          </button>
-                                          <button
-                                            onClick={() =>
-                                              setDeleteModal({
-                                                open: true,
-                                                type: 'single_variant',
-                                                targetIds: [v.id],
-                                                title: 'Xóa biến thể cấu hình?',
-                                                description: `Bạn có chắc muốn xóa biến thể "${v.storage} - ${v.color}" này không?`,
-                                              })
-                                            }
-                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer"
-                                            title="Xóa cấu hình này"
-                                          >
-                                            <Trash2 size={15} />
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    ))}
+                                          </td>
+
+                                          {/* CỘT 9: THAO TÁC */}
+                                          <td className="py-3 px-4 text-right space-x-1">
+                                            <button
+                                              onClick={() => setEditingVariant({ ...v, images: v.images || [], origin: v.origin || 'Việt Nam' })}
+                                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
+                                              title="Sửa biến thể & Quản lý ảnh"
+                                            >
+                                              <Edit2 size={15} />
+                                            </button>
+                                            <button
+                                              onClick={() =>
+                                                setDeleteModal({
+                                                  open: true,
+                                                  type: 'single_variant',
+                                                  targetIds: [v.id],
+                                                  title: 'Xóa biến thể cấu hình?',
+                                                  description: `Bạn có chắc muốn xóa biến thể "${v.storage} - ${v.color} (${v.origin || 'Việt Nam'})" này không?`,
+                                                })
+                                              }
+                                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                                              title="Xóa cấu hình này"
+                                            >
+                                              <Trash2 size={15} />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               </div>
@@ -1162,7 +1192,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         )}
       </div>
 
-      {/* MODAL THÔNG BÁO XÁC NHẬN XÓA HIỆN ĐẠI */}
+      {/* MODAL THÔNG BÁO XÁC NHẬN XÓA */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-gray-100">
@@ -1209,7 +1239,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         </div>
       )}
 
-      {/* MODAL SỬA BIẾN THỂ & THƯ VIỆN NHIỀU ẢNH */}
+      {/* MODAL SỬA BIẾN THỂ & XUẤT XỨ */}
       {editingVariant && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-6 space-y-4 shadow-2xl text-xs">
@@ -1258,15 +1288,31 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Màu Sắc *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingVariant.color}
-                  onChange={(e) => setEditingVariant({ ...editingVariant, color: e.target.value })}
-                  className="w-full border rounded p-2 outline-none focus:border-red-500 font-medium"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Màu Sắc *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingVariant.color}
+                    onChange={(e) => setEditingVariant({ ...editingVariant, color: e.target.value })}
+                    className="w-full border rounded p-2 outline-none focus:border-red-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Xuất Xứ *</label>
+                  <select
+                    value={editingVariant.origin || 'Việt Nam'}
+                    onChange={(e) => setEditingVariant({ ...editingVariant, origin: e.target.value })}
+                    className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold bg-white cursor-pointer"
+                  >
+                    {PRESET_ORIGINS.map((orig) => (
+                      <option key={orig} value={orig}>
+                        {orig}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1303,7 +1349,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 />
               </div>
 
-              {/* QUẢN LÝ THƯ VIỆN ĐA ẢNH */}
+              {/* QUẢN LÝ ẢNH */}
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-gray-700 flex items-center gap-1.5">
@@ -1371,7 +1417,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         </div>
       )}
 
-      {/* MODAL THÊM CẤU HÌNH BIẾN THỂ CHO DÒNG CÓ SẴN */}
+      {/* MODAL THÊM CẤU HÌNH BIẾN THỂ */}
       {addingVariantProduct && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl text-xs">
@@ -1389,7 +1435,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             </div>
             <form onSubmit={handleCreateVariantForProduct} className="space-y-3">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">Dung Lượng / Kích Thước (Chọn nhanh) *</label>
+                <label className="font-bold text-gray-700 block mb-1">Dung Lượng / Kích Thước *</label>
                 <select
                   name="storage"
                   defaultValue="256GB"
@@ -1403,15 +1449,31 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 </select>
               </div>
 
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Màu Sắc *</label>
-                <input
-                  name="color"
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Titan Tự Nhiên, Đen Không Gian"
-                  className="w-full border rounded p-2 outline-none focus:border-red-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Màu Sắc *</label>
+                  <input
+                    name="color"
+                    type="text"
+                    required
+                    placeholder="VD: Titan Tự Nhiên"
+                    className="w-full border rounded p-2 outline-none focus:border-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Xuất Xứ *</label>
+                  <select
+                    name="origin"
+                    defaultValue="Việt Nam"
+                    className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold bg-white cursor-pointer"
+                  >
+                    {PRESET_ORIGINS.map((orig) => (
+                      <option key={orig} value={orig}>
+                        {orig}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1576,7 +1638,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 {variantsList.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-gray-50 border rounded-lg grid grid-cols-1 md:grid-cols-4 gap-2 items-center"
+                    className="p-3 bg-gray-50 border rounded-lg grid grid-cols-1 md:grid-cols-5 gap-2 items-center"
                   >
                     <select
                       value={item.storage}
@@ -1595,7 +1657,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                     </select>
                     <input
                       type="text"
-                      placeholder="Màu sắc (VD: Titan)"
+                      placeholder="Màu sắc"
                       value={item.color}
                       onChange={(e) => {
                         const up = [...variantsList];
@@ -1604,6 +1666,21 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                       }}
                       className="border p-1.5 rounded bg-white"
                     />
+                    <select
+                      value={item.origin || 'Việt Nam'}
+                      onChange={(e) => {
+                        const up = [...variantsList];
+                        up[idx].origin = e.target.value;
+                        setVariantsList(up);
+                      }}
+                      className="border p-1.5 rounded bg-white font-bold"
+                    >
+                      {PRESET_ORIGINS.map((orig) => (
+                        <option key={orig} value={orig}>
+                          {orig}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="number"
                       placeholder="Giá bán"
