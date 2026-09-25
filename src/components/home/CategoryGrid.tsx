@@ -24,7 +24,7 @@ const DEFAULT_CATEGORY_BANNERS = [
     id: 'cat-b1',
     name: 'banner1',
     link: '/iphone',
-    imageUrl: '/noi-bat/banneriphoe.webp',
+    imageUrl: '/noi-bat/banneriphone.webp',
   },
   {
     id: 'cat-b2',

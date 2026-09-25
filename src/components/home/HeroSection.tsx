@@ -41,7 +41,7 @@ const DEFAULT_PROMO_CARDS = [
   {
     id: 'default-promo-1',
     title: 'Macbook Air M5',
-    imageUrl: '/subbanners/subbaner1.png',
+    imageUrl: '/subbanners/subbanner1.png',
     link: '/macbook/macbook-air-m5',
   },
   {
