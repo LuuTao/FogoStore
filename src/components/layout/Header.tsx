@@ -260,7 +260,7 @@ export const Header: React.FC = () => {
     fetchMenuData();
   }, []);
 
-  // Nạp toàn bộ danh mục sản phẩm (kèm TẤT CẢ các biến thể) vào Cache
+  // Nạp toàn bộ danh mục sản phẩm (kèm tất cả các biến thể) vào Cache
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -289,7 +289,7 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
-  // TÌM KIẾM TOÀN BỘ CÁC BIẾN THỂ TRONG DB, BỎ "LIÊN HỆ", ƯU TIÊN MỚI, TỐI THIỂU 5-10 KẾT QUẢ
+  // LOGIC TÌM KIẾM THÔNG MINH: BẮT BUỘC KHỚP TỪ KHÓA, BUNG BIẾN THỂ, ƯU TIÊN MÔ ĐEN MỚI NHẤT
   useEffect(() => {
     const rawQuery = searchTerm.trim().toLowerCase();
     if (!rawQuery) {
@@ -303,23 +303,23 @@ export const Header: React.FC = () => {
     const timer = setTimeout(async () => {
       const processProducts = (rawList: any[]): SearchItem[] => {
         const queryKeywords = rawQuery.split(/\s+/).filter(Boolean);
-        const flattenedVariants: any[] = [];
+        const flattenedList: any[] = [];
 
-        // 1. DUYỆT TỪNG SẢN PHẨM VÀ BUNG TOÀN BỘ CÁC BIẾN THỂ (VARIANTS) CỦA NÓ
         rawList.forEach((product: any) => {
           if (!product || !product.name) return;
 
-          const variants = Array.isArray(product.variants) && product.variants.length > 0
-            ? product.variants
-            : [{ price: product.price || 0, images: product.images }];
+          const variants =
+            Array.isArray(product.variants) && product.variants.length > 0
+              ? product.variants
+              : [{ price: product.price || 0, images: product.images }];
 
           variants.forEach((v: any, vIdx: number) => {
             const price = Number(v.price !== undefined ? v.price : (product.price || 0));
 
-            // CHỈ LẤY BIẾN THỂ CÓ GIÁ ĐANG BÁN (PRICE > 0), LOẠI BỎ HẲN CÁC SẢN PHẨM "LIÊN HỆ"
+            // Chỉ lấy các cấu hình có giá bán thực tế (> 0đ)
             if (price <= 0) return;
 
-            // Xây dựng tên hiển thị chi tiết (VD: iPad Pro M5 11 inch 128GB - Xám)
+            // Xây dựng nhãn hiển thị biến thể (dung lượng, màu sắc)[cite: 7]
             const extraTags: string[] = [];
             if (v.storage && !product.name.toLowerCase().includes(v.storage.toLowerCase())) {
               extraTags.push(v.storage);
@@ -328,9 +328,10 @@ export const Header: React.FC = () => {
               extraTags.push(v.color);
             }
 
-            const fullName = extraTags.length > 0
-              ? `${product.name} (${extraTags.join(' - ')})`
-              : product.name;
+            const fullName =
+              extraTags.length > 0
+                ? `${product.name} (${extraTags.join(' - ')})`
+                : product.name;
 
             // Xử lý ảnh biến thể
             let rawImg = '';
@@ -347,16 +348,49 @@ export const Header: React.FC = () => {
               rawImg = v.imageUrl || product.imageUrl || product.thumbnail || '/placeholder.png';
             }
 
-            const searchString = `${product.name} ${fullName} ${v.storage || ''} ${v.color || ''} ${product.category?.name || ''} ${product.slug || ''}`.toLowerCase();
+            const searchString = `${product.name} ${fullName} ${v.storage || ''} ${v.color || ''} ${product.category?.name || ''} ${product.slug || ''} ${v.slug || ''}`.toLowerCase();
 
-            // Kiểm tra hàng cũ / hàng like new
             const isUsed =
               searchString.includes('cũ') ||
               searchString.includes('like new') ||
               searchString.includes('99%') ||
               searchString.includes('cu');
 
-            flattenedVariants.push({
+            // HỆ THỐNG TÍNH ĐIỂM ƯU TIÊN THẾ HỆ FLAGSHIP MỚI NHẤT
+            let priorityScore = 0;
+
+            // Đời cao nhất (+100 điểm)
+            if (
+              searchString.includes('18') ||
+              searchString.includes('duo') ||
+              searchString.includes('m5')
+            ) {
+              priorityScore += 100;
+            }
+            // Đời cận cao (+80 điểm)
+            else if (
+              searchString.includes('17') ||
+              searchString.includes('m4') ||
+              searchString.includes('air 7')
+            ) {
+              priorityScore += 80;
+            }
+            // Đời tiếp theo (+50 điểm)
+            else if (searchString.includes('16') || searchString.includes('m3')) {
+              priorityScore += 50;
+            }
+
+            // Hàng Mới được ưu tiên hơn Hàng Cũ (+50 điểm)
+            if (!isUsed) {
+              priorityScore += 50;
+            }
+
+            // Trùng khớp từ khóa trong tên được cộng thêm điểm
+            queryKeywords.forEach((kw) => {
+              if (searchString.includes(kw)) priorityScore += 30;
+            });
+
+            flattenedList.push({
               id: `${product.id}-${v.id || vIdx}`,
               name: fullName,
               slug: v.slug || product.slug || product.id,
@@ -365,40 +399,32 @@ export const Header: React.FC = () => {
               categoryName: product.category?.name || product.categoryName,
               createdAt: product.createdAt ? new Date(product.createdAt).getTime() : 0,
               isUsed,
+              priorityScore,
               searchString,
             });
           });
         });
 
-        // 2. TÌM KHỚP TẤT CẢ TỪ KHÓA
-        let matched = flattenedVariants.filter((item) =>
+        // BẮT BUỘC KHỚP TẤT CẢ TỪ KHÓA (Ví dụ: "17" phải có "17", "m5" phải có "m5")[cite: 8, 9]
+        const matched = flattenedList.filter((item) =>
           queryKeywords.every((kw) => item.searchString.includes(kw))
         );
 
-        // 3. NẾU DƯỚI 5 KẾT QUẢ -> NỚI LỎNG THEO TỪ KHÓA CHÍNH ĐỂ ĐẢM BẢO ÍT NHẤT 5 KẾT QUẢ
-        if (matched.length < 5 && queryKeywords.length > 1) {
-          const mainKeyword = queryKeywords.slice(0, 2).join(' '); // Ví dụ: "ipad pro" hoặc "iphone 16"
-          const fallbackMatches = flattenedVariants.filter(
-            (item) =>
-              item.searchString.includes(mainKeyword) &&
-              !matched.some((m) => m.id === item.id)
-          );
-          matched = [...matched, ...fallbackMatches];
-        }
+        // Khử trùng lặp tên hiển thị
+        const uniqueMatches = matched.filter(
+          (item, idx, self) =>
+            idx === self.findIndex((t) => t.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
+        );
 
-        // 4. SẮP XẾP ƯU TIÊN:
-        // - HÀNG MỚI (isUsed = false) LÊN TRƯỚC
-        // - HÀNG CŨ (isUsed = true) XUỐNG SAU
-        // - MỚI NHẤT TRONG DB ĐƯỢC ƯU TIÊN
-        matched.sort((a, b) => {
-          if (a.isUsed !== b.isUsed) {
-            return a.isUsed ? 1 : -1;
+        // Sắp xếp: Ưu tiên điểm thế hệ cao nhất lên đầu bảng, hàng Mới trước, cùng điểm thì xếp theo ngày tạo
+        uniqueMatches.sort((a, b) => {
+          if (b.priorityScore !== a.priorityScore) {
+            return b.priorityScore - a.priorityScore;
           }
           return b.createdAt - a.createdAt;
         });
 
-        // Trả về từ 6 đến 12 kết quả
-        return matched.slice(0, 10);
+        return uniqueMatches.slice(0, 10);
       };
 
       if (productsCache.length > 0) {
@@ -407,7 +433,6 @@ export const Header: React.FC = () => {
         setShowDropdown(true);
         setIsSearching(false);
       } else {
-        // Fallback: Gọi trực tiếp API
         try {
           const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(rawQuery)}&all=true`);
           if (res.ok) {
@@ -652,7 +677,6 @@ export const Header: React.FC = () => {
                         {user.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên'}
                       </span>
 
-                      {/* Tag VIP hoặc Thân Thiết */}
                       {user.role !== 'ADMIN' && user.rank === 'VIP' && (
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-amber-500 to-yellow-400 text-white shadow-xs tracking-wider animate-pulse">
                           <Crown size={10} strokeWidth={3} />
