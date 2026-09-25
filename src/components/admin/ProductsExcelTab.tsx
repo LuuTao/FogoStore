@@ -23,9 +23,18 @@ export default function ProductsExcelTab({ onSuccess }: Props) {
     setLoading(true);
     setStatus(null);
 
+    // Lấy token quản trị từ LocalStorage
+    const token =
+      localStorage.getItem('fogo_token') ||
+      localStorage.getItem('token') ||
+      '';
+
     try {
       const res = await fetch(`${API_URL}/api/admin/products/import-excel`, {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`, // Thêm dòng này để backend xác thực quyền Admin
+        },
         body: formData,
       });
 
@@ -43,6 +52,7 @@ export default function ProductsExcelTab({ onSuccess }: Props) {
       setLoading(false);
       e.target.value = '';
     }
+
   };
 
   return (
