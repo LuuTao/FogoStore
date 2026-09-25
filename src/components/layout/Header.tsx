@@ -209,6 +209,15 @@ interface SearchItem {
   categoryName?: string;
 }
 
+// Xử lý chuẩn URL ảnh cho popup tìm kiếm
+const formatSearchImage = (url?: string | null): string => {
+  if (!url) return '/placeholder.png';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('/')) {
+    return url;
+  }
+  return `${API_URL}/${url}`;
+};
+
 export const Header: React.FC = () => {
   const router = useRouter();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -245,19 +254,33 @@ export const Header: React.FC = () => {
           }
         }
       } catch (err) {
-        // Fallback
+        // Fallback giữ nguyên danh mục chính
       }
     };
     fetchMenuData();
   }, []);
 
+  // Nạp danh mục sản phẩm phục vụ tìm kiếm nhanh
   useEffect(() => {
     const loadProducts = async () => {
       try {
         const res = await fetch(`${API_URL}/api/products`);
+        if (!res.ok) return;
         const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          setProductsCache(json.data);
+
+        let list: any[] = [];
+        if (Array.isArray(json)) {
+          list = json;
+        } else if (Array.isArray(json.data)) {
+          list = json.data;
+        } else if (json.data && Array.isArray(json.data.products)) {
+          list = json.data.products;
+        } else if (Array.isArray(json.products)) {
+          list = json.products;
+        }
+
+        if (list.length > 0) {
+          setProductsCache(list);
         }
       } catch (e) {
         console.error('Lỗi nạp sản phẩm tìm kiếm:', e);
@@ -266,40 +289,86 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
+  // Logic tìm kiếm thông minh kết hợp Client-Cache & Server-Fallback
+  // Lọc sản phẩm thực tế: Có tên thật, giá > 0 và trạng thái hoạt động
+  // Tìm kiếm thông minh: Có trong DB là hiển thị, giá 0đ sẽ hiện chữ "Liên hệ"
   useEffect(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) {
+    const rawQuery = searchTerm.trim();
+    if (!rawQuery) {
       setSearchResults([]);
       setShowDropdown(false);
       return;
     }
 
+    const query = rawQuery.toLowerCase();
     setIsSearching(true);
-    const timer = setTimeout(() => {
+
+    const timer = setTimeout(async () => {
       if (productsCache.length > 0) {
         const matched = productsCache
           .filter((item: any) => {
+            // Chỉ bỏ sản phẩm không có ID hoặc không có tên
+            if (!item.id || !item.name || item.name.trim() === '') return false;
+
             const name = (item.name || '').toLowerCase();
-            const cat = (item.category?.name || item.category?.slug || '').toLowerCase();
-            return name.includes(query) || cat.includes(query);
+            const cat = (item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
+            const brand = (item.brand || '').toLowerCase();
+            return name.includes(query) || cat.includes(query) || brand.includes(query);
           })
           .slice(0, 6)
           .map((item: any) => {
-            const variant = item.variants?.[0] || {};
+            const firstVariant = item.variants?.[0] || {};
+            const rawImg =
+              firstVariant.images?.[0] ||
+              firstVariant.imageUrl ||
+              item.imageUrl ||
+              item.thumbnail ||
+              '/placeholder.png';
+            
+            // Giữ nguyên giá trị giá (kể cả 0)
+            const price = firstVariant.price !== undefined ? firstVariant.price : (item.price || 0);
+
             return {
               id: item.id,
               name: item.name,
-              slug: item.slug,
-              price: variant.price || 0,
-              imageUrl: variant.images?.[0] || '/placeholder.png',
-              categoryName: item.category?.name,
+              slug: item.slug || item.id,
+              price,
+              imageUrl: formatSearchImage(rawImg),
+              categoryName: item.category?.name || item.categoryName,
             };
           });
 
         setSearchResults(matched);
         setShowDropdown(true);
+        setIsSearching(false);
+      } else {
+        // Fallback: Gọi API trực tiếp nếu cache chưa kịp tải
+        try {
+          const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(query)}`);
+          if (res.ok) {
+            const json = await res.json();
+            const list = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+            const mapped = list.slice(0, 6).map((item: any) => {
+              const firstVariant = item.variants?.[0] || {};
+              const rawImg = firstVariant.images?.[0] || item.imageUrl || '/placeholder.png';
+              return {
+                id: item.id,
+                name: item.name,
+                slug: item.slug || item.id,
+                price: firstVariant.price !== undefined ? firstVariant.price : (item.price || 0),
+                imageUrl: formatSearchImage(rawImg),
+                categoryName: item.category?.name,
+              };
+            });
+            setSearchResults(mapped);
+            setShowDropdown(true);
+          }
+        } catch (e) {
+          // ignore
+        } finally {
+          setIsSearching(false);
+        }
       }
-      setIsSearching(false);
     }, 200);
 
     return () => clearTimeout(timer);
@@ -516,7 +585,7 @@ export const Header: React.FC = () => {
                         {user.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên'}
                       </span>
 
-                      {/* Tag Thân Thiết hoặc VIP bên cạnh chữ Thành viên */}
+                      {/* Tag VIP hoặc Thân Thiết cạnh chức danh */}
                       {user.role !== 'ADMIN' && user.rank === 'VIP' && (
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-amber-500 to-yellow-400 text-white shadow-xs tracking-wider animate-pulse">
                           <Crown size={10} strokeWidth={3} />
