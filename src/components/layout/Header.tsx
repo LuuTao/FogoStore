@@ -316,10 +316,7 @@ export const Header: React.FC = () => {
           variants.forEach((v: any, vIdx: number) => {
             const price = Number(v.price !== undefined ? v.price : (product.price || 0));
 
-            // Chỉ lấy các cấu hình có giá bán thực tế (> 0đ)
-            if (price <= 0) return;
-
-            // Xây dựng nhãn hiển thị biến thể (dung lượng, màu sắc)[cite: 7]
+            // Chỉ cần biến thể có tồn tại trong database (kể cả 0đ) là cho hiển thị
             const extraTags: string[] = [];
             if (v.storage && !product.name.toLowerCase().includes(v.storage.toLowerCase())) {
               extraTags.push(v.storage);
@@ -333,7 +330,6 @@ export const Header: React.FC = () => {
                 ? `${product.name} (${extraTags.join(' - ')})`
                 : product.name;
 
-            // Xử lý ảnh biến thể
             let rawImg = '';
             if (Array.isArray(v.images) && v.images.length > 0) {
               rawImg = v.images[0];
@@ -356,45 +352,37 @@ export const Header: React.FC = () => {
               searchString.includes('99%') ||
               searchString.includes('cu');
 
-            // HỆ THỐNG TÍNH ĐIỂM ƯU TIÊN THẾ HỆ FLAGSHIP MỚI NHẤT
             let priorityScore = 0;
 
-            // Đời cao nhất (+100 điểm)
             if (
               searchString.includes('18') ||
               searchString.includes('duo') ||
               searchString.includes('m5')
             ) {
               priorityScore += 100;
-            }
-            // Đời cận cao (+80 điểm)
-            else if (
+            } else if (
               searchString.includes('17') ||
               searchString.includes('m4') ||
               searchString.includes('air 7')
             ) {
               priorityScore += 80;
-            }
-            // Đời tiếp theo (+50 điểm)
-            else if (searchString.includes('16') || searchString.includes('m3')) {
+            } else if (searchString.includes('16') || searchString.includes('m3')) {
               priorityScore += 50;
             }
 
-            // Hàng Mới được ưu tiên hơn Hàng Cũ (+50 điểm)
-            if (!isUsed) {
-              priorityScore += 50;
-            }
+            if (!isUsed) priorityScore += 50;
+            // Ưu tiên sản phẩm có giá hiển thị trước sản phẩm "Liên hệ"
+            if (price > 0) priorityScore += 30;
 
-            // Trùng khớp từ khóa trong tên được cộng thêm điểm
             queryKeywords.forEach((kw) => {
-              if (searchString.includes(kw)) priorityScore += 30;
+              if (searchString.includes(kw)) priorityScore += 20;
             });
 
             flattenedList.push({
               id: `${product.id}-${v.id || vIdx}`,
               name: fullName,
               slug: v.slug || product.slug || product.id,
-              price,
+              price, // Giữ nguyên giá trị 0 nếu chưa có giá
               imageUrl: formatSearchImage(rawImg),
               categoryName: product.category?.name || product.categoryName,
               createdAt: product.createdAt ? new Date(product.createdAt).getTime() : 0,

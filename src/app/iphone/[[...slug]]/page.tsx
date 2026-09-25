@@ -65,7 +65,6 @@ const DEFAULT_IPHONE_SERIES: SeriesTabItem[] = [
   },
 ];
 
-// Định nghĩa tag submodel rõ ràng tránh trùng lặp
 const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '18': [
     { name: '18 Pro Max', tag: 'iphone-18-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
@@ -144,19 +143,26 @@ const formatProductImageUrl = (url?: string | null): string => {
   return `${API_URL}${path}`;
 };
 
-const buildProductNameWithStorage = (originalName: string, storage: string): string => {
-  if (!storage) return originalName;
-  const upperStorage = storage.toUpperCase();
-  let clean = originalName.replace(new RegExp(`\\b${upperStorage}\\b`, 'gi'), '').trim();
-
-  const matchSuffix = clean.match(/(Chính Hãng.*|New Seal.*|CPO.*|Chưa Active.*|Đã Kích Hoạt.*)$/i);
-  if (matchSuffix) {
-    const mainTitle = clean.substring(0, matchSuffix.index).trim();
-    const suffix = matchSuffix[0].trim();
-    return `${mainTitle} ${upperStorage} ${suffix}`;
+const buildProductNameWithStorage = (originalName: string, storage: string, color?: string): string => {
+  let result = originalName;
+  const upperStorage = storage ? storage.toUpperCase() : '';
+  
+  if (upperStorage && !result.toUpperCase().includes(upperStorage)) {
+    const matchSuffix = result.match(/(Chính Hãng.*|New Seal.*|CPO.*|Chưa Active.*|Đã Kích Hoạt.*)$/i);
+    if (matchSuffix) {
+      const mainTitle = result.substring(0, matchSuffix.index).trim();
+      const suffix = matchSuffix[0].trim();
+      result = `${mainTitle} ${upperStorage} ${suffix}`;
+    } else {
+      result = `${result} ${upperStorage}`;
+    }
   }
 
-  return `${clean} ${upperStorage}`;
+  if (color && !result.toLowerCase().includes(color.toLowerCase())) {
+    result = `${result} - ${color}`;
+  }
+
+  return result;
 };
 
 export default function DynamicIPhonePage() {
@@ -173,13 +179,11 @@ export default function DynamicIPhonePage() {
   const [adminBanners, setAdminBanners] = useState<any[]>([]);
   const [recentViewed, setRecentViewed] = useState<any[]>([]);
 
-  // Đọc linh hoạt từ URL phân tầng hoặc query
   const slugParam = params?.slug;
   const rawSlug = Array.isArray(slugParam) ? slugParam.join('/') : (slugParam as string) || '';
   const queryParam = searchParams?.get('series') || '';
   const currentFilter = (rawSlug || queryParam || '').toLowerCase().trim();
 
-  // Nhận diện series tag cha (18, 17, 16, 15, duo)
   const currentSeriesTag = useMemo(() => {
     if (!currentFilter) return null;
     if (currentFilter.includes('duo')) return 'duo';
@@ -232,15 +236,9 @@ export default function DynamicIPhonePage() {
     const fetchIPhoneProducts = async () => {
       try {
         setLoadingDb(true);
-        let res = await fetch(`${API_URL}/api/products/filter?category=iphone`, {
-          cache: 'no-store',
-        });
+        // Gọi API lấy toàn bộ biến thể
+        let res = await fetch(`${API_URL}/api/products?all=true&limit=all`, { cache: 'no-store' });
         let json = await res.json();
-
-        if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-          res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
-          json = await res.json();
-        }
 
         const items = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
         const filtered = items.filter((item: any) => {
@@ -261,82 +259,77 @@ export default function DynamicIPhonePage() {
     fetchIPhoneProducts();
   }, []);
 
+  // Bung chi tiết toàn bộ các biến thể dung lượng/màu sắc (giá = 0đ vẫn hiển thị "Liên hệ")
   const expandedProducts = useMemo(() => {
     const result: any[] = [];
 
     rawDbProducts.forEach((prod) => {
-      const variants: any[] = Array.isArray(prod.variants) ? prod.variants : [];
+      const variants: any[] = Array.isArray(prod.variants) && prod.variants.length > 0
+        ? prod.variants
+        : [{ price: prod.price || 0, images: prod.images }];
 
-      const storageMap = new Map<string, any[]>();
-      variants.forEach((v) => {
-        const rawSt = (v.storage && String(v.storage).trim()) || '';
-        const stKey = rawSt.toLowerCase() === 'tiêu chuẩn' || !rawSt ? '' : rawSt.toUpperCase().replace(/\//g, '-');
-        if (!storageMap.has(stKey)) {
-          storageMap.set(stKey, []);
-        }
-        storageMap.get(stKey)!.push(v);
-      });
-
-      if (storageMap.size <= 1) {
-        const v = variants[0] || {};
-        const curPrice = Number(v.price || prod.price || 0);
+      variants.forEach((v, vIdx) => {
+        const curPrice = Number(v.price !== undefined ? v.price : (prod.price || 0));
         const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
-        const stKey = Array.from(storageMap.keys())[0] || '';
-        const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
-        const hasPrice = curPrice > 0;
-        const finalName = buildProductNameWithStorage(prod.name, stKey);
+        const stKey = (v.storage && String(v.storage).trim()) || '';
+        const colorKey = (v.color && String(v.color).trim()) || '';
+        const finalName = buildProductNameWithStorage(prod.name, stKey, colorKey);
+
+        // Đường dẫn chính xác trỏ đến biến thể (sử dụng slug của variant hoặc query)
+        const targetSlug = v.slug || prod.slug;
+        const targetHref = v.slug
+          ? `/san-pham/${v.slug}`
+          : `/san-pham/${prod.slug}?storage=${encodeURIComponent(stKey)}&color=${encodeURIComponent(colorKey)}`;
+
+        let rawImg = '';
+        if (Array.isArray(v.images) && v.images.length > 0) {
+          rawImg = v.images[0];
+        } else if (typeof v.images === 'string') {
+          try {
+            const parsed = JSON.parse(v.images);
+            rawImg = Array.isArray(parsed) ? parsed[0] : parsed;
+          } catch {
+            rawImg = v.images;
+          }
+        } else {
+          rawImg = v.imageUrl || prod.imageUrl || prod.thumbnail || prod.image || '/placeholder.png';
+        }
+
+        let priorityScore = 0;
+        const lowerName = finalName.toLowerCase();
+        if (lowerName.includes('18') || lowerName.includes('duo')) priorityScore += 100;
+        else if (lowerName.includes('17')) priorityScore += 80;
+        else if (lowerName.includes('16')) priorityScore += 50;
+
+        // Ưu tiên biến thể có giá đang bán lên trước biến thể "Liên hệ"
+        if (curPrice > 0) priorityScore += 20;
 
         result.push({
-          id: prod.id,
-          variantId: v.id || prod.id,
+          id: `${prod.id}-${v.id || vIdx}`,
+          variantId: v.id || `${prod.id}-${stKey}`,
           name: finalName,
-          slug: `${prod.slug}${slugSuffix}`,
+          slug: targetSlug,
           modelSlug: prod.slug,
-          href: `/san-pham/${prod.slug}${slugSuffix}`,
+          href: targetHref,
           currentPrice: formatVndPrice(curPrice),
-          originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+          originalPrice: curPrice > 0 && origPrice > curPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
           storage: stKey,
-          color: v.color || '',
-          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
-          imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-          statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-          searchIndex: `${prod.name} ${stKey}`.toLowerCase(),
+          color: colorKey,
+          priorityScore,
+          createdAt: prod.createdAt ? new Date(prod.createdAt).getTime() : 0,
+          discountPercent: curPrice > 0 && origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 0,
+          imageUrl: formatProductImageUrl(rawImg),
+          statusTag: curPrice > 0 ? 'Sẵn hàng' : 'Liên hệ',
+          searchIndex: `${finalName} ${stKey} ${colorKey} ${prod.slug}`.toLowerCase(),
         });
-      } else {
-        storageMap.forEach((varList, stKey) => {
-          const v = varList[0];
-          const curPrice = Number(v.price || prod.price || 0);
-          const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
-          const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
-          const hasPrice = curPrice > 0;
-          const finalName = buildProductNameWithStorage(prod.name, stKey);
-
-          result.push({
-            id: `${prod.id}-${stKey || 'base'}`,
-            variantId: v.id || `${prod.id}-${stKey}`,
-            name: finalName,
-            slug: `${prod.slug}${slugSuffix}`,
-            modelSlug: prod.slug,
-            href: `/san-pham/${prod.slug}${slugSuffix}`,
-            currentPrice: formatVndPrice(curPrice),
-            originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
-            rawPrice: curPrice,
-            storage: stKey,
-            color: v.color || '',
-            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
-            imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
-            statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-            searchIndex: `${prod.name} ${stKey}`.toLowerCase(),
-          });
-        });
-      }
+      });
     });
 
     return result;
   }, [rawDbProducts]);
 
-  // Lọc sản phẩm chính xác theo model mà không làm rỗng trang
+  // Bộ lọc danh mục con và sắp xếp chuẩn
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
@@ -346,7 +339,6 @@ export default function DynamicIPhonePage() {
       const targetNumber = numMatch ? numMatch[0] : null;
 
       if (targetNumber) {
-        // Thu hẹp vào đúng thế hệ (ví dụ: iPhone 18)
         const seriesRegex = new RegExp(`\\b${targetNumber}\\b`, 'i');
         items = items.filter((i) => seriesRegex.test(i.name));
 
@@ -369,13 +361,11 @@ export default function DynamicIPhonePage() {
           lowerFilter.includes('standard') ||
           lowerFilter.endsWith(`-${targetNumber}-base`)
         ) {
-          // Lọc đúng bản thường: loại bỏ Pro, Pro Max, Plus, Air
           items = items.filter((i) => {
             const n = (i.name || '').toLowerCase();
             return !n.includes('pro') && !n.includes('plus') && !n.includes('air');
           });
         }
-        // Nếu URL là /iphone/iphone-18 thì giữ nguyên tất cả bản thuộc dòng 18 Series
       } else if (lowerFilter.includes('duo')) {
         items = items.filter((i) => (i.name || '').toLowerCase().includes('duo'));
       } else {
@@ -388,7 +378,7 @@ export default function DynamicIPhonePage() {
 
     if (activeFilters.price) {
       items = items.filter((item) => {
-        const price = parsePrice(item.rawPrice || item.currentPrice);
+        const price = item.rawPrice;
         if (activeFilters.price === 'Dưới 2 triệu') return price < 2000000;
         if (activeFilters.price === 'Từ 2 - 4 triệu') return price >= 2000000 && price <= 4000000;
         if (activeFilters.price === 'Từ 4 - 7 triệu') return price > 4000000 && price <= 7000000;
@@ -399,30 +389,22 @@ export default function DynamicIPhonePage() {
       });
     }
 
-    if (activeFilters.ram) {
-      const ramVal = activeFilters.ram.toLowerCase();
-      items = items.filter((item) => item.searchIndex.includes(ramVal));
-    }
-
     if (activeFilters.storage) {
       const storeVal = activeFilters.storage.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(storeVal));
     }
 
+    // Sắp xếp: Mặc định ưu tiên đời máy mới nhất (18, Duo, 17) -> giá -> thời gian tạo
     items.sort((a, b) => {
-      const priceA = parsePrice(a.rawPrice || a.currentPrice);
-      const priceB = parsePrice(b.rawPrice || b.currentPrice);
-
-      if (currentSort === 'price_asc') return priceA - priceB;
-      if (currentSort === 'price_desc') return priceB - priceA;
-      if (currentSort === 'id') return String(a.id).localeCompare(String(b.id));
-      return 0;
+      if (currentSort === 'price_asc') return a.rawPrice - b.rawPrice;
+      if (currentSort === 'price_desc') return b.rawPrice - a.rawPrice;
+      if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
+      return b.createdAt - a.createdAt;
     });
 
     return items;
   }, [expandedProducts, currentFilter, currentSort, activeFilters]);
 
-  // Hiển thị tiêu đề chuẩn xác
   const displayTitle = useMemo(() => {
     if (!currentFilter) return 'Tất cả sản phẩm iPhone';
 
@@ -539,12 +521,11 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* HÀNG SERIES CHA (ĐÃ SỬA: ĐỒNG BỘ DẠNG NESTED /iphone/iphone-18) */}
+          {/* HÀNG SERIES CHA */}
           <div className="my-6 py-2 w-full">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
-                // Nhận diện chuẩn active của hàng cha
                 const isSelected = isAllButton
                   ? !currentFilter
                   : currentFilter.startsWith(series.slug || '') ||
@@ -582,12 +563,11 @@ export default function DynamicIPhonePage() {
             </div>
           </div>
 
-          {/* SUBMODELS CON (ĐÃ SỬA: PHÂN BIỆT RÕ RÀNG PRO VÀ PRO MAX TRÁNH TRÙNG ACTIVE) */}
+          {/* SUBMODELS CON */}
           {subModels.length > 0 && (
             <div className="mb-8 pt-3 pb-3 border-t border-dashed border-gray-200 w-full">
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 md:gap-6 w-full px-2">
                 {subModels.map((model) => {
-                  // Điều kiện active chính xác từng nút độc lập
                   let isSubSelected = false;
                   if (model.tag.includes('pro-max')) {
                     isSubSelected = currentFilter.includes('pro-max') || currentFilter.includes('promax');
