@@ -329,53 +329,65 @@ export default function DynamicIPhonePage() {
     return result;
   }, [rawDbProducts]);
 
-  // Bộ lọc danh mục con và sắp xếp chuẩn
+  // Bộ lọc sản phẩm: Xử lý chuẩn xác URL "iphone-17-series" và toàn bộ các dòng con
   const filteredProducts = useMemo(() => {
     let items = [...expandedProducts];
 
     if (currentFilter) {
-      const lowerFilter = currentFilter.toLowerCase();
+      const lowerFilter = currentFilter.toLowerCase().trim();
       const numMatch = lowerFilter.match(/\d+/);
       const targetNumber = numMatch ? numMatch[0] : null;
 
+      // TRƯỜNG HỢP 1: LỌC THEO THẾ HỆ SỐ (Ví dụ: "17", "18", "16", "15")
       if (targetNumber) {
-        const seriesRegex = new RegExp(`\\b${targetNumber}\\b`, 'i');
-        items = items.filter((i) => seriesRegex.test(i.name));
+        // Chỉ giữ lại các sản phẩm có chứa số đời máy (ví dụ chữ "17")
+        items = items.filter((i) => {
+          const checkStr = `${i.name} ${i.modelSlug || ''} ${i.slug || ''}`.toLowerCase();
+          return checkStr.includes(targetNumber);
+        });
 
+        // 1. Nếu đang chọn nút "Pro Max"
         if (lowerFilter.includes('pro-max') || lowerFilter.includes('promax')) {
           items = items.filter((i) => {
-            const nl = (i.name || '').toLowerCase();
+            const nl = i.name.toLowerCase();
             return nl.includes('pro max') || nl.includes('promax');
           });
-        } else if (lowerFilter.includes('pro') && !lowerFilter.includes('max')) {
+        }
+        // 2. Nếu đang chọn nút "Pro" (không tính Pro Max)
+        else if (lowerFilter.includes('pro') && !lowerFilter.includes('max')) {
           items = items.filter((i) => {
-            const nl = (i.name || '').toLowerCase();
+            const nl = i.name.toLowerCase();
             return nl.includes('pro') && !nl.includes('max');
           });
-        } else if (lowerFilter.includes('plus')) {
-          items = items.filter((i) => (i.name || '').toLowerCase().includes('plus'));
-        } else if (lowerFilter.includes('air')) {
-          items = items.filter((i) => (i.name || '').toLowerCase().includes('air'));
-        } else if (
-          lowerFilter.includes('tieuchuan') || 
-          lowerFilter.includes('standard') ||
-          lowerFilter.endsWith(`-${targetNumber}-base`)
-        ) {
+        }
+        // 3. Nếu đang chọn nút "Plus"
+        else if (lowerFilter.includes('plus')) {
+          items = items.filter((i) => i.name.toLowerCase().includes('plus'));
+        }
+        // 4. Nếu đang chọn nút "Air"
+        else if (lowerFilter.includes('air')) {
+          items = items.filter((i) => i.name.toLowerCase().includes('air'));
+        }
+        // 5. Nếu đang chọn nút bản thường / tiêu chuẩn
+        else if (lowerFilter.includes('tieuchuan') || lowerFilter.includes('standard')) {
           items = items.filter((i) => {
-            const n = (i.name || '').toLowerCase();
-            return !n.includes('pro') && !n.includes('plus') && !n.includes('air');
+            const nl = i.name.toLowerCase();
+            return !nl.includes('pro') && !nl.includes('plus') && !nl.includes('air');
           });
         }
-      } else if (lowerFilter.includes('duo')) {
-        items = items.filter((i) => (i.name || '').toLowerCase().includes('duo'));
-      } else {
-        const cleanTag = lowerFilter.replace(/iphone|-|series/g, ' ').trim();
-        if (cleanTag) {
-          items = items.filter((i) => (i.name || '').toLowerCase().includes(cleanTag));
-        }
+        // 6. QUAN TRỌNG: NẾU URL LÀ "iphone-17-series" HOẶC "iphone-17" 
+        // -> GIỮ NGUYÊN TOÀN BỘ CÁC BẢN CỦA IPHONE 17 (KHÔNG LỌC BỚT GÌ HẾT)
+      } 
+      // TRƯỜNG HỢP 2: DÒNG IPHONE DUO
+      else if (lowerFilter.includes('duo')) {
+        items = items.filter((i) => {
+          const checkStr = `${i.name} ${i.modelSlug || ''} ${i.slug || ''}`.toLowerCase();
+          return checkStr.includes('duo');
+        });
       }
     }
 
+    // Bộ lọc theo khoảng giá
     if (activeFilters.price) {
       items = items.filter((item) => {
         const price = item.rawPrice;
@@ -389,12 +401,13 @@ export default function DynamicIPhonePage() {
       });
     }
 
+    // Bộ lọc theo bộ nhớ
     if (activeFilters.storage) {
       const storeVal = activeFilters.storage.toLowerCase();
       items = items.filter((item) => item.searchIndex.includes(storeVal));
     }
 
-    // Sắp xếp: Mặc định ưu tiên đời máy mới nhất (18, Duo, 17) -> giá -> thời gian tạo
+    // Sắp xếp
     items.sort((a, b) => {
       if (currentSort === 'price_asc') return a.rawPrice - b.rawPrice;
       if (currentSort === 'price_desc') return b.rawPrice - a.rawPrice;
