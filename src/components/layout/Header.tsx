@@ -259,11 +259,11 @@ export const Header: React.FC = () => {
     fetchMenuData();
   }, []);
 
-  // Nạp danh mục sản phẩm phục vụ tìm kiếm
+  // Nạp toàn bộ danh mục sản phẩm vào Cache phục vụ tìm kiếm tức thì 0ms
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/products`);
+        const res = await fetch(`${API_URL}/api/products?all=true&limit=all`);
         if (!res.ok) return;
         const json = await res.json();
 
@@ -288,46 +288,41 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
-  // Logic tìm kiếm: CHẶN HÀNG ẢO, LOẠI BỎ HÀNG KHÔNG ẢNH/ẢNH RÁC VÀ KHỬ TRÙNG LẶP TÊN
-  // Logic tìm kiếm an toàn và chính xác
+  // Logic tìm kiếm an toàn: Lọc sạch hàng rác, khử trùng lặp và không phân biệt chữ hoa/thường
   useEffect(() => {
-    const rawQuery = searchTerm.trim();
+    const rawQuery = searchTerm.trim().toLowerCase();
     if (!rawQuery) {
       setSearchResults([]);
       setShowDropdown(false);
       return;
     }
 
-    const query = rawQuery.toLowerCase();
     setIsSearching(true);
 
     const timer = setTimeout(async () => {
       const processProducts = (rawList: any[]): SearchItem[] => {
         return rawList
           .filter((item: any) => {
-            // 1. Phải có ID và Tên hợp lệ
-            if (!item.id || !item.name || item.name.trim() === '') return false;
+            if (!item || !item.name || typeof item.name !== 'string') return false;
 
-            // 2. Khớp từ khóa tìm kiếm (Tên, Danh mục, Slug)
-            const name = (item.name || '').toLowerCase();
-            const cat = (item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
-            const slug = (item.slug || '').toLowerCase();
+            const name = item.name.toLowerCase();
+            const cat = String(item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
+            const slug = String(item.slug || '').toLowerCase();
 
-            return name.includes(query) || cat.includes(query) || slug.includes(query);
+            return name.includes(rawQuery) || cat.includes(rawQuery) || slug.includes(rawQuery);
           })
-          // 3. Khử trùng lặp theo tên
+          // Khử trùng lặp: Nếu trùng tên sản phẩm, chỉ giữ 1 sản phẩm đại diện
           .filter((item: any, index: number, self: any[]) =>
             index === self.findIndex((t: any) => t.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
           )
           .slice(0, 6)
           .map((item: any) => {
             const firstVariant = item.variants?.[0] || {};
-            
-            // Xử lý lấy ảnh từ mọi vị trí khả dĩ
+
             let rawImg = '';
             if (Array.isArray(firstVariant.images) && firstVariant.images.length > 0) {
               rawImg = firstVariant.images[0];
-            } else if (typeof firstVariant.images === 'string' && firstVariant.images) {
+            } else if (typeof firstVariant.images === 'string') {
               try {
                 const parsed = JSON.parse(firstVariant.images);
                 rawImg = Array.isArray(parsed) ? parsed[0] : parsed;
@@ -335,7 +330,12 @@ export const Header: React.FC = () => {
                 rawImg = firstVariant.images;
               }
             } else {
-              rawImg = firstVariant.imageUrl || item.imageUrl || item.thumbnail || (Array.isArray(item.images) ? item.images[0] : '') || '/placeholder.png';
+              rawImg =
+                firstVariant.imageUrl ||
+                item.imageUrl ||
+                item.thumbnail ||
+                (Array.isArray(item.images) ? item.images[0] : '') ||
+                '/placeholder.png';
             }
 
             const price = firstVariant.price !== undefined ? firstVariant.price : (item.price || 0);
@@ -357,12 +357,12 @@ export const Header: React.FC = () => {
         setShowDropdown(true);
         setIsSearching(false);
       } else {
-        // Fallback: Gọi trực tiếp API
+        // Fallback: Gọi trực tiếp API nếu cache chưa về kịp
         try {
-          const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(query)}`);
+          const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(rawQuery)}&all=true`);
           if (res.ok) {
             const json = await res.json();
-            const list = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+            const list = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
             const matched = processProducts(list);
             setSearchResults(matched);
             setShowDropdown(true);
@@ -373,7 +373,7 @@ export const Header: React.FC = () => {
           setIsSearching(false);
         }
       }
-    }, 200);
+    }, 150);
 
     return () => clearTimeout(timer);
   }, [searchTerm, productsCache]);
@@ -589,7 +589,7 @@ export const Header: React.FC = () => {
                         {user.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên'}
                       </span>
 
-                      {/* Tag VIP hoặc Thân Thiết cạnh chức danh */}
+                      {/* Tag VIP hoặc Thân Thiết */}
                       {user.role !== 'ADMIN' && user.rank === 'VIP' && (
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-amber-500 to-yellow-400 text-white shadow-xs tracking-wider animate-pulse">
                           <Crown size={10} strokeWidth={3} />
