@@ -28,7 +28,10 @@ import {
   CheckSquare,
   Square,
   MinusSquare,
+  Download,
+  Loader2,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Props {
   inventory: any[];
@@ -89,6 +92,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const [editingVariant, setEditingVariant] = useState<any>(null);
   const [addingVariantProduct, setAddingVariantProduct] = useState<any>(null);
   const [loadingAction, setLoadingAction] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   // --- STATE CHỌN NHIỀU VÀ MODAL XÓA AN TOÀN ---
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -106,7 +110,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     description: '',
   });
 
-  // Thông báo Toast góc màn hình thay thế alert
+  // Thông báo Toast góc màn hình
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -235,7 +239,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
 
   const groupedBySeries = useMemo(() => {
     let filtered = groupedProducts.filter(({ product, variants }) => {
-      const catName = (product.category?.name || '').toLowerCase();
       const catSlug = (product.category?.slug || '').toLowerCase();
       const prodName = (product.name || '').toLowerCase();
       const isUsed = prodName.includes('cũ') || prodName.includes('like new') || prodName.includes('99%') || catSlug.includes('cu');
@@ -405,6 +408,96 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     }
   };
 
+  // ==============================================================
+  // HÀM XUẤT VÀ TẢI FILE EXCEL VỀ MÁY TÍNH
+  // ==============================================================
+  const handleDownloadExcel = () => {
+    if (!inventory || inventory.length === 0) {
+      showToast('Không có dữ liệu kho hàng để xuất file!', 'error');
+      return;
+    }
+
+    try {
+      setIsExportingExcel(true);
+      const dataRows: any[] = [];
+      let stt = 1;
+
+      // Duyệt qua từng sản phẩm và biến thể trong cơ sở dữ liệu
+      groupedProducts.forEach(({ product, variants }) => {
+        const seriesName = getProductSeries(product.name, product.category?.name);
+        const categoryName = product.category?.name || 'Apple';
+
+        if (variants && variants.length > 0) {
+          variants.forEach((v: any) => {
+            const price = Number(v.price || 0);
+            const originalPrice = Number(v.originalPrice || 0);
+            const stock = Number(v.stock || 0);
+
+            dataRows.push({
+              STT: stt++,
+              'Dòng Series': seriesName,
+              'Tên Sản Phẩm': product.name,
+              'Danh Mục': categoryName,
+              'Dung Lượng / Kích Thước': v.storage || 'Tiêu chuẩn',
+              'Màu Sắc': v.color || 'Tiêu chuẩn',
+              'Giá Bán (VNĐ)': price > 0 ? price : 'Liên hệ',
+              'Giá Gốc (VNĐ)': originalPrice > 0 ? originalPrice : '',
+              'Tồn Kho (Máy)': stock,
+              'Trạng Thái': stock === 0 ? 'Hết hàng (0)' : stock <= 5 ? `Sắp hết (${stock})` : `Còn hàng (${stock})`,
+              'Mã Biến Thể / Slug': v.slug || product.slug || '',
+            });
+          });
+        } else {
+          // Trường hợp sản phẩm chưa có biến thể nào
+          dataRows.push({
+            STT: stt++,
+            'Dòng Series': seriesName,
+            'Tên Sản Phẩm': product.name,
+            'Danh Mục': categoryName,
+            'Dung Lượng / Kích Thước': 'Chưa tạo',
+            'Màu Sắc': 'Chưa tạo',
+            'Giá Bán (VNĐ)': 'Liên hệ',
+            'Giá Gốc (VNĐ)': '',
+            'Tồn Kho (Máy)': 0,
+            'Trạng Thái': 'Hết hàng (0)',
+            'Mã Biến Thể / Slug': product.slug || '',
+          });
+        }
+      });
+
+      // Tạo Sheet & Workbook
+      const worksheet = XLSX.utils.json_to_sheet(dataRows);
+
+      // Căn độ rộng các cột
+      worksheet['!cols'] = [
+        { wch: 6 },  // STT
+        { wch: 22 }, // Dòng Series
+        { wch: 45 }, // Tên Sản Phẩm
+        { wch: 15 }, // Danh Mục
+        { wch: 24 }, // Dung Lượng / Kích Thước
+        { wch: 18 }, // Màu Sắc
+        { wch: 18 }, // Giá Bán (VNĐ)
+        { wch: 18 }, // Giá Gốc (VNĐ)
+        { wch: 15 }, // Tồn Kho (Máy)
+        { wch: 16 }, // Trạng Thái
+        { wch: 38 }, // Mã Biến Thể / Slug
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Ton_Kho_FoGoStore');
+
+      // Tải trực tiếp file Excel về máy tính
+      const dateStr = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `Bao_Cao_Ton_Kho_FoGoStore_${dateStr}.xlsx`);
+      showToast('Đã tải thành công file Excel về máy tính!');
+    } catch (err) {
+      console.error('Lỗi khi xuất file Excel:', err);
+      showToast('Đã xảy ra lỗi khi tạo file Excel', 'error');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   const handleUploadMultipleImagesForEditing = async (files: FileList) => {
     if (!files || files.length === 0) return;
     setLoadingAction(true);
@@ -541,7 +634,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     }
   };
 
-  // --- HÀM THỰC THI XÓA ĐÃ GỠ BỎ ALERT/CONFIRM ---
   const handleExecuteDelete = async () => {
     setLoadingAction(true);
     try {
@@ -584,7 +676,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
 
   return (
     <div className="space-y-6 select-none relative">
-      {/* TOAST THÔNG BÁO XỊN XÒ GÓC PHẢI */}
+      {/* TOAST THÔNG BÁO GÓC PHẢI */}
       {toast && (
         <div
           className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-bold transition-all transform animate-bounce ${
@@ -598,7 +690,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         </div>
       )}
 
-      {/* HEADER */}
+      {/* HEADER & CÁC NÚT THAO TÁC */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
@@ -608,17 +700,34 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             Cấu trúc phân cấp: Danh Mục &rarr; Dòng Series &rarr; Sub-model &rarr; Cấu Hình & Tồn Kho Thực Tế
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          {/* NÚT TẢI FILE EXCEL VỀ MÁY */}
+          <button
+            type="button"
+            onClick={handleDownloadExcel}
+            disabled={isExportingExcel}
+            className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all disabled:opacity-50"
+            title="Tải toàn bộ danh sách tồn kho về máy tính định dạng Excel (.xlsx)"
+          >
+            {isExportingExcel ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Download size={16} />
+            )}
+            <span>{isExportingExcel ? 'Đang tạo Excel...' : 'Xuất File Excel'}</span>
+          </button>
+
+          {/* NÚT ĐĂNG SẢN PHẨM MỚI */}
           <button
             onClick={() => setIsOpenAddProductModal(true)}
-            className="bg-[#d70018] hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+            className="bg-[#d70018] hover:bg-red-700 active:scale-95 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
           >
             <Plus size={16} /> Đăng Sản Phẩm Mới
           </button>
         </div>
       </div>
 
-      {/* THANH THAO TÁC HÀNG LOẠT (BULK ACTION BAR KHI CHECK CHỌN) */}
+      {/* THANH THAO TÁC HÀNG LOẠT */}
       {selectedProductIds.length > 0 && (
         <div className="bg-red-50 border border-red-200 p-3.5 px-4 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center gap-3">
@@ -903,7 +1012,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                 <p className="text-[11px] text-gray-500 mt-0.5">
                                   Tổng tồn: <span className="font-bold text-blue-600">{totalStock} máy</span> | Giá khởi điểm:{' '}
                                   <span className="font-bold text-emerald-600">
-                                    {minPrice.toLocaleString('vi-VN')} đ
+                                    {minPrice > 0 ? `${minPrice.toLocaleString('vi-VN')} đ` : 'Liên hệ'}
                                   </span>
                                 </p>
                               </div>
@@ -981,10 +1090,10 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                           </span>
                                         </td>
                                         <td className="py-3 px-4 font-black text-emerald-600">
-                                          {v.price?.toLocaleString('vi-VN')} đ
+                                          {v.price > 0 ? `${v.price.toLocaleString('vi-VN')} đ` : 'Liên hệ'}
                                         </td>
                                         <td className="py-3 px-4 text-gray-400 line-through">
-                                          {(v.originalPrice || v.price)?.toLocaleString('vi-VN')} đ
+                                          {(v.originalPrice || v.price) > 0 ? `${(v.originalPrice || v.price).toLocaleString('vi-VN')} đ` : ''}
                                         </td>
                                         <td className="py-3 px-4">
                                           <input
@@ -1053,9 +1162,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         )}
       </div>
 
-      {/* ============================================================== */}
-      {/* MODAL THÔNG BÁO XÁC NHẬN XÓA HIỆN ĐẠI (THAY THẾ TOÀN BỘ ALERT/CONFIRM) */}
-      {/* ============================================================== */}
+      {/* MODAL THÔNG BÁO XÁC NHẬN XÓA HIỆN ĐẠI */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-gray-100">
