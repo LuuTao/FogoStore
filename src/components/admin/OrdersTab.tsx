@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { 
   Trash2, 
   Search, 
@@ -30,7 +31,7 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // State hiển thị thông báo kiểu Banner (Xanh: thành công, Đỏ: thất bại)
+  // State hiển thị thông báo kiểu Banner
   const [alertInfo, setAlertInfo] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null);
 
   // State Modal chỉnh sửa thông tin đơn hàng
@@ -38,6 +39,26 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({ customerName: '', customerPhone: '', address: '', note: '' });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // State Modal xác nhận xóa thay thế confirm()
+  const [deleteModal, setDeleteModal] = useState<{
+    open: boolean;
+    type: 'single' | 'bulk';
+    targetId?: string;
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    type: 'single',
+    title: '',
+    description: '',
+  });
+
+  const getAdminToken = () =>
+    localStorage.getItem('fogo_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('fogo_admin_token') ||
+    '';
 
   const showAlert = (message: string, type: 'success' | 'error') => {
     setAlertInfo({ show: true, message, type });
@@ -57,9 +78,10 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
     return url;
   };
 
-  // Cập nhật trạng thái đơn (Hoàn tất tự động Đã thanh toán)
+  // Cập nhật trạng thái đơn (kèm Token)
   const handleUpdateStatus = async (id: string, newOrderStatus: string) => {
     try {
+      const token = getAdminToken();
       const payload: { orderStatus: string; paymentStatus?: string } = {
         orderStatus: newOrderStatus,
       };
@@ -70,7 +92,10 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
 
       const res = await fetch(`${API_URL}/api/admin/orders/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -78,8 +103,8 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
         showAlert('Cập nhật trạng thái đơn hàng thành công!', 'success');
         onRefresh();
       } else {
-        const data = await res.json();
-        showAlert(data.error || 'Lỗi cập nhật trạng thái đơn hàng', 'error');
+        const data = await res.json().catch(() => ({}));
+        showAlert(data.message || data.error || 'Lỗi cập nhật trạng thái đơn hàng', 'error');
       }
     } catch {
       showAlert('Lỗi kết nối máy chủ khi cập nhật đơn hàng', 'error');
@@ -105,19 +130,23 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
 
     try {
       setIsSubmittingEdit(true);
+      const token = getAdminToken();
       const res = await fetch(`${API_URL}/api/orders/${editingOrder.orderCode || editingOrder.id}/update`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(editForm),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         showAlert('Chỉnh sửa thông tin đơn hàng thành công!', 'success');
         setIsEditModalOpen(false);
         onRefresh();
       } else {
-        showAlert(data.error || 'Không thể cập nhật đơn hàng', 'error');
+        showAlert(data.message || data.error || 'Không thể cập nhật đơn hàng', 'error');
       }
     } catch {
       showAlert('Lỗi kết nối khi cập nhật đơn hàng', 'error');
@@ -126,54 +155,49 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
     }
   };
 
-  // Xóa đơn hàng đơn lẻ
-  const handleDeleteSingle = async (id: string, orderCode: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${orderCode}?`)) return;
-
+  // Thực thi xóa qua Modal
+  const handleExecuteDelete = async () => {
     try {
       setIsDeleting(true);
-      const res = await fetch(`${API_URL}/api/admin/orders/${id}`, {
-        method: 'DELETE',
-      });
+      const token = getAdminToken();
 
-      if (res.ok) {
-        showAlert(`Đã xóa đơn hàng #${orderCode} thành công!`, 'success');
-        setSelectedIds((prev) => prev.filter((item) => item !== id));
-        onRefresh();
-      } else {
-        const data = await res.json();
-        showAlert(data.error || 'Không thể xóa đơn hàng này', 'error');
+      if (deleteModal.type === 'single' && deleteModal.targetId) {
+        const res = await fetch(`${API_URL}/api/admin/orders/${deleteModal.targetId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          showAlert('Đã xóa đơn hàng thành công!', 'success');
+          setSelectedIds((prev) => prev.filter((item) => item !== deleteModal.targetId));
+          setDeleteModal({ open: false, type: 'single', title: '', description: '' });
+          onRefresh();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          showAlert(data.message || data.error || 'Không thể xóa đơn hàng này', 'error');
+        }
+      } else if (deleteModal.type === 'bulk') {
+        const res = await fetch(`${API_URL}/api/admin/orders/bulk-delete`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ ids: selectedIds }),
+        });
+
+        if (res.ok) {
+          showAlert(`Đã xóa thành công ${selectedIds.length} đơn hàng!`, 'success');
+          setSelectedIds([]);
+          setDeleteModal({ open: false, type: 'bulk', title: '', description: '' });
+          onRefresh();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          showAlert(data.message || data.error || 'Xảy ra lỗi khi xóa đơn hàng', 'error');
+        }
       }
     } catch {
-      showAlert('Lỗi kết nối khi xóa đơn hàng', 'error');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  // Xóa hàng loạt
-  const handleDeleteBulk = async () => {
-    if (selectedIds.length === 0) return;
-    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} đơn hàng đã chọn?`)) return;
-
-    try {
-      setIsDeleting(true);
-      const res = await fetch(`${API_URL}/api/admin/orders/bulk-delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-
-      if (res.ok) {
-        showAlert(`Đã xóa thành công ${selectedIds.length} đơn hàng!`, 'success');
-        setSelectedIds([]);
-        onRefresh();
-      } else {
-        const data = await res.json();
-        showAlert(data.error || 'Xảy ra lỗi khi xóa đơn hàng', 'error');
-      }
-    } catch {
-      showAlert('Lỗi kết nối khi thực hiện xóa hàng loạt', 'error');
+      showAlert('Lỗi kết nối khi thực hiện xóa', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -210,7 +234,7 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
 
   return (
     <div className="space-y-5 select-none relative">
-      {/* THÔNG BÁO BANNER GIỐNG CẬP NHẬT BANNER */}
+      {/* THÔNG BÁO BANNER */}
       {alertInfo && (
         <div
           className={`p-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-md transition-all animate-in fade-in slide-in-from-top-2 ${
@@ -296,11 +320,18 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
           <button
             type="button"
             disabled={isDeleting}
-            onClick={handleDeleteBulk}
+            onClick={() =>
+              setDeleteModal({
+                open: true,
+                type: 'bulk',
+                title: `Xác nhận xóa ${selectedIds.length} đơn hàng`,
+                description: `Bạn có chắc chắn muốn xóa vĩnh viễn ${selectedIds.length} đơn hàng đã chọn khỏi hệ thống?`,
+              })
+            }
             className="bg-[#d70018] hover:bg-[#b50014] text-white px-3.5 py-1.5 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
           >
             <Trash2 size={13} />
-            <span>{isDeleting ? 'Đang xóa...' : 'Xóa các đơn đã chọn'}</span>
+            <span>Xóa các đơn đã chọn</span>
           </button>
         </div>
       )}
@@ -429,7 +460,6 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
                             <Eye size={14} />
                           </Link>
                           
-                          {/* NÚT CHỈNH SỬA ĐƠN HÀNG */}
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(order)}
@@ -441,7 +471,15 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
 
                           <button
                             type="button"
-                            onClick={() => handleDeleteSingle(order.id, order.orderCode)}
+                            onClick={() =>
+                              setDeleteModal({
+                                open: true,
+                                type: 'single',
+                                targetId: order.id,
+                                title: `Xác nhận xóa đơn hàng #${order.orderCode}`,
+                                description: 'Bạn có chắc chắn muốn xóa đơn hàng này cùng toàn bộ chi tiết sản phẩm liên quan?',
+                              })
+                            }
                             className="p-1.5 bg-gray-100 hover:bg-red-600 hover:text-white rounded text-gray-600 transition-colors cursor-pointer"
                             title="Xóa đơn hàng"
                           >
@@ -457,6 +495,48 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
           </table>
         </div>
       </div>
+
+      {/* MODAL XÁC NHẬN XÓA HIỆN ĐẠI */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4 border border-gray-100">
+            <div className="w-14 h-14 rounded-full bg-red-100 text-[#d70018] flex items-center justify-center mx-auto shadow-inner">
+              <AlertTriangle size={28} />
+            </div>
+
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900">{deleteModal.title}</h3>
+              <p className="text-xs text-gray-600 mt-1.5 leading-relaxed font-medium">
+                {deleteModal.description}
+              </p>
+              <p className="text-[11px] text-red-500 font-semibold mt-1">
+                * Hành động này không thể hoàn tác.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModal({ open: false, type: 'single', title: '', description: '' })}
+                disabled={isDeleting}
+                className="py-2.5 px-4 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-xl font-bold text-xs cursor-pointer transition-all"
+              >
+                Hủy bỏ
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={isDeleting}
+                className="py-2.5 px-4 bg-[#d70018] hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow-md transition-all flex items-center justify-center gap-1.5"
+              >
+                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{isDeleting ? 'Đang xóa...' : 'Đồng ý xóa'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CHỈNH SỬA THÔNG TIN ĐƠN HÀNG */}
       {isEditModalOpen && (

@@ -25,6 +25,9 @@ import {
   Cpu,
   Image as ImageIcon,
   RotateCcw,
+  CheckSquare,
+  Square,
+  MinusSquare,
 } from 'lucide-react';
 
 interface Props {
@@ -32,7 +35,6 @@ interface Props {
   onRefresh: () => void;
 }
 
-// 1. Bổ sung 3 danh mục máy cũ vào cấu trúc phân cấp khi đăng sản phẩm
 const SUB_SERIES_PRESETS: Record<string, string[]> = {
   iPhone: ['iPhone Duo Series', 'iPhone 18 Series', 'iPhone 17 Series', 'iPhone 16 Series'],
   iPad: ['iPad Pro', 'iPad Air', 'iPad Gen', 'iPad Mini'],
@@ -65,6 +67,8 @@ const PRESET_STORAGES = [
 
 const PRESET_CHIPS = ['A18 Pro', 'A18', 'A17 Pro', 'A16 Bionic', 'M5', 'M4', 'M3', 'M2', 'M1', 'S10', 'S9'];
 
+const API_BASE = 'https://fogo-store-api.onrender.com';
+
 export default function InventoryTab({ inventory, onRefresh }: Props) {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -80,12 +84,46 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const [expandedSeries, setExpandedSeries] = useState<{ [series: string]: boolean }>({});
   const [expandedProducts, setExpandedProducts] = useState<{ [id: string]: boolean }>({});
 
-  // Modals
+  // Modals nghiệp vụ
   const [isOpenAddProductModal, setIsOpenAddProductModal] = useState(false);
   const [editingVariant, setEditingVariant] = useState<any>(null);
   const [addingVariantProduct, setAddingVariantProduct] = useState<any>(null);
-
   const [loadingAction, setLoadingAction] = useState(false);
+
+  // --- STATE CHỌN NHIỀU VÀ MODAL XÓA AN TOÀN ---
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [deleteModal, setDeleteModal] = useState<{
+    open: boolean;
+    type: 'single_product' | 'bulk_products' | 'single_variant';
+    targetIds: string[];
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    type: 'single_product',
+    targetIds: [],
+    title: '',
+    description: '',
+  });
+
+  // Thông báo Toast góc màn hình thay thế alert
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const getAuthHeader = () => {
+    const token =
+      localStorage.getItem('fogo_token') ||
+      localStorage.getItem('token') ||
+      '';
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  };
 
   // Form state đăng sản phẩm mới
   const [newProdName, setNewProdName] = useState('');
@@ -105,7 +143,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     },
   ]);
 
-  // Tự động phân dòng Series từ tên sản phẩm và phân loại Cũ / Mới chuẩn xác
   const getProductSeries = (name: string, catName: string = '') => {
     const lower = (name + ' ' + catName).toLowerCase();
     const isUsed = lower.includes('cũ') || lower.includes('like new') || lower.includes('99%');
@@ -154,7 +191,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     return 'Khác';
   };
 
-  // Danh mục động kết hợp sẵn 3 danh mục máy cũ
   const categories = useMemo(() => {
     const defaultCats = ['iPhone', 'MacBook', 'Watch', 'iPad', 'Phụ kiện', 'iPhone Cũ', 'iPad Cũ', 'MacBook Cũ'];
     const set = new Set<string>(defaultCats);
@@ -204,7 +240,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       const prodName = (product.name || '').toLowerCase();
       const isUsed = prodName.includes('cũ') || prodName.includes('like new') || prodName.includes('99%') || catSlug.includes('cu');
 
-      // Lọc chuẩn xác theo danh mục mới chọn
       if (selectedCategory !== 'ALL') {
         if (selectedCategory === 'iPhone Cũ') {
           if (!(prodName.includes('iphone') && isUsed)) return false;
@@ -289,6 +324,43 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     return result;
   }, [groupedProducts, selectedCategory, selectedStorage, selectedRam, selectedChip, stockStatusFilter, searchKeyword, sortBy]);
 
+  // Danh sách toàn bộ Product ID đang hiển thị trên giao diện
+  const allVisibleProductIds = useMemo(() => {
+    const ids: string[] = [];
+    Object.values(groupedBySeries).forEach((list) => {
+      list.forEach((item) => ids.push(item.product.id));
+    });
+    return ids;
+  }, [groupedBySeries]);
+
+  // Logic Toggle chọn Checkbox
+  const toggleSelectProduct = (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedProductIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+  };
+
+  const toggleSelectSeries = (seriesProducts: { product: any }[], e: React.MouseEvent) => {
+    e.stopPropagation();
+    const seriesIds = seriesProducts.map((p) => p.product.id);
+    const isAllSelected = seriesIds.every((id) => selectedProductIds.includes(id));
+
+    if (isAllSelected) {
+      setSelectedProductIds((prev) => prev.filter((id) => !seriesIds.includes(id)));
+    } else {
+      setSelectedProductIds((prev) => Array.from(new Set([...prev, ...seriesIds])));
+    }
+  };
+
+  const toggleSelectAllVisible = () => {
+    if (selectedProductIds.length === allVisibleProductIds.length && allVisibleProductIds.length > 0) {
+      setSelectedProductIds([]);
+    } else {
+      setSelectedProductIds(allVisibleProductIds);
+    }
+  };
+
   const toggleSeries = (series: string) => {
     setExpandedSeries((prev) => ({
       ...prev,
@@ -313,16 +385,23 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     return <Smartphone size={16} className="text-[#d70018]" />;
   };
 
+  // Cập nhật tồn kho nhanh
   const handleQuickStockUpdate = async (variantId: string, newStock: number) => {
     try {
-      await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/${variantId}`, {
+      const res = await fetch(`${API_BASE}/api/admin/variants/${variantId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeader(),
         body: JSON.stringify({ stock: newStock }),
       });
-      onRefresh();
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast('Cập nhật số lượng tồn kho thành công!');
+        onRefresh();
+      } else {
+        showToast(data.message || data.error || 'Cập nhật tồn kho thất bại', 'error');
+      }
     } catch {
-      alert('Lỗi cập nhật tồn kho');
+      showToast('Lỗi kết nối khi cập nhật tồn kho', 'error');
     }
   };
 
@@ -334,7 +413,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
         formData.append('image', files[i]);
-        const res = await fetch('https://fogo-store-api.onrender.com/api/upload', {
+        const res = await fetch(`${API_BASE}/api/upload`, {
           method: 'POST',
           body: formData,
         });
@@ -348,7 +427,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         images: [...(prev.images || []), ...uploadedUrls],
       }));
     } catch {
-      alert('Lỗi khi tải ảnh lên');
+      showToast('Lỗi khi tải ảnh lên', 'error');
     } finally {
       setLoadingAction(false);
     }
@@ -365,9 +444,9 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     e.preventDefault();
     setLoadingAction(true);
     try {
-      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/${editingVariant.id}`, {
+      const res = await fetch(`${API_BASE}/api/admin/variants/${editingVariant.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeader(),
         body: JSON.stringify({
           ...editingVariant,
           price: Number(editingVariant.price),
@@ -376,14 +455,15 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setEditingVariant(null);
+        showToast('Đã lưu cấu hình biến thể vào Database!');
         onRefresh();
       } else {
-        alert(data.error);
+        showToast(data.message || data.error || 'Lỗi lưu thông tin', 'error');
       }
     } catch {
-      alert('Lỗi lưu thông tin');
+      showToast('Lỗi máy chủ khi lưu biến thể', 'error');
     } finally {
       setLoadingAction(false);
     }
@@ -394,9 +474,9 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     const form = e.target as any;
     setLoadingAction(true);
     try {
-      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/variant`, {
+      const res = await fetch(`${API_BASE}/api/admin/variants`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeader(),
         body: JSON.stringify({
           productId: addingVariantProduct.id,
           storage: form.storage.value,
@@ -407,14 +487,15 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setAddingVariantProduct(null);
+        showToast('Đã thêm biến thể mới!');
         onRefresh();
       } else {
-        alert(data.error);
+        showToast(data.message || data.error || 'Lỗi khi thêm biến thể', 'error');
       }
     } catch {
-      alert('Lỗi khi thêm biến thể');
+      showToast('Lỗi kết nối khi thêm cấu hình', 'error');
     } finally {
       setLoadingAction(false);
     }
@@ -423,14 +504,14 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const handleSaveFullProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProdName.trim()) {
-      alert('Vui lòng nhập tên sản phẩm');
+      showToast('Vui lòng nhập tên sản phẩm', 'error');
       return;
     }
     setLoadingAction(true);
     try {
-      const res = await fetch('https://fogo-store-api.onrender.com/api/admin/products/full', {
+      const res = await fetch(`${API_BASE}/api/admin/products/full`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeader(),
         body: JSON.stringify({
           name: newProdName,
           categoryName: newProdCategory,
@@ -442,55 +523,81 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setIsOpenAddProductModal(false);
         setNewProdName('');
         setVariantsList([
           { storage: '128GB', color: 'Titan Tự Nhiên', price: 29990000, originalPrice: 31990000, stock: 20, images: [] },
         ]);
+        showToast('Đã đăng sản phẩm thành công!');
         onRefresh();
       } else {
-        alert(data.error || 'Thêm sản phẩm thất bại');
+        showToast(data.message || data.error || 'Thêm sản phẩm thất bại', 'error');
       }
     } catch {
-      alert('Lỗi kết nối máy chủ');
+      showToast('Lỗi kết nối máy chủ', 'error');
     } finally {
       setLoadingAction(false);
     }
   };
 
-  const handleDeleteFullProduct = async (productId: string) => {
-    if (!confirm('Bạn có chắc muốn xóa toàn bộ dòng máy này cùng tất cả biến thể?')) return;
+  // --- HÀM THỰC THI XÓA ĐÃ GỠ BỎ ALERT/CONFIRM ---
+  const handleExecuteDelete = async () => {
+    setLoadingAction(true);
     try {
-      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/products/${productId}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-      if (data.success) onRefresh();
-      else alert(data.error);
-    } catch {
-      alert('Không thể xóa sản phẩm');
-    }
-  };
+      let res;
+      if (deleteModal.type === 'single_product') {
+        res = await fetch(`${API_BASE}/api/admin/products/${deleteModal.targetIds[0]}`, {
+          method: 'DELETE',
+          headers: getAuthHeader(),
+        });
+      } else if (deleteModal.type === 'bulk_products') {
+        res = await fetch(`${API_BASE}/api/admin/products/bulk-delete`, {
+          method: 'POST',
+          headers: getAuthHeader(),
+          body: JSON.stringify({ ids: deleteModal.targetIds }),
+        });
+      } else if (deleteModal.type === 'single_variant') {
+        res = await fetch(`${API_BASE}/api/admin/variants/${deleteModal.targetIds[0]}`, {
+          method: 'DELETE',
+          headers: getAuthHeader(),
+        });
+      }
 
-  const handleDeleteVariant = async (variantId: string) => {
-    if (!confirm('Bạn có chắc muốn xóa biến thể cấu hình này?')) return;
-    try {
-      const res = await fetch(`https://fogo-store-api.onrender.com/api/admin/inventory/${variantId}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-      if (data.success) onRefresh();
-      else alert(data.error);
+      const data = await res?.json();
+      if (res?.ok && (data.success || data.message)) {
+        showToast(data.message || 'Đã xóa dữ liệu thành công!');
+        setSelectedProductIds((prev) => prev.filter((id) => !deleteModal.targetIds.includes(id)));
+        setDeleteModal((prev) => ({ ...prev, open: false }));
+        onRefresh();
+      } else {
+        showToast(data?.message || data?.error || 'Có lỗi xảy ra trong quá trình xóa', 'error');
+      }
     } catch {
-      alert('Lỗi khi xóa biến thể');
+      showToast('Không thể kết nối đến máy chủ API', 'error');
+    } finally {
+      setLoadingAction(false);
     }
   };
 
   const totalProductModels = Object.values(groupedBySeries).reduce((s, arr) => s + arr.length, 0);
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-6 select-none relative">
+      {/* TOAST THÔNG BÁO XỊN XÒ GÓC PHẢI */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-bold transition-all transform animate-bounce ${
+            toast.type === 'success'
+              ? 'bg-emerald-600 text-white border-emerald-700'
+              : 'bg-red-600 text-white border-red-700'
+          }`}
+        >
+          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -501,13 +608,52 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             Cấu trúc phân cấp: Danh Mục &rarr; Dòng Series &rarr; Sub-model &rarr; Cấu Hình & Tồn Kho Thực Tế
           </p>
         </div>
-        <button
-          onClick={() => setIsOpenAddProductModal(true)}
-          className="bg-[#d70018] hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
-        >
-          <Plus size={16} /> Đăng Sản Phẩm Mới
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsOpenAddProductModal(true)}
+            className="bg-[#d70018] hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+          >
+            <Plus size={16} /> Đăng Sản Phẩm Mới
+          </button>
+        </div>
       </div>
+
+      {/* THANH THAO TÁC HÀNG LOẠT (BULK ACTION BAR KHI CHECK CHỌN) */}
+      {selectedProductIds.length > 0 && (
+        <div className="bg-red-50 border border-red-200 p-3.5 px-4 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white text-xs font-bold">
+              {selectedProductIds.length}
+            </span>
+            <span className="text-xs font-extrabold text-red-900">
+              Đã chọn {selectedProductIds.length} sản phẩm trên trang
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedProductIds([])}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold cursor-pointer"
+            >
+              Bỏ chọn tất cả
+            </button>
+            <button
+              onClick={() =>
+                setDeleteModal({
+                  open: true,
+                  type: 'bulk_products',
+                  targetIds: selectedProductIds,
+                  title: `Xác nhận xóa ${selectedProductIds.length} sản phẩm`,
+                  description: `Bạn có chắc chắn muốn xóa toàn bộ ${selectedProductIds.length} dòng máy này và tất cả các biến thể tương ứng không? Dữ liệu sẽ biến mất vĩnh viễn khỏi Database.`,
+                })
+              }
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+            >
+              <Trash2 size={14} /> Xóa {selectedProductIds.length} Mục Đã Chọn
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CỤM BỘ LỌC ĐA NĂNG */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3 text-xs">
@@ -523,7 +669,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             />
           </div>
 
-          {/* DROPDOWN DANH MỤC CÓ ĐẦY ĐỦ 3 MỤC MÁY CŨ */}
+          {/* DROPDOWN DANH MỤC */}
           <div className="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-gray-50/50">
             <Layers size={14} className="text-gray-500" />
             <select
@@ -605,10 +751,27 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-100">
-          <span>
-            Tìm thấy: <strong className="text-gray-800">{Object.keys(groupedBySeries).length}</strong> nhóm Series •{' '}
-            <strong className="text-[#d70018]">{totalProductModels}</strong> dòng máy
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleSelectAllVisible}
+              className="flex items-center gap-1.5 text-gray-700 hover:text-red-600 font-bold cursor-pointer"
+            >
+              {selectedProductIds.length > 0 && selectedProductIds.length === allVisibleProductIds.length ? (
+                <CheckSquare size={16} className="text-red-600" />
+              ) : selectedProductIds.length > 0 ? (
+                <MinusSquare size={16} className="text-red-600" />
+              ) : (
+                <Square size={16} />
+              )}
+              <span>Chọn tất cả ({allVisibleProductIds.length} máy)</span>
+            </button>
+            <span>•</span>
+            <span>
+              Tìm thấy: <strong className="text-gray-800">{Object.keys(groupedBySeries).length}</strong> nhóm Series •{' '}
+              <strong className="text-[#d70018]">{totalProductModels}</strong> dòng máy
+            </span>
+          </div>
+
           <button
             onClick={() => {
               setSearchKeyword('');
@@ -618,6 +781,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
               setSelectedRam('ALL');
               setStockStatusFilter('ALL');
               setSortBy('name_asc');
+              setSelectedProductIds([]);
             }}
             className="text-[#d70018] hover:underline font-bold cursor-pointer"
           >
@@ -641,6 +805,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
               0
             );
 
+            const isAllSeriesSelected = productList.every((p) => selectedProductIds.includes(p.product.id));
+
             return (
               <div key={seriesName} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* TẦNG 1: HEADER DÒNG SERIES */}
@@ -652,6 +818,21 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                     <button className="text-gray-500 hover:text-gray-700">
                       {isSeriesOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </button>
+
+                    {/* Checkbox chọn nguyên nhóm Series */}
+                    <button
+                      type="button"
+                      onClick={(e) => toggleSelectSeries(productList, e)}
+                      className="text-gray-500 hover:text-red-600 transition"
+                      title="Chọn tất cả dòng máy trong nhóm này"
+                    >
+                      {isAllSeriesSelected ? (
+                        <CheckSquare size={18} className="text-red-600" />
+                      ) : (
+                        <Square size={18} />
+                      )}
+                    </button>
+
                     <div className="flex items-center gap-2">
                       {getCategoryIcon(seriesName)}
                       <h3 className="font-extrabold text-sm text-gray-900 tracking-tight">{seriesName}</h3>
@@ -674,17 +855,32 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                       const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
                       const minPrice =
                         variants.length > 0 ? Math.min(...variants.map((v) => v.price || 0)) : 0;
+                      const isChecked = selectedProductIds.includes(product.id);
 
                       return (
-                        <div key={product.id}>
-                          <div className="bg-slate-50/70 p-3.5 px-4 pl-6 flex items-center justify-between border-b border-gray-100">
+                        <div key={product.id} className={isChecked ? 'bg-red-50/30' : ''}>
+                          <div className="bg-slate-50/70 p-3.5 px-4 pl-4 flex items-center justify-between border-b border-gray-100">
                             <div className="flex items-center gap-3">
+                              {/* Checkbox chọn 1 dòng máy */}
+                              <button
+                                type="button"
+                                onClick={(e) => toggleSelectProduct(product.id, e)}
+                                className="text-gray-400 hover:text-red-600 cursor-pointer transition"
+                              >
+                                {isChecked ? (
+                                  <CheckSquare size={18} className="text-red-600" />
+                                ) : (
+                                  <Square size={18} />
+                                )}
+                              </button>
+
                               <button
                                 onClick={() => toggleExpand(product.id)}
                                 className="p-1 hover:bg-gray-200 rounded cursor-pointer text-gray-600 transition-colors"
                               >
                                 {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                               </button>
+
                               <div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs sm:text-sm font-extrabold text-gray-800">
@@ -721,7 +917,15 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                 <Plus size={13} /> Thêm Cấu Hình
                               </button>
                               <button
-                                onClick={() => handleDeleteFullProduct(product.id)}
+                                onClick={() =>
+                                  setDeleteModal({
+                                    open: true,
+                                    type: 'single_product',
+                                    targetIds: [product.id],
+                                    title: 'Xóa dòng máy này?',
+                                    description: `Bạn có chắc muốn xóa "${product.name}" cùng tất cả các biến thể liên quan?`,
+                                  })
+                                }
                                 className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 cursor-pointer transition-colors"
                                 title="Xóa dòng máy này"
                               >
@@ -816,7 +1020,15 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                             <Edit2 size={15} />
                                           </button>
                                           <button
-                                            onClick={() => handleDeleteVariant(v.id)}
+                                            onClick={() =>
+                                              setDeleteModal({
+                                                open: true,
+                                                type: 'single_variant',
+                                                targetIds: [v.id],
+                                                title: 'Xóa biến thể cấu hình?',
+                                                description: `Bạn có chắc muốn xóa biến thể "${v.storage} - ${v.color}" này không?`,
+                                              })
+                                            }
                                             className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer"
                                             title="Xóa cấu hình này"
                                           >
@@ -840,6 +1052,55 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           })
         )}
       </div>
+
+      {/* ============================================================== */}
+      {/* MODAL THÔNG BÁO XÁC NHẬN XÓA HIỆN ĐẠI (THAY THẾ TOÀN BỘ ALERT/CONFIRM) */}
+      {/* ============================================================== */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-gray-100">
+            <div className="flex items-start justify-between">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <AlertTriangle size={24} />
+              </div>
+              <button
+                onClick={() => setDeleteModal((prev) => ({ ...prev, open: false }))}
+                className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900">{deleteModal.title}</h3>
+              <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">{deleteModal.description}</p>
+              <p className="text-[11px] text-red-600 font-semibold mt-2">
+                * Cảnh báo: Thao tác này không thể hoàn tác sau khi đã xóa!
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => setDeleteModal((prev) => ({ ...prev, open: false }))}
+                disabled={loadingAction}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={loadingAction}
+                className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition shadow-sm disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 size={14} />
+                {loadingAction ? 'Đang thực hiện xóa...' : 'Đồng ý Xóa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL SỬA BIẾN THỂ & THƯ VIỆN NHIỀU ẢNH */}
       {editingVariant && (
@@ -1101,7 +1362,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         </div>
       )}
 
-      {/* MODAL ĐĂNG SẢN PHẨM MỚI VỚI DROPDOWN ĐẦY ĐỦ CÁC DANH MỤC CŨ */}
+      {/* MODAL ĐĂNG SẢN PHẨM MỚI */}
       {isOpenAddProductModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-6 space-y-4 text-xs shadow-2xl">
@@ -1128,7 +1389,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 />
               </div>
 
-              {/* KHỐI CHỌN DANH MỤC CÓ THÊM 3 MỤC HÀNG CŨ */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Danh Mục Thiết Bị *</label>

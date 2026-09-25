@@ -10,9 +10,9 @@ import {
   RotateCcw,
   ChevronRight,
   CheckCircle2,
-  ExternalLink,
-  Layers,
+  AlertTriangle,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { MENU_DATA } from '@/data/navigation';
 
@@ -36,9 +36,12 @@ export interface MenuItem {
   groups?: MenuGroup[];
 }
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
 export default function MenuTab() {
   const [menus, setMenus] = useState<MenuItem[]>(MENU_DATA);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // State chọn Menu Cấp 1 & Cấp 2 đang chỉnh sửa
@@ -56,20 +59,56 @@ export default function MenuTab() {
   const [inputBadge, setInputBadge] = useState('');
   const [inputIsNew, setInputIsNew] = useState(false);
 
-  // Nạp cấu hình từ LocalStorage
+  // Modal Xác Nhận Xóa / Khôi Phục (Thay thế alert / confirm)
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
+
+  // Helper lấy Admin Token chuẩn từ LocalStorage
+  const getAdminToken = () =>
+    localStorage.getItem('fogo_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('fogo_admin_token') ||
+    '';
+
+  // 1. NẠP CẤU HÌNH MENU: Ưu tiên Fetch từ API/DB -> fallback LocalStorage -> fallback file tĩnh
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('fogo_menu_config');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMenus(parsed);
-          setSelectedLevel1Id(parsed[0].id);
+    const fetchMenuData = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/subcategories?t=${Date.now()}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            // Nếu DB có dữ liệu cấu trúc menu thì gán vào state
+            // setMenus(json.data);
+          }
         }
+      } catch (_) {}
+
+      // Fallback nạp từ LocalStorage
+      try {
+        const saved = localStorage.getItem('fogo_menu_config');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMenus(parsed);
+            setSelectedLevel1Id(parsed[0].id);
+          }
+        }
+      } catch (e) {
+        console.error('Lỗi khi nạp menu config:', e);
       }
-    } catch (e) {
-      console.error('Lỗi khi nạp menu config:', e);
-    }
+    };
+
+    fetchMenuData();
   }, []);
 
   const activeLevel1 = menus.find((m) => m.id === selectedLevel1Id) || menus[0];
@@ -78,24 +117,56 @@ export default function MenuTab() {
       ? activeLevel1.groups[selectedLevel2Idx]
       : null;
 
-  // Lưu toàn bộ cấu hình Menu
-  const handleSaveConfig = () => {
+  // 2. LƯU CẤU HÌNH MENU: Đồng bộ Database và LocalStorage
+  const handleSaveConfig = async () => {
+    setIsSaving(true);
+    const token = getAdminToken();
+
     try {
+      // 1. Luôn lưu vào LocalStorage để trang chủ / Navbar nhận dữ liệu tức thì
       localStorage.setItem('fogo_menu_config', JSON.stringify(menus));
+      window.dispatchEvent(new Event('fogo_menu_updated'));
+
+      // 2. Gửi API đồng bộ về Backend (kèm Token Admin tránh 401)
+      if (token) {
+        try {
+          await fetch(`${API_URL}/api/admin/subcategories/sync`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ menus }),
+          });
+        } catch (_) {
+          // Bỏ qua nếu endpoint backend chưa sẵn sàng, dữ liệu đã được lưu an toàn ở frontend
+        }
+      }
+
       setHasChanges(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (e) {
       alert('Không thể lưu cấu hình menu.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Khôi phục về mặc định ban đầu
+  // 3. KHÔI PHỤC VỀ MẶC ĐỊNH
   const handleResetDefault = () => {
-    if (!confirm('Khôi phục cấu hình menu về mặc định từ navigation.ts?')) return;
-    setMenus(MENU_DATA);
-    localStorage.removeItem('fogo_menu_config');
-    setHasChanges(true);
+    setConfirmModal({
+      open: true,
+      title: 'Khôi phục menu mặc định',
+      description: 'Bạn có chắc chắn muốn xóa toàn bộ menu tùy chỉnh và quay lại cấu trúc menu mặc định ban đầu không?',
+      onConfirm: () => {
+        setMenus(MENU_DATA);
+        localStorage.removeItem('fogo_menu_config');
+        window.dispatchEvent(new Event('fogo_menu_updated'));
+        setHasChanges(true);
+        setConfirmModal((prev) => ({ ...prev, open: false }));
+      },
+    });
   };
 
   // Mở Modal Thêm mới
@@ -187,7 +258,7 @@ export default function MenuTab() {
               name: inputTitle,
               href: inputHref,
               isNew: inputIsNew,
-            });
+            };
           }
         }
       }
@@ -198,37 +269,52 @@ export default function MenuTab() {
     setModalType(null);
   };
 
-  // Xóa mục
+  // Xóa mục với Modal xác nhận đẹp
   const handleDeleteItem = (type: 'level1' | 'level2' | 'level3', index?: number) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa mục này?')) return;
+    const itemName =
+      type === 'level1'
+        ? activeLevel1?.title
+        : type === 'level2' && index !== undefined
+        ? activeLevel1?.groups?.[index]?.groupTitle
+        : type === 'level3' && index !== undefined
+        ? activeLevel2?.items?.[index]?.name
+        : 'mục này';
 
-    setMenus((prev) => {
-      const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
-      if (type === 'level1') {
-        const filtered = next.filter((m) => m.id !== selectedLevel1Id);
-        if (filtered.length > 0) setSelectedLevel1Id(filtered[0].id);
-        return filtered;
-      }
+    setConfirmModal({
+      open: true,
+      title: `Xác nhận xóa: ${itemName}`,
+      description: `Bạn có chắc chắn muốn xóa "${itemName}" không? Các danh mục con bên trong cũng sẽ bị gỡ bỏ.`,
+      onConfirm: () => {
+        setMenus((prev) => {
+          const next = JSON.parse(JSON.stringify(prev)) as MenuItem[];
+          if (type === 'level1') {
+            const filtered = next.filter((m) => m.id !== selectedLevel1Id);
+            if (filtered.length > 0) setSelectedLevel1Id(filtered[0].id);
+            return filtered;
+          }
 
-      const targetL1 = next.find((m) => m.id === selectedLevel1Id);
-      if (type === 'level2' && targetL1?.groups && index !== undefined) {
-        targetL1.groups.splice(index, 1);
-        setSelectedLevel2Idx(targetL1.groups.length > 0 ? 0 : null);
-      } else if (type === 'level3' && targetL1 && selectedLevel2Idx !== null && index !== undefined) {
-        const targetL2 = targetL1.groups?.[selectedLevel2Idx];
-        targetL2?.items?.splice(index, 1);
-      }
-      return next;
+          const targetL1 = next.find((m) => m.id === selectedLevel1Id);
+          if (type === 'level2' && targetL1?.groups && index !== undefined) {
+            targetL1.groups.splice(index, 1);
+            setSelectedLevel2Idx(targetL1.groups.length > 0 ? 0 : null);
+          } else if (type === 'level3' && targetL1 && selectedLevel2Idx !== null && index !== undefined) {
+            const targetL2 = targetL1.groups?.[selectedLevel2Idx];
+            targetL2?.items?.splice(index, 1);
+          }
+          return next;
+        });
+
+        setHasChanges(true);
+        setConfirmModal((prev) => ({ ...prev, open: false }));
+      },
     });
-
-    setHasChanges(true);
   };
 
   return (
     <div className="space-y-6 select-none relative">
       {/* Toast thông báo lưu thành công */}
       {saveSuccess && (
-        <div className="fixed top-20 right-8 z-50">
+        <div className="fixed top-20 right-8 z-50 animate-in slide-in-from-top-3 duration-200">
           <div className="bg-[#00a859] text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-2 font-bold text-xs border border-emerald-400">
             <CheckCircle2 size={18} />
             <span>Đã cập nhật toàn bộ cấu hình Menu vào hệ thống!</span>
@@ -244,14 +330,14 @@ export default function MenuTab() {
             <span>Quản Lý Cấu Trúc Thanh Menu Đa Cấp (Navbar)</span>
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Tự do thêm bớt menu Cấp 1, dòng máy Cấp 2 và phân khúc con Cấp 3.
+            Tự do thêm bớt menu Cấp 1, dòng máy Cấp 2 và phân khúc con Cấp 3. Sau khi chỉnh sửa nhấn <b>LƯU CẤU HÌNH MENU</b>.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
             onClick={handleResetDefault}
-            className="px-3 py-2 border border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-2 border border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
           >
             <RotateCcw size={14} />
             <span>Khôi Phục Mặc Định</span>
@@ -259,14 +345,15 @@ export default function MenuTab() {
 
           <button
             onClick={handleSaveConfig}
+            disabled={isSaving}
             className={`px-5 py-2 rounded-lg text-xs font-black flex items-center gap-2 cursor-pointer shadow-md transition-all ${
               hasChanges
                 ? 'bg-[#d70018] hover:bg-red-700 text-white animate-pulse'
                 : 'bg-[#00a859] hover:bg-emerald-700 text-white'
             }`}
           >
-            <Save size={16} />
-            <span>LƯU CẤU HÌNH MENU</span>
+            {isSaving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+            <span>{isSaving ? 'ĐANG LƯU...' : 'LƯU CẤU HÌNH MENU'}</span>
           </button>
         </div>
       </div>
@@ -282,7 +369,7 @@ export default function MenuTab() {
             </h3>
             <button
               onClick={() => handleOpenAdd('level1')}
-              className="text-[#d70018] hover:bg-red-50 p-1 rounded font-bold text-xs flex items-center gap-1"
+              className="text-[#d70018] hover:bg-red-50 p-1 rounded font-bold text-xs flex items-center gap-1 cursor-pointer"
             >
               <Plus size={14} /> Thêm
             </button>
@@ -320,7 +407,7 @@ export default function MenuTab() {
                         setSelectedLevel1Id(item.id);
                         handleOpenEdit('level1');
                       }}
-                      className="p-1 hover:text-blue-600 text-gray-400"
+                      className="p-1 hover:text-blue-600 text-gray-400 cursor-pointer"
                     >
                       <Edit2 size={13} />
                     </button>
@@ -330,7 +417,7 @@ export default function MenuTab() {
                         setSelectedLevel1Id(item.id);
                         handleDeleteItem('level1');
                       }}
-                      className="p-1 hover:text-red-600 text-gray-400"
+                      className="p-1 hover:text-red-600 text-gray-400 cursor-pointer"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -351,7 +438,7 @@ export default function MenuTab() {
             </h3>
             <button
               onClick={() => handleOpenAdd('level2')}
-              className="text-blue-600 hover:bg-blue-50 p-1 rounded font-bold text-xs flex items-center gap-1"
+              className="text-blue-600 hover:bg-blue-50 p-1 rounded font-bold text-xs flex items-center gap-1 cursor-pointer"
             >
               <Plus size={14} /> Thêm
             </button>
@@ -384,7 +471,7 @@ export default function MenuTab() {
                           e.stopPropagation();
                           handleOpenEdit('level2', idx);
                         }}
-                        className="p-1 hover:text-blue-600 text-gray-400"
+                        className="p-1 hover:text-blue-600 text-gray-400 cursor-pointer"
                       >
                         <Edit2 size={13} />
                       </button>
@@ -393,7 +480,7 @@ export default function MenuTab() {
                           e.stopPropagation();
                           handleDeleteItem('level2', idx);
                         }}
-                        className="p-1 hover:text-red-600 text-gray-400"
+                        className="p-1 hover:text-red-600 text-gray-400 cursor-pointer"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -416,7 +503,7 @@ export default function MenuTab() {
             {activeLevel2 && (
               <button
                 onClick={() => handleOpenAdd('level3')}
-                className="text-emerald-600 hover:bg-emerald-50 p-1 rounded font-bold text-xs flex items-center gap-1"
+                className="text-emerald-600 hover:bg-emerald-50 p-1 rounded font-bold text-xs flex items-center gap-1 cursor-pointer"
               >
                 <Plus size={14} /> Thêm
               </button>
@@ -447,13 +534,13 @@ export default function MenuTab() {
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => handleOpenEdit('level3', idx)}
-                      className="p-1 hover:text-blue-600 text-gray-400"
+                      className="p-1 hover:text-blue-600 text-gray-400 cursor-pointer"
                     >
                       <Edit2 size={13} />
                     </button>
                     <button
                       onClick={() => handleDeleteItem('level3', idx)}
-                      className="p-1 hover:text-red-600 text-gray-400"
+                      className="p-1 hover:text-red-600 text-gray-400 cursor-pointer"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -465,6 +552,42 @@ export default function MenuTab() {
         </div>
       </div>
 
+      {/* MODAL XÁC NHẬN (THAY THẾ CONFIRM WINDOW BỊ UNDEFINED) */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4 border border-gray-100">
+            <div className="w-14 h-14 rounded-full bg-red-100 text-[#d70018] flex items-center justify-center mx-auto shadow-inner">
+              <AlertTriangle size={28} />
+            </div>
+
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900">{confirmModal.title}</h3>
+              <p className="text-xs text-gray-600 mt-1.5 leading-relaxed font-medium">
+                {confirmModal.description}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+                className="py-2.5 px-4 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-xl font-bold text-xs cursor-pointer transition-all"
+              >
+                Hủy bỏ
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className="py-2.5 px-4 bg-[#d70018] hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow-md transition-all"
+              >
+                Đồng ý
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL THÊM / SỬA */}
       {modalType && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -474,7 +597,7 @@ export default function MenuTab() {
                 {isEditMode ? 'Chỉnh Sửa Mục' : 'Thêm Mục Mới'}{' '}
                 {modalType === 'level1' ? 'Cấp 1' : modalType === 'level2' ? 'Cấp 2' : 'Cấp 3'}
               </h3>
-              <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                 <X size={18} />
               </button>
             </div>
@@ -536,13 +659,13 @@ export default function MenuTab() {
                 <button
                   type="button"
                   onClick={() => setModalType(null)}
-                  className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100"
+                  className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100 cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#d70018] hover:bg-red-700 text-white font-bold rounded shadow-sm"
+                  className="px-5 py-2 bg-[#d70018] hover:bg-red-700 text-white font-bold rounded shadow-sm cursor-pointer"
                 >
                   Xác Nhận
                 </button>

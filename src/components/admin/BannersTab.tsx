@@ -428,7 +428,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
     }
   };
 
-  // LƯU CẤU HÌNH VÀO DATABASE
+ // LƯU CẤU HÌNH VÀO DATABASE
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     try {
@@ -445,47 +445,39 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         order: idx,
       }));
 
-      let syncSuccess = false;
-      let syncError = '';
+      // LẤY ĐÚNG KEY TOKEN TRÊN LOCALSTORAGE (fogo_token HOẶC token)
+      const adminToken =
+        localStorage.getItem('fogo_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('fogo_admin_token') ||
+        '';
 
-      try {
-        const adminToken = localStorage.getItem('fogo_admin_token') || ''; // hoặc cookie token
-
-        const res1 = await fetch(`${API_URL}/api/admin/banners/sync`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`, // Bắt buộc gửi token
-          },
-          body: JSON.stringify({ items: payloadItems }),
-        });
-        if (res1.ok) syncSuccess = true;
-        else syncError = `Status ${res1.status}`;
-      } catch (e: any) {
-        syncError = e.message;
+      if (!adminToken) {
+        alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại tài khoản Admin!');
+        setIsSaving(false);
+        return;
       }
 
-      if (!syncSuccess) {
-        try {
-          const res2 = await fetch(`${API_URL}/api/banners`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: payloadItems }),
-          });
-          if (res2.ok) syncSuccess = true;
-        } catch (e: any) {
-          syncError = e.message;
-        }
+      const res = await fetch(`${API_URL}/api/admin/banners/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`, // Gửi kèm token chuẩn
+        },
+        body: JSON.stringify({ items: payloadItems }),
+      });
+
+      const resData = await res.json();
+
+      if (!res.ok || !resData.success) {
+        throw new Error(resData.message || resData.error || `Lỗi máy chủ (Mã: ${res.status})`);
       }
 
+      // Lưu song song vào LocalStorage làm fallback hiển thị
       try {
         localStorage.setItem('fogo_banners_config', JSON.stringify(items));
         window.dispatchEvent(new Event('fogo_banners_updated'));
       } catch (_) {}
-
-      if (!syncSuccess) {
-        throw new Error(syncError || 'Backend chưa lưu được dữ liệu');
-      }
 
       setHasUnsavedChanges(false);
       setSaveToast(true);
