@@ -10,45 +10,58 @@ import TrackRecentViewed from '@/components/products/TrackRecentViewed';
 import { ACCESSORY_CATALOG_ITEMS } from '@/data/accessoryCatalog';
 
 interface PageProps {
-  params: Promise<{ slug: string[] }> | { slug: string[] };
+  params: Promise<{ slug: string | string[] }> | { slug: string | string[] };
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
+}
+
+function parsePrice(val: any): number {
+  if (typeof val === 'number') return val;
+  return Number(String(val).replace(/[^0-9]/g, '')) || 0;
 }
 
 export default async function ProductDetailPage(props: PageProps) {
   const resolvedParams = await props.params;
   const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
 
-  // Nối các phần tử của mảng slug lại bằng dấu gạch ngang (-) để triệt tiêu hoàn toàn dấu / gây lỗi 404
+  // ============================================================================
+  // 1. CHUẨN HÓA SLUG TỪ MẢNG PATH / CATCH-ALL ROUTE
+  // ============================================================================
   const rawSlugArray = resolvedParams?.slug || [];
   const rawSlug = Array.isArray(rawSlugArray) ? rawSlugArray.join('-') : String(rawSlugArray);
-  
   const currentSlug = decodeURIComponent(rawSlug).trim().replace(/\/+$/, '').toLowerCase();
-  const proid = typeof resolvedSearchParams?.proid === 'string' ? resolvedSearchParams.proid : '';
+  const proid = typeof resolvedSearchParams?.proid === 'string' ? resolvedSearchParams.proid.trim() : '';
 
   if (!currentSlug) {
     notFound();
   }
-  // ... (giữ nguyên phần còn lại của logic bên dưới)
 
   // ============================================================================
-  // 2. CHUẨN HÓA SLUG & BÓC TÁCH MỌI CẤU HÌNH PHỨC TẠP (MACBOOK, IPHONE, IPAD)
+  // 2. BÓC TÁCH THÔNG SỐ (DUNG LƯỢNG, MÀU SẮC, HASH ID) KHỎI SLUG
   // ============================================================================
   const cleanSlugForMatch = currentSlug.replace(/\//g, '-').toLowerCase();
 
-  // Mẫu regex tổng hợp quét tất cả thông số phần cứng nằm ở đuôi URL
-  const specPattern = '(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|15cpu|18cpu|14cpu|16gpu|18gpu|20gpu|32gpu|40gpu)';
-  
-  const regEnd = new RegExp(`-(${specPattern})+$`, 'i');
-  const storageMatchEnd = cleanSlugForMatch.match(regEnd);
+  // 2.1. Loại bỏ mã hash ID số ở đuôi (ví dụ: -1174439965)
+  const slugWithoutHash = cleanSlugForMatch.replace(/-\d{6,}$/gi, '');
 
-  const urlStorage = storageMatchEnd ? storageMatchEnd[1].toUpperCase() : '';
+  // 2.2. Nhận diện dung lượng từ URL
+  const specPattern = '(?:8gb|16gb|24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm)';
+  const storageRegexMatch = slugWithoutHash.match(new RegExp(`-(${specPattern})`, 'i'));
+  const urlStorage = storageRegexMatch ? storageRegexMatch[1].toUpperCase() : '';
 
-  // Regex lọc sạch các thông số rác ở đuôi URL để tìm ra baseSlug chính xác trong Database
-  const storageRegex = new RegExp(`-(?:24gb|32gb|36gb|48gb|64gb|96gb|128gb|256gb|512gb|1tb|2tb|40mm|41mm|42mm|44mm|45mm|46mm|49mm|14-inch|16-inch|15cpu|18cpu|14cpu|16gpu|18gpu|20gpu|32gpu|40gpu)+$`, 'gi');
-  
-  let baseSlug = cleanSlugForMatch.replace(storageRegex, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  // 2.3. Nhận diện màu sắc từ URL
+  const colorPattern = '(?:glacier|blue-glacier|silver|black|burgundy|gold|gray|grey|titanium|natural-titanium|white|space-black|deep-blue|cosmic-orange|soft-pink|midnight|starlight|lavender|mist-blue|sage)';
+  const colorRegexMatch = slugWithoutHash.match(new RegExp(`-(${colorPattern})`, 'i'));
+  const urlColorSlug = colorRegexMatch ? colorRegexMatch[1] : '';
+
+  // 2.4. Bóc tách để tìm ra Model cha gốc (baseSlug)
+  let baseSlug = slugWithoutHash
+    .replace(new RegExp(`-(?:${specPattern})`, 'gi'), '')
+    .replace(new RegExp(`-(?:${colorPattern})`, 'gi'), '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
   if (!baseSlug) {
-    baseSlug = cleanSlugForMatch;
+    baseSlug = slugWithoutHash;
   }
 
   let product: any = null;
@@ -60,8 +73,8 @@ export default async function ProductDetailPage(props: PageProps) {
   try {
     const query = proid ? `?proid=${encodeURIComponent(proid)}` : '';
 
-    // Thử 1: Gọi với baseSlug (Tên model gốc đã được lọc sạch thông số)
-    let res = await fetch(`${apiUrl}/api/products/${baseSlug}${query}`, {
+    // Thử 1: Gọi API bằng slug gốc không chứa hash ID
+    let res = await fetch(`${apiUrl}/api/products/${slugWithoutHash}${query}`, {
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -73,8 +86,22 @@ export default async function ProductDetailPage(props: PageProps) {
       }
     }
 
-    // Thử 2: Nếu không thấy, gọi dự phòng với toàn bộ chuỗi slug chưa cắt
-    if (!product && cleanSlugForMatch !== baseSlug) {
+    // Thử 2: Gọi API bằng baseSlug (đã lọc sạch dung lượng và màu sắc)
+    if (!product && baseSlug !== slugWithoutHash) {
+      res = await fetch(`${apiUrl}/api/products/${baseSlug}${query}`, {
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        const resJson = await res.json();
+        if (resJson.success && resJson.data) {
+          product = resJson.data;
+        }
+      }
+    }
+
+    // Thử 3: Gọi API bằng chuỗi slug ban đầu (bao gồm cả hash ID nếu có)
+    if (!product && cleanSlugForMatch !== slugWithoutHash) {
       res = await fetch(`${apiUrl}/api/products/${cleanSlugForMatch}${query}`, {
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
@@ -91,19 +118,19 @@ export default async function ProductDetailPage(props: PageProps) {
   }
 
   // ============================================================================
-  // 4. NEO CHẶT baseSlug THEO SLUG GỐC CHUẨN XÁC TRONG DATABASE
+  // 4. NEO CHẶT baseSlug THEO SLUG TRONG DATABASE
   // ============================================================================
   if (product && product.slug) {
     baseSlug = product.slug;
   }
 
   // ============================================================================
-  // 5. XỬ LÝ FALLBACK PHỤ KIỆN
+  // 5. XỬ LÝ DỮ LIỆU PHỤ KIỆN TỪ CATALOG LOCAL (FALLBACK)
   // ============================================================================
   if (!product && typeof ACCESSORY_CATALOG_ITEMS !== 'undefined' && Array.isArray(ACCESSORY_CATALOG_ITEMS)) {
     const fallbackItem = ACCESSORY_CATALOG_ITEMS.find((item: any) => {
       const itemSlug = item.slug || item.id || item.href?.replace(/^\/san-pham\//, '');
-      return itemSlug === currentSlug || itemSlug === baseSlug;
+      return itemSlug === currentSlug || itemSlug === baseSlug || itemSlug === slugWithoutHash;
     });
 
     if (fallbackItem) {
@@ -117,8 +144,8 @@ export default async function ProductDetailPage(props: PageProps) {
             id: fallbackItem.id || `var-${currentSlug}`,
             color: 'Trắng',
             storage: 'Tiêu chuẩn',
-            price: parsePrice(fallbackItem.currentPrice || fallbackItem.rawPrice || 1000),
-            originalPrice: parsePrice(fallbackItem.originalPrice || 6190000),
+            price: parsePrice(fallbackItem.currentPrice || fallbackItem.rawPrice || 0),
+            originalPrice: parsePrice(fallbackItem.originalPrice || 0),
             stock: 50,
             images: [fallbackItem.imageUrl || 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=600'],
           },
@@ -128,7 +155,7 @@ export default async function ProductDetailPage(props: PageProps) {
   }
 
   // ============================================================================
-  // 6. MOCK DATA DỰ PHÒNG CHỐNG CRASH KHI BACKEND SLEEP (RENDER COLD START)
+  // 6. DỮ LIỆU MẪU DỰ PHÒNG KHI BACKEND SLEEP
   // ============================================================================
   if (!product) {
     const cleanWords = cleanSlugForMatch
@@ -171,7 +198,7 @@ export default async function ProductDetailPage(props: PageProps) {
       variants: [
         {
           id: `var-${cleanSlugForMatch}-1`,
-          color: 'Mặc định',
+          color: 'Tiêu chuẩn',
           storage: urlStorage || '256GB',
           price: defaultPrice,
           originalPrice: defaultPrice + 3000000,
@@ -182,29 +209,66 @@ export default async function ProductDetailPage(props: PageProps) {
     };
   }
 
-  // Đảm bảo luôn có ít nhất 1 biến thể hợp lệ để render giao diện
+  // Đảm bảo mảng variants luôn tồn tại
   if (!product.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
     product.variants = [
       {
         id: `var-fallback-${product.id || '1'}`,
-        color: 'Mặc định',
+        color: 'Tiêu chuẩn',
         storage: urlStorage || '256GB',
-        price: product.price || 25000000,
-        originalPrice: product.originalPrice || 28000000,
+        price: product.price || 0,
+        originalPrice: product.originalPrice || 0,
         stock: 10,
         images: [product.imageUrl || product.image || 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600'],
       },
     ];
   }
 
+  // ============================================================================
+  // 7. XÁC ĐỊNH BIẾN THỂ KHỚP VỚI URL (DUNG LƯỢNG & MÀU SẮC BAN ĐẦU)
+  // ============================================================================
+  let matchedVariant = null;
+
+  if (proid) {
+    matchedVariant = product.variants.find((v: any) => String(v.id) === proid);
+  }
+
+  if (!matchedVariant && (urlStorage || urlColorSlug)) {
+    matchedVariant = product.variants.find((v: any) => {
+      const stMatch = urlStorage ? String(v.storage || '').toUpperCase() === urlStorage : true;
+      const clMatch = urlColorSlug
+        ? String(v.color || '').toLowerCase().replace(/\s+/g, '-').includes(urlColorSlug) ||
+          urlColorSlug.includes(String(v.color || '').toLowerCase().replace(/\s+/g, '-'))
+        : true;
+      return stMatch && clMatch;
+    });
+
+    if (!matchedVariant && urlStorage) {
+      matchedVariant = product.variants.find((v: any) => String(v.storage || '').toUpperCase() === urlStorage);
+    }
+  }
+
+  if (!matchedVariant) {
+    matchedVariant = product.variants[0];
+  }
+
+  // ============================================================================
+  // 8. ĐIỀU HƯỚNG GIAO DIỆN THEO DANH MỤC
+  // ============================================================================
   const catSlug = (product.category?.slug || '').toLowerCase();
   const catName = (product.category?.name || '').toLowerCase();
   const prodName = (product.name || '').toLowerCase();
   const slugLower = cleanSlugForMatch.toLowerCase();
 
-  // ============================================================================
-  // 7. BỘ ĐIỀU HƯỚNG GIAO DIỆN (DISPATCHER)
-  // ============================================================================
+  const detailProps = {
+    initialProduct: product,
+    currentSlug: cleanSlugForMatch,
+    baseSlug: baseSlug,
+    urlStorage: matchedVariant?.storage || urlStorage || '',
+    initialVariantId: matchedVariant?.id || '',
+    initialColor: matchedVariant?.color || '',
+  };
+
   const isUsedProduct =
     catSlug === 'hang-cu' ||
     catSlug.includes('cu') ||
@@ -216,7 +280,7 @@ export default async function ProductDetailPage(props: PageProps) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <UsedProductDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
+        <UsedProductDetail {...detailProps} />
       </>
     );
   }
@@ -232,7 +296,7 @@ export default async function ProductDetailPage(props: PageProps) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <AccessoryDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
+        <AccessoryDetail {...detailProps} />
       </>
     );
   }
@@ -242,7 +306,7 @@ export default async function ProductDetailPage(props: PageProps) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <WatchDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
+        <WatchDetail {...detailProps} />
       </>
     );
   }
@@ -252,7 +316,7 @@ export default async function ProductDetailPage(props: PageProps) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <MacBookDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
+        <MacBookDetail {...detailProps} />
       </>
     );
   }
@@ -262,21 +326,16 @@ export default async function ProductDetailPage(props: PageProps) {
     return (
       <>
         <TrackRecentViewed product={product} />
-        <IPadDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
+        <IPadDetail {...detailProps} />
       </>
     );
   }
 
-  // Mặc định render giao diện iPhone
+  // Mặc định hiển thị trang iPhone
   return (
     <>
       <TrackRecentViewed product={product} />
-      <IPhoneDetail initialProduct={product} currentSlug={cleanSlugForMatch} baseSlug={baseSlug} urlStorage={urlStorage} />
+      <IPhoneDetail {...detailProps} />
     </>
   );
-}
-
-function parsePrice(val: any): number {
-  if (typeof val === 'number') return val;
-  return Number(String(val).replace(/[^0-9]/g, '')) || 0;
 }

@@ -29,7 +29,7 @@ import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
 
-const IPHONE_STORAGES = ['64GB', '128GB', '256GB', '512GB', '1TB', '2TB'];
+const DEFAULT_IPHONE_STORAGES = ['64GB', '128GB', '256GB', '512GB', '1TB', '2TB'];
 
 interface Props {
   initialProduct: any;
@@ -60,6 +60,7 @@ export default function IPhoneDetail({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentProId = searchParams.get('proid');
 
   const { addToCart } = useCart();
 
@@ -82,7 +83,30 @@ export default function IPhoneDetail({
     message: '',
   });
 
-  // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ VÀ THÔNG SỐ TỪ ADMIN (LOCALSTORAGE)
+  // 1. TỰ ĐỘNG LẤY TẤT CẢ CÁC DUNG LƯỢNG THỰC TẾ TRONG DATABASE CỦA DÒNG NÀY
+  const storageList = useMemo(() => {
+    if (!product?.variants || product.variants.length === 0) return DEFAULT_IPHONE_STORAGES;
+    const set = new Set<string>();
+    product.variants.forEach((v: any) => {
+      const st = (v.storage && String(v.storage).trim()) || '';
+      if (st && st.toUpperCase() !== 'TIÊU CHUẨN') {
+        set.add(st);
+      }
+    });
+    const list = Array.from(set);
+    if (list.length === 0) return DEFAULT_IPHONE_STORAGES;
+
+    const parseSize = (s: string) => {
+      const upper = s.toUpperCase();
+      const num = parseInt(upper.replace(/[^0-9]/g, '')) || 0;
+      if (upper.includes('TB')) return num * 1024 * 1024;
+      if (upper.includes('GB')) return num * 1024;
+      return num;
+    };
+    return list.sort((a, b) => parseSize(a) - parseSize(b));
+  }, [product]);
+
+  // 2. ĐỒNG BỘ MÔ TẢ & THÔNG SỐ ADMIN
   useEffect(() => {
     if (!product?.id) return;
     try {
@@ -99,27 +123,43 @@ export default function IPhoneDetail({
       console.warn('Lỗi đồng bộ dữ liệu sản phẩm từ Admin:', e);
     }
   }, [product?.id]);
-  
+
   useEffect(() => {
     if (initialProduct) {
       setProduct(initialProduct);
     }
   }, [initialProduct]);
 
+  // 3. KHỞI TẠO BIẾN THỂ BAN ĐẦU THEO URL HOẶC PROID
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
 
-    const firstValidVar = product.variants.find((v: any) => {
-      const st = (v.storage || '').trim().toUpperCase();
-      return st && st !== 'TIÊU CHUẨN';
-    }) || product.variants[0];
+    let targetVar = null;
 
-    const defaultSt = (firstValidVar?.storage || '128GB').trim();
-    const activeSt = (urlStorage || defaultSt).trim();
+    // Ưu tiên 1: proid truyền trên URL
+    if (currentProId) {
+      targetVar = product.variants.find((v: any) => String(v.id) === currentProId);
+    }
 
-    setSelectedStorage(activeSt);
-    setSelectedColor(firstValidVar?.color || 'Black');
+    // Ưu tiên 2: dung lượng từ URL (urlStorage)
+    if (!targetVar && urlStorage) {
+      targetVar = product.variants.find(
+        (v: any) => (v.storage || '').trim().toUpperCase() === urlStorage.trim().toUpperCase()
+      );
+    }
 
+    // Ưu tiên 3: Biến thể đầu tiên có giá > 0
+    if (!targetVar) {
+      targetVar = product.variants.find((v: any) => Number(v.price) > 0) || product.variants[0];
+    }
+
+    const defaultSt = targetVar?.storage || storageList[0] || '256GB';
+    const defaultCl = targetVar?.color || 'Black';
+
+    setSelectedStorage(defaultSt);
+    setSelectedColor(defaultCl);
+
+    // Fetch sản phẩm liên quan
     fetch(`${API_URL}/api/products/filter?category=iphone`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((resJson) => {
@@ -136,17 +176,15 @@ export default function IPhoneDetail({
         const mapped = filtered.map((p: any) => {
           const vars: any[] = Array.isArray(p.variants) ? p.variants : [];
           const bestVar = vars.find((v: any) => Number(v.price) > 0 && Array.isArray(v.images) && v.images.length > 0) || vars[0] || {};
-
           const realPrice = Number(bestVar.price || p.price || 0);
-          const realImage = formatImg(bestVar.images?.[0] || p.images?.[0] || p.imageUrl || p.image);
 
           return {
             id: p.id,
             name: p.name,
             slug: p.slug,
             realPrice,
-            priceDisplay: realPrice > 0 ? realPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
-            imageUrl: realImage,
+            priceDisplay: realPrice > 0 ? `${realPrice.toLocaleString('vi-VN')}đ` : 'Liên hệ',
+            imageUrl: formatImg(bestVar.images?.[0] || p.images?.[0] || p.imageUrl || p.image),
             href: `/san-pham/${p.slug}`,
           };
         });
@@ -154,10 +192,7 @@ export default function IPhoneDetail({
         const validList = mapped.filter((p: any) => p.realPrice > 0);
         setRelatedProducts(validList.length >= 5 ? validList.slice(0, 5) : mapped.slice(0, 5));
       })
-      .catch((err) => {
-        console.error('Lỗi khi fetch sản phẩm liên quan:', err);
-        setRelatedProducts([]);
-      });
+      .catch(() => setRelatedProducts([]));
 
     try {
       const saved = localStorage.getItem('fogo_recent_viewed');
@@ -169,7 +204,7 @@ export default function IPhoneDetail({
         name: product.name,
         slug: product.slug,
         imageUrl: formatImg(product.images?.[0] || product.imageUrl || product.variants?.[0]?.images?.[0]),
-        currentPrice: product.price ? Number(product.price).toLocaleString('vi-VN') + 'đ' : 'Liên hệ',
+        currentPrice: product.price ? `${Number(product.price).toLocaleString('vi-VN')}đ` : 'Liên hệ',
         href: `/san-pham/${currentSlug || product.slug}`,
       };
 
@@ -179,30 +214,9 @@ export default function IPhoneDetail({
     } catch (e) {
       console.warn('Lỗi đọc recent viewed:', e);
     }
-  }, [product, urlStorage, currentSlug]);
+  }, [product, urlStorage, currentSlug, currentProId, storageList]);
 
-  const storageList = useMemo(() => {
-    if (!product?.variants || product.variants.length === 0) return IPHONE_STORAGES;
-    const set = new Set<string>();
-    product.variants.forEach((v: any) => {
-      const st = (v.storage || '').trim();
-      if (st && st.toUpperCase() !== 'TIÊU CHUẨN') {
-        set.add(st);
-      }
-    });
-    const list = Array.from(set);
-    if (list.length === 0) return IPHONE_STORAGES;
-
-    const parseSize = (s: string) => {
-      const upper = s.toUpperCase();
-      const num = parseInt(upper.replace(/[^0-9]/g, '')) || 0;
-      if (upper.includes('TB')) return num * 1024 * 1024;
-      if (upper.includes('GB')) return num * 1024;
-      return num;
-    };
-    return list.sort((a, b) => parseSize(a) - parseSize(b));
-  }, [product]);
-
+  // 4. DANH SÁCH MÀU SẮC ĐẶC TRƯNG: MỖI MÀU LẤY ĐÚNG 1 ẢNH ĐẠI DIỆN (KHÔNG LẶP ẢNH)
   const currentColorOptions = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return [];
 
@@ -214,18 +228,27 @@ export default function IPhoneDetail({
     const map = new Map<string, any>();
 
     targetList.forEach((v: any) => {
-      const c = (v.color || '').trim();
-      if (c && !map.has(c)) {
-        map.set(c, v);
+      const c = (v.color && String(v.color).trim()) || 'Tiêu chuẩn';
+      if (!map.has(c.toLowerCase())) {
+        let displayImg = '';
+        if (Array.isArray(v.images) && v.images.length > 0) displayImg = v.images[0];
+        else if (typeof v.images === 'string') displayImg = v.images;
+        else displayImg = product?.imageUrl || '';
+
+        map.set(c.toLowerCase(), {
+          color: c,
+          image: displayImg,
+          price: Number(v.price || 0),
+          id: v.id,
+          sampleVariant: v,
+        });
       }
     });
 
-    return Array.from(map.entries()).map(([colorName, sampleVariant]) => ({
-      color: colorName,
-      sampleVariant,
-    }));
+    return Array.from(map.values());
   }, [product, selectedStorage]);
 
+  // 5. BIẾN THỂ ĐANG ĐƯỢC CHỌN HIỆN TẠI
   const currentVariant = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return null;
 
@@ -242,38 +265,23 @@ export default function IPhoneDetail({
       (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
     );
 
-    const samplePrice = sample?.price || product.variants[0]?.price || 0;
-
-    return {
-      id: sample?.id || `out-of-stock-${selectedStorage.toLowerCase()}-${encodeURIComponent(selectedColor)}`,
-      storage: selectedStorage,
-      color: selectedColor,
-      price: samplePrice,
-      originalPrice: sample?.originalPrice || product.variants[0]?.originalPrice || 0,
-      stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
-      images: sample?.images || product.variants[0]?.images || [],
-    };
+    return sample || product.variants[0];
   }, [product, selectedStorage, selectedColor]);
 
+  // 6. DANH SÁCH ẢNH CỦA MÀU ĐANG CHỌN (KHÔNG BỊ LẶP ẢNH CÙNG MÀU)
   const imagesList: string[] = useMemo(() => {
-    let list: string[] = [];
+    const list: string[] = [];
 
-    const exactVariant = product?.variants?.find(
-      (v: any) => 
-        (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
-        (!selectedStorage || (v.storage || '').trim().toLowerCase() === selectedStorage.toLowerCase())
-    ) || product?.variants?.find(
-      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
-    );
-
-    if (exactVariant) {
-      if (Array.isArray(exactVariant.images)) {
-        exactVariant.images.forEach((img: string) => {
+    if (currentVariant) {
+      if (Array.isArray(currentVariant.images)) {
+        currentVariant.images.forEach((img: string) => {
           if (img && !list.includes(img)) list.push(img);
         });
+      } else if (typeof currentVariant.images === 'string' && currentVariant.images) {
+        list.push(currentVariant.images);
       }
-      if (exactVariant.imageUrl && !list.includes(exactVariant.imageUrl)) {
-        list.push(exactVariant.imageUrl);
+      if (currentVariant.imageUrl && !list.includes(currentVariant.imageUrl)) {
+        list.push(currentVariant.imageUrl);
       }
     }
 
@@ -282,23 +290,22 @@ export default function IPhoneDetail({
         product.images.forEach((img: string) => {
           if (img && !list.includes(img)) list.push(img);
         });
-      } else if (product?.imageUrl && !list.includes(product.imageUrl)) {
+      } else if (product?.imageUrl) {
         list.push(product.imageUrl);
       }
     }
 
     return list.length > 0 ? list : ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600'];
-  }, [product, selectedColor, selectedStorage]);
+  }, [currentVariant, product]);
 
   const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
 
   const isOutOfStock = useMemo(() => {
     if (!currentVariant) return true;
-    const price = Number(currentVariant.price || 0);
-    return price <= 0;
+    return Number(currentVariant.price || 0) <= 0;
   }, [currentVariant]);
 
-  // SỬA: CẬP NHẬT TỨC THÌ VÀ SÁNG VIỀN ĐỎ NGAY
+  // SỰ KIỆN: BẤM CHỌN DUNG LƯỢNG (URL ĐỔI THEO ĐÚNG DUNG LƯỢNG MỚI)
   const handleSelectStorage = (st: string) => {
     setSelectedStorage(st);
 
@@ -308,7 +315,12 @@ export default function IPhoneDetail({
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     ) || product?.variants?.find((v: any) => (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase());
 
-    const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
+    const cleanBase = (baseSlug || product?.slug || 'iphone')
+      .toLowerCase()
+      .replace(/-(256gb|512gb|1tb|2tb|128gb|64gb|32gb).*$/i, '')
+      .replace(/\/+$/, '')
+      .trim();
+
     const targetStorage = st.toLowerCase().replace(/\s+/g, '-');
     const proidParam = matched ? `?proid=${matched.id}` : '';
 
@@ -317,6 +329,7 @@ export default function IPhoneDetail({
     }
   };
 
+  // SỰ KIỆN: BẤM CHỌN MÀU SẮC (GIỮ NGUYÊN DUNG LƯỢNG, CHỈ ĐỔI PROID)
   const handleSelectColor = (colorName: string) => {
     if (selectedColor.toLowerCase() === colorName.toLowerCase()) return;
 
@@ -329,14 +342,21 @@ export default function IPhoneDetail({
     }, 150);
 
     const matched = product?.variants?.find(
-      (v: any) => (v.color || '').trim().toLowerCase() === colorName.toLowerCase()
-    );
+      (v: any) =>
+        (v.color || '').trim().toLowerCase() === colorName.toLowerCase() &&
+        (!selectedStorage || (v.storage || '').trim().toLowerCase() === selectedStorage.toLowerCase())
+    ) || product?.variants?.find((v: any) => (v.color || '').trim().toLowerCase() === colorName.toLowerCase());
 
-    const nextId = matched ? matched.id : `mock-${selectedStorage.toLowerCase()}-${encodeURIComponent(colorName)}`;
+    const nextId = matched ? matched.id : '';
 
     if (typeof window !== 'undefined') {
+      const cleanBase = (baseSlug || product?.slug || 'iphone')
+        .toLowerCase()
+        .replace(/-(256gb|512gb|1tb|2tb|128gb|64gb|32gb).*$/i, '')
+        .trim();
       const stPath = selectedStorage ? `-${selectedStorage.toLowerCase().replace(/\s+/g, '-')}` : '';
-      window.history.replaceState(null, '', `/san-pham/${baseSlug}${stPath}?proid=${nextId}`);
+      const proidParam = nextId ? `?proid=${nextId}` : '';
+      window.history.replaceState(null, '', `/san-pham/${cleanBase}${stPath}${proidParam}`);
     }
   };
 
@@ -345,10 +365,10 @@ export default function IPhoneDetail({
     if (!parsedNum || parsedNum <= 0 || isNaN(parsedNum)) {
       return 'Liên hệ';
     }
-    return parsedNum.toLocaleString('vi-VN') + 'đ';
+    return `${parsedNum.toLocaleString('vi-VN')}đ`;
   };
 
-  const cleanProductName = product.name
+  const cleanProductName = product?.name
     ? product.name.replace(/\b(64GB|128GB|256GB|512GB|1TB|2TB|Tiêu chuẩn)\b/gi, '').trim()
     : 'iPhone';
 
@@ -507,7 +527,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* CHỌN DUNG LƯỢNG: TỰ ĐỘNG XUỐNG DÒNG VÀ SÁNG VIỀN ĐỎ */}
+              {/* CHỌN DUNG LƯỢNG */}
               {storageList.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
@@ -516,18 +536,24 @@ export default function IPhoneDetail({
                   <div className="flex flex-wrap gap-2.5 w-full">
                     {storageList.map((st) => {
                       const isSelected = selectedStorage.trim().toLowerCase() === st.trim().toLowerCase();
+                      const sample = product?.variants?.find((v: any) => (v.storage || '').trim().toLowerCase() === st.toLowerCase() && Number(v.price) > 0);
+                      const priceSub = sample ? `${(Number(sample.price) / 1000000).toFixed(1)}Tr` : '';
+
                       return (
                         <button
                           key={st}
                           type="button"
                           onClick={() => handleSelectStorage(st)}
-                          className={`px-4 py-2.5 text-xs sm:text-sm font-black rounded-xl border-2 text-center transition-all cursor-pointer ${
+                          className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 text-center transition-all cursor-pointer relative min-w-[75px] ${
                             isSelected
                               ? 'border-[#d70018] text-[#d70018] bg-red-50/20 shadow-sm'
                               : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
-                          {st}
+                          <div>{st}</div>
+                          {priceSub && (
+                            <div className="text-[10px] font-bold text-[#d70018] mt-0.5">{priceSub}</div>
+                          )}
                         </button>
                       );
                     })}
@@ -535,32 +561,33 @@ export default function IPhoneDetail({
                 </div>
               )}
 
-              {/* CHỌN MÀU SẮC */}
+              {/* CHỌN MÀU SẮC (KHÔNG BỊ LẶP ẢNH) */}
               {currentColorOptions.length > 0 && (
                 <div>
                   <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">
                     Màu sắc:
                   </label>
                   <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full">
-                    {currentColorOptions.map(({ color, sampleVariant }) => {
-                      const isSelected = selectedColor.trim().toLowerCase() === color.trim().toLowerCase();
-                      const thumb = sampleVariant?.images?.[0] || imagesList[0];
+                    {currentColorOptions.map((opt) => {
+                      const isSelected = selectedColor.trim().toLowerCase() === opt.color.trim().toLowerCase();
 
                       return (
                         <button
-                          key={color}
+                          key={opt.color}
                           type="button"
-                          onClick={() => handleSelectColor(color)}
-                          className={`px-3.5 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer ${
+                          onClick={() => handleSelectColor(opt.color)}
+                          className={`px-3.5 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer relative ${
                             isSelected
                               ? 'border-[#d70018] text-[#d70018] font-black bg-red-50/20 shadow-sm'
                               : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'
                           }`}
                         >
                           <div className="w-5 h-5 rounded-full overflow-hidden p-0.5 border border-gray-200 shrink-0">
-                            <img src={formatImg(thumb)} alt="" className="w-full h-full object-contain" />
+                            <img src={formatImg(opt.image)} alt="" className="w-full h-full object-contain" />
                           </div>
-                          <span className="text-sm sm:text-base font-bold whitespace-nowrap">{color}</span>
+                          <div className="text-left">
+                            <span className="text-xs sm:text-sm font-bold whitespace-nowrap block">{opt.color}</span>
+                          </div>
                         </button>
                       );
                     })}
@@ -598,7 +625,7 @@ export default function IPhoneDetail({
                 <div className="pt-2 space-y-2">
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
                     <p className="text-xs font-bold text-[#d70018]">
-                      Cấu hình {cleanProductName} ({selectedColor}) hiện đang tạm hết hàng.
+                      Cấu hình {cleanProductName} ({selectedColor}) hiện đang nhận đặt hàng hoặc liên hệ báo giá.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -692,26 +719,6 @@ export default function IPhoneDetail({
                   >
                     <MessageCircle size={13} />
                   </a>
-                  <a
-                    href="https://twitter.com/fogostore"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center hover:opacity-85 transition-opacity"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                    </svg>
-                  </a>
-                  <a
-                    href="https://pinterest.com/fogostore"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-full bg-[#e60023] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.546.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
-                    </svg>
-                  </a>
                   <button
                     type="button"
                     onClick={handleCopyUrl}
@@ -788,7 +795,7 @@ export default function IPhoneDetail({
                 </div>
               </div>
 
-              {/* BANNER KREDIVO BẰNG LINK ẢNH */}
+              {/* BANNER KREDIVO */}
               <div
                 onClick={() => setIsInstallmentOpen(true)}
                 className="w-full rounded-2xl overflow-hidden border border-gray-200 shadow-xs hover:shadow-md transition-all cursor-pointer group"
@@ -847,19 +854,18 @@ export default function IPhoneDetail({
                   }`}
                 >
                   {formattedDescription ? (
-                    // ✅ CODE MỚI ĐÃ ĐƯỢC LÀM SẠCH VÀ CHỐNG XSS:
-                  <div
-                    className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
-                              [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
-                              [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
-                    dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(
-                        String(product.description || '')
-                          .replace(/src="\/\//g, 'src="https://')
-                          .replace(/src='\/\//g, "src='https://")
-                      ),
-                    }}
-                  />
+                    <div
+                      className="w-full text-justify text-gray-800 leading-relaxed break-words text-sm sm:text-base 
+                                [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
+                                [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(
+                          String(product.description || '')
+                            .replace(/src="\/\//g, 'src="https://')
+                            .replace(/src='\/\//g, "src='https://")
+                        ),
+                      }}
+                    />
                   ) : (
                     <p className="text-xs text-gray-500 text-center">Thông tin mô tả sản phẩm đang được cập nhật.</p>
                   )}
