@@ -207,6 +207,7 @@ interface SearchItem {
   price: number;
   imageUrl: string;
   categoryName?: string;
+  isUsed?: boolean;
 }
 
 const formatSearchImage = (url?: string | null): string => {
@@ -259,7 +260,7 @@ export const Header: React.FC = () => {
     fetchMenuData();
   }, []);
 
-  // Nạp toàn bộ danh mục sản phẩm vào Cache phục vụ tìm kiếm tức thì 0ms
+  // Nạp toàn bộ danh mục sản phẩm vào Cache
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -288,7 +289,7 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
-  // Logic tìm kiếm an toàn: Lọc sạch hàng rác, khử trùng lặp và không phân biệt chữ hoa/thường
+  // Logic tìm kiếm thông minh: CHẶN LIÊN HỆ, ƯU TIÊN HÀNG MỚI, TRẢ VỀ ÍT NHẤT 5-8 SẢN PHẨM
   useEffect(() => {
     const rawQuery = searchTerm.trim().toLowerCase();
     if (!rawQuery) {
@@ -301,23 +302,13 @@ export const Header: React.FC = () => {
 
     const timer = setTimeout(async () => {
       const processProducts = (rawList: any[]): SearchItem[] => {
-        return rawList
-          .filter((item: any) => {
-            if (!item || !item.name || typeof item.name !== 'string') return false;
+        // 1. Phân tách từ khóa tìm kiếm (e.g., "ipad pro m5" -> ["ipad", "pro", "m5"])
+        const queryKeywords = rawQuery.split(/\s+/).filter(Boolean);
 
-            const name = item.name.toLowerCase();
-            const cat = String(item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
-            const slug = String(item.slug || '').toLowerCase();
-
-            return name.includes(rawQuery) || cat.includes(rawQuery) || slug.includes(rawQuery);
-          })
-          // Khử trùng lặp: Nếu trùng tên sản phẩm, chỉ giữ 1 sản phẩm đại diện
-          .filter((item: any, index: number, self: any[]) =>
-            index === self.findIndex((t: any) => t.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
-          )
-          .slice(0, 6)
+        const itemsWithPrices = rawList
           .map((item: any) => {
             const firstVariant = item.variants?.[0] || {};
+            const price = firstVariant.price !== undefined ? Number(firstVariant.price) : Number(item.price || 0);
 
             let rawImg = '';
             if (Array.isArray(firstVariant.images) && firstVariant.images.length > 0) {
@@ -338,7 +329,17 @@ export const Header: React.FC = () => {
                 '/placeholder.png';
             }
 
-            const price = firstVariant.price !== undefined ? firstVariant.price : (item.price || 0);
+            const name = String(item.name || '').toLowerCase();
+            const cat = String(item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
+            const slug = String(item.slug || '').toLowerCase();
+
+            // Kiểm tra xem sản phẩm có phải là hàng cũ hay không
+            const isUsed =
+              name.includes('cũ') ||
+              name.includes('like new') ||
+              name.includes('99%') ||
+              cat.includes('cũ') ||
+              slug.includes('cu');
 
             return {
               id: item.id,
@@ -347,8 +348,49 @@ export const Header: React.FC = () => {
               price,
               imageUrl: formatSearchImage(rawImg),
               categoryName: item.category?.name || item.categoryName,
+              createdAt: item.createdAt ? new Date(item.createdAt).getTime() : 0,
+              isUsed,
+              searchString: `${name} ${cat} ${slug}`,
             };
-          });
+          })
+          // BƯỚC 1: BỎ HOÀN TOÀN CÁC SẢN PHẨM GIÁ BẰNG 0 / LIÊN HỆ
+          .filter((item) => item.id && item.name && item.price > 0);
+
+        // BƯỚC 2: TÌM KIẾM THEO TẤT CẢ TỪ KHÓA (CHÍNH XÁC NHẤT)
+        let matched = itemsWithPrices.filter((item) =>
+          queryKeywords.every((kw) => item.searchString.includes(kw))
+        );
+
+        // BƯỚC 3: NẾU KẾT QUẢ DƯỚI 5 SẢN PHẨM -> NỚI LỎNG TÌM KIẾM THEO DÒNG ĐỂ ĐẢM BẢO ÍT NHẤT 5 SẢN PHẨM
+        if (matched.length < 5 && queryKeywords.length > 1) {
+          const mainKey = queryKeywords.slice(0, 2).join(' '); // ví dụ "ipad pro"
+          const fallbackMatches = itemsWithPrices.filter(
+            (item) =>
+              item.searchString.includes(mainKey) &&
+              !matched.some((m) => m.id === item.id)
+          );
+          matched = [...matched, ...fallbackMatches];
+        }
+
+        // BƯỚC 4: KHỬ TRÙNG LẶP THEO TÊN
+        const uniqueList = matched.filter(
+          (item, idx, self) =>
+            idx === self.findIndex((t) => t.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
+        );
+
+        // BƯỚC 5: SẮP XẾP ƯU TIÊN:
+        // - HÀNG MỚI ĐỨNG ĐẦU (isUsed = false)
+        // - HÀNG CŨ ĐẨY RA SAU (isUsed = true)
+        // - CÙNG LOẠI THÌ ƯU TIÊN THEO THỜI GIAN TẠO MỚI NHẤT
+        uniqueList.sort((a, b) => {
+          if (a.isUsed !== b.isUsed) {
+            return a.isUsed ? 1 : -1; // New xếp trước, Cũ xếp sau
+          }
+          return b.createdAt - a.createdAt; // Mới nhất xếp trước
+        });
+
+        // Trả về danh sách gợi ý 6 - 8 sản phẩm
+        return uniqueList.slice(0, 8);
       };
 
       if (productsCache.length > 0) {
@@ -357,7 +399,7 @@ export const Header: React.FC = () => {
         setShowDropdown(true);
         setIsSearching(false);
       } else {
-        // Fallback: Gọi trực tiếp API nếu cache chưa về kịp
+        // Fallback gọi API trực tiếp
         try {
           const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(rawQuery)}&all=true`);
           if (res.ok) {
@@ -469,7 +511,7 @@ export const Header: React.FC = () => {
                   <span>{searchResults.length} sản phẩm</span>
                 </div>
 
-                <div className="max-h-[340px] overflow-y-auto divide-y divide-gray-100">
+                <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-100">
                   {searchResults.length > 0 ? (
                     searchResults.map((item) => (
                       <Link
@@ -486,16 +528,29 @@ export const Header: React.FC = () => {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-gray-800 group-hover:text-[#d70018] truncate transition-colors">
-                            {item.name}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-bold text-gray-800 group-hover:text-[#d70018] truncate transition-colors">
+                              {item.name}
+                            </p>
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs font-black text-[#d70018]">
                               {formatVnd(item.price)}
                             </span>
                             {item.categoryName && (
-                              <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                  item.isUsed
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
                                 {item.categoryName}
+                              </span>
+                            )}
+                            {!item.isUsed && (
+                              <span className="text-[9px] bg-red-50 text-[#d70018] font-bold px-1 py-0.5 rounded">
+                                MỚI
                               </span>
                             )}
                           </div>
@@ -742,7 +797,7 @@ export const Header: React.FC = () => {
 
           {showDropdown && (
             <div className="absolute top-full left-3 right-3 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
-              <div className="max-h-[280px] overflow-y-auto divide-y divide-gray-100">
+              <div className="max-h-[300px] overflow-y-auto divide-y divide-gray-100">
                 {searchResults.length > 0 ? (
                   searchResults.map((item) => (
                     <Link
@@ -756,7 +811,14 @@ export const Header: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-gray-800 truncate">{item.name}</p>
-                        <span className="text-[11px] font-black text-[#d70018] block">{formatVnd(item.price)}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[11px] font-black text-[#d70018] block">{formatVnd(item.price)}</span>
+                          {!item.isUsed && (
+                            <span className="text-[9px] bg-red-50 text-[#d70018] font-bold px-1 py-0.5 rounded">
+                              MỚI
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                   ))
