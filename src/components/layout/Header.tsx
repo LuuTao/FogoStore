@@ -254,13 +254,13 @@ export const Header: React.FC = () => {
           }
         }
       } catch (err) {
-        // Fallback giữ nguyên danh mục chính
+        // Fallback
       }
     };
     fetchMenuData();
   }, []);
 
-  // Nạp toàn bộ danh mục sản phẩm vào Cache
+  // Nạp toàn bộ danh mục sản phẩm (kèm TẤT CẢ các biến thể) vào Cache
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -289,7 +289,7 @@ export const Header: React.FC = () => {
     loadProducts();
   }, []);
 
-  // Logic tìm kiếm thông minh: CHẶN LIÊN HỆ, ƯU TIÊN HÀNG MỚI, TRẢ VỀ ÍT NHẤT 5-8 SẢN PHẨM
+  // TÌM KIẾM TOÀN BỘ CÁC BIẾN THỂ TRONG DB, BỎ "LIÊN HỆ", ƯU TIÊN MỚI, TỐI THIỂU 5-10 KẾT QUẢ
   useEffect(() => {
     const rawQuery = searchTerm.trim().toLowerCase();
     if (!rawQuery) {
@@ -302,95 +302,103 @@ export const Header: React.FC = () => {
 
     const timer = setTimeout(async () => {
       const processProducts = (rawList: any[]): SearchItem[] => {
-        // 1. Phân tách từ khóa tìm kiếm (e.g., "ipad pro m5" -> ["ipad", "pro", "m5"])
         const queryKeywords = rawQuery.split(/\s+/).filter(Boolean);
+        const flattenedVariants: any[] = [];
 
-        const itemsWithPrices = rawList
-          .map((item: any) => {
-            const firstVariant = item.variants?.[0] || {};
-            const price = firstVariant.price !== undefined ? Number(firstVariant.price) : Number(item.price || 0);
+        // 1. DUYỆT TỪNG SẢN PHẨM VÀ BUNG TOÀN BỘ CÁC BIẾN THỂ (VARIANTS) CỦA NÓ
+        rawList.forEach((product: any) => {
+          if (!product || !product.name) return;
 
-            let rawImg = '';
-            if (Array.isArray(firstVariant.images) && firstVariant.images.length > 0) {
-              rawImg = firstVariant.images[0];
-            } else if (typeof firstVariant.images === 'string') {
-              try {
-                const parsed = JSON.parse(firstVariant.images);
-                rawImg = Array.isArray(parsed) ? parsed[0] : parsed;
-              } catch {
-                rawImg = firstVariant.images;
-              }
-            } else {
-              rawImg =
-                firstVariant.imageUrl ||
-                item.imageUrl ||
-                item.thumbnail ||
-                (Array.isArray(item.images) ? item.images[0] : '') ||
-                '/placeholder.png';
+          const variants = Array.isArray(product.variants) && product.variants.length > 0
+            ? product.variants
+            : [{ price: product.price || 0, images: product.images }];
+
+          variants.forEach((v: any, vIdx: number) => {
+            const price = Number(v.price !== undefined ? v.price : (product.price || 0));
+
+            // CHỈ LẤY BIẾN THỂ CÓ GIÁ ĐANG BÁN (PRICE > 0), LOẠI BỎ HẲN CÁC SẢN PHẨM "LIÊN HỆ"
+            if (price <= 0) return;
+
+            // Xây dựng tên hiển thị chi tiết (VD: iPad Pro M5 11 inch 128GB - Xám)
+            const extraTags: string[] = [];
+            if (v.storage && !product.name.toLowerCase().includes(v.storage.toLowerCase())) {
+              extraTags.push(v.storage);
+            }
+            if (v.color && !product.name.toLowerCase().includes(v.color.toLowerCase())) {
+              extraTags.push(v.color);
             }
 
-            const name = String(item.name || '').toLowerCase();
-            const cat = String(item.category?.name || item.category?.slug || item.categoryName || '').toLowerCase();
-            const slug = String(item.slug || '').toLowerCase();
+            const fullName = extraTags.length > 0
+              ? `${product.name} (${extraTags.join(' - ')})`
+              : product.name;
 
-            // Kiểm tra xem sản phẩm có phải là hàng cũ hay không
+            // Xử lý ảnh biến thể
+            let rawImg = '';
+            if (Array.isArray(v.images) && v.images.length > 0) {
+              rawImg = v.images[0];
+            } else if (typeof v.images === 'string') {
+              try {
+                const parsed = JSON.parse(v.images);
+                rawImg = Array.isArray(parsed) ? parsed[0] : parsed;
+              } catch {
+                rawImg = v.images;
+              }
+            } else {
+              rawImg = v.imageUrl || product.imageUrl || product.thumbnail || '/placeholder.png';
+            }
+
+            const searchString = `${product.name} ${fullName} ${v.storage || ''} ${v.color || ''} ${product.category?.name || ''} ${product.slug || ''}`.toLowerCase();
+
+            // Kiểm tra hàng cũ / hàng like new
             const isUsed =
-              name.includes('cũ') ||
-              name.includes('like new') ||
-              name.includes('99%') ||
-              cat.includes('cũ') ||
-              slug.includes('cu');
+              searchString.includes('cũ') ||
+              searchString.includes('like new') ||
+              searchString.includes('99%') ||
+              searchString.includes('cu');
 
-            return {
-              id: item.id,
-              name: item.name,
-              slug: item.slug || item.id,
+            flattenedVariants.push({
+              id: `${product.id}-${v.id || vIdx}`,
+              name: fullName,
+              slug: v.slug || product.slug || product.id,
               price,
               imageUrl: formatSearchImage(rawImg),
-              categoryName: item.category?.name || item.categoryName,
-              createdAt: item.createdAt ? new Date(item.createdAt).getTime() : 0,
+              categoryName: product.category?.name || product.categoryName,
+              createdAt: product.createdAt ? new Date(product.createdAt).getTime() : 0,
               isUsed,
-              searchString: `${name} ${cat} ${slug}`,
-            };
-          })
-          // BƯỚC 1: BỎ HOÀN TOÀN CÁC SẢN PHẨM GIÁ BẰNG 0 / LIÊN HỆ
-          .filter((item) => item.id && item.name && item.price > 0);
+              searchString,
+            });
+          });
+        });
 
-        // BƯỚC 2: TÌM KIẾM THEO TẤT CẢ TỪ KHÓA (CHÍNH XÁC NHẤT)
-        let matched = itemsWithPrices.filter((item) =>
+        // 2. TÌM KHỚP TẤT CẢ TỪ KHÓA
+        let matched = flattenedVariants.filter((item) =>
           queryKeywords.every((kw) => item.searchString.includes(kw))
         );
 
-        // BƯỚC 3: NẾU KẾT QUẢ DƯỚI 5 SẢN PHẨM -> NỚI LỎNG TÌM KIẾM THEO DÒNG ĐỂ ĐẢM BẢO ÍT NHẤT 5 SẢN PHẨM
+        // 3. NẾU DƯỚI 5 KẾT QUẢ -> NỚI LỎNG THEO TỪ KHÓA CHÍNH ĐỂ ĐẢM BẢO ÍT NHẤT 5 KẾT QUẢ
         if (matched.length < 5 && queryKeywords.length > 1) {
-          const mainKey = queryKeywords.slice(0, 2).join(' '); // ví dụ "ipad pro"
-          const fallbackMatches = itemsWithPrices.filter(
+          const mainKeyword = queryKeywords.slice(0, 2).join(' '); // Ví dụ: "ipad pro" hoặc "iphone 16"
+          const fallbackMatches = flattenedVariants.filter(
             (item) =>
-              item.searchString.includes(mainKey) &&
+              item.searchString.includes(mainKeyword) &&
               !matched.some((m) => m.id === item.id)
           );
           matched = [...matched, ...fallbackMatches];
         }
 
-        // BƯỚC 4: KHỬ TRÙNG LẶP THEO TÊN
-        const uniqueList = matched.filter(
-          (item, idx, self) =>
-            idx === self.findIndex((t) => t.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
-        );
-
-        // BƯỚC 5: SẮP XẾP ƯU TIÊN:
-        // - HÀNG MỚI ĐỨNG ĐẦU (isUsed = false)
-        // - HÀNG CŨ ĐẨY RA SAU (isUsed = true)
-        // - CÙNG LOẠI THÌ ƯU TIÊN THEO THỜI GIAN TẠO MỚI NHẤT
-        uniqueList.sort((a, b) => {
+        // 4. SẮP XẾP ƯU TIÊN:
+        // - HÀNG MỚI (isUsed = false) LÊN TRƯỚC
+        // - HÀNG CŨ (isUsed = true) XUỐNG SAU
+        // - MỚI NHẤT TRONG DB ĐƯỢC ƯU TIÊN
+        matched.sort((a, b) => {
           if (a.isUsed !== b.isUsed) {
-            return a.isUsed ? 1 : -1; // New xếp trước, Cũ xếp sau
+            return a.isUsed ? 1 : -1;
           }
-          return b.createdAt - a.createdAt; // Mới nhất xếp trước
+          return b.createdAt - a.createdAt;
         });
 
-        // Trả về danh sách gợi ý 6 - 8 sản phẩm
-        return uniqueList.slice(0, 8);
+        // Trả về từ 6 đến 12 kết quả
+        return matched.slice(0, 10);
       };
 
       if (productsCache.length > 0) {
@@ -399,7 +407,7 @@ export const Header: React.FC = () => {
         setShowDropdown(true);
         setIsSearching(false);
       } else {
-        // Fallback gọi API trực tiếp
+        // Fallback: Gọi trực tiếp API
         try {
           const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(rawQuery)}&all=true`);
           if (res.ok) {
@@ -508,7 +516,7 @@ export const Header: React.FC = () => {
               <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                   <span>Gợi ý cho &quot;{searchTerm}&quot;</span>
-                  <span>{searchResults.length} sản phẩm</span>
+                  <span>{searchResults.length} lựa chọn</span>
                 </div>
 
                 <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-100">
