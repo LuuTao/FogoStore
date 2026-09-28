@@ -489,7 +489,7 @@ export const Header: React.FC = () => {
             </Link>
           </div>
 
-          <div ref={searchContainerRef} className="flex-1 max-w-lg relative hidden sm:block">
+          <div ref={searchContainerRef} className="flex-1 min-w-0 max-w-lg relative hidden min-[500px]:block">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
@@ -781,7 +781,7 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className="block sm:hidden px-3 pb-2.5 pt-0.5 relative">
+        <div className="min-[500px]:hidden px-3 pb-2.5 pt-0.5 relative">
           <form onSubmit={handleSearchSubmit} className="relative w-full">
             <input
               type="text"
