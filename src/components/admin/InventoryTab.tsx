@@ -545,6 +545,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           originalPrice: Number(editingVariant.originalPrice || editingVariant.price),
           stock: Number(editingVariant.stock),
           origin: editingVariant.origin || 'Việt Nam',
+          size: editingVariant.size || '',
+          version: editingVariant.version || '',
         }),
       });
       const data = await res.json();
@@ -575,6 +577,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           storage: form.storage.value,
           color: form.color.value,
           origin: form.origin?.value || 'Việt Nam',
+          size: form.size?.value || '',
+          version: form.version?.value || '',
           price: Number(form.price.value),
           originalPrice: Number(form.originalPrice.value || form.price.value),
           stock: Number(form.stock.value),
@@ -1315,6 +1319,19 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                         {orig}
                       </option>
                     ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Kích thước (iPad/MacBook)</label>
+                  <input type="text" placeholder="Ví dụ: 13 inch" value={editingVariant.size || ''} onChange={(e) => setEditingVariant({ ...editingVariant, size: e.target.value })} className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold" />
+                </div>
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Phiên bản (iPad)</label>
+                  <select value={editingVariant.version || ''} onChange={(e) => setEditingVariant({ ...editingVariant, version: e.target.value })} className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold bg-white">
+                    <option value="">Không áp dụng</option><option value="Wifi">Wifi</option><option value="5G">5G</option>
                   </select>
                 </div>
               </div>

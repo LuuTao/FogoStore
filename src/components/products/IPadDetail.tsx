@@ -73,6 +73,7 @@ export default function IPadDetail({
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedOrigin, setSelectedOrigin] = useState<string>('');
   const [selectedVersion, setSelectedVersion] = useState<string>('');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isImageTransitioning, setIsImageTransitioning] = useState<boolean>(false);
@@ -125,6 +126,7 @@ export default function IPadDetail({
     setSelectedColor(firstValidVar?.color || 'Space Gray');
     setSelectedOrigin(firstValidVar?.origin || 'Việt Nam');
     setSelectedVersion(firstValidVar?.version || firstValidVar?.connectivity || firstValidVar?.network || 'Wifi');
+    setSelectedSize(firstValidVar?.size || firstValidVar?.screenSize || firstValidVar?.inch || ((product.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/i)?.[0] || ''));
 
     // Lấy danh sách iPad liên quan từ DB
     fetch(`${API_URL}/api/products/filter?category=ipad`, { cache: 'no-store' })
@@ -244,6 +246,7 @@ export default function IPadDetail({
           (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase() &&
           (!selectedOrigin || (v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase()) &&
           (!v.version && !v.connectivity && !v.network || String(v.version || v.connectivity || v.network).trim().toLowerCase() === selectedVersion.trim().toLowerCase())
+          && (!v.size || !selectedSize || String(v.size).trim().toLowerCase() === selectedSize.trim().toLowerCase())
       );
       if (exact) return exact;
     }
@@ -263,7 +266,7 @@ export default function IPadDetail({
       stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
       images: sample?.images || product.variants[0]?.images || [],
     };
-  }, [product, selectedStorage, selectedColor, selectedOrigin, selectedVersion]);
+  }, [product, selectedStorage, selectedColor, selectedOrigin, selectedVersion, selectedSize]);
 
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
@@ -309,6 +312,7 @@ export default function IPadDetail({
   }, [currentVariant]);
   const originList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.origin || 'Việt Nam').trim()).filter(Boolean)));
   const versionList = ['5G', 'Wifi'];
+  const sizeList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean)));
   const currentOrigin = currentVariant?.origin || selectedOrigin || 'Việt Nam';
   const currentVersion = String(currentVariant?.version || currentVariant?.connectivity || currentVariant?.network || selectedVersion || 'Wifi');
 
@@ -537,6 +541,15 @@ export default function IPadDetail({
                   {versionList.map((version) => <button key={version} type="button" onClick={() => setSelectedVersion(version)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${currentVersion.toLowerCase() === version.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{version}</button>)}
                 </div>
               </div>
+
+              {sizeList.length > 0 && (
+                <div>
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Kích thước:</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {sizeList.map((size) => <button key={size} type="button" onClick={() => setSelectedSize(size)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${selectedSize.toLowerCase() === size.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{size}</button>)}
+                  </div>
+                </div>
+              )}
 
               {/* CHỌN DUNG LƯỢNG: TỰ ĐỘNG XUỐNG DÒNG VÀ SÁNG VIỀN ĐỎ */}
               {storageList.length > 0 && (

@@ -507,7 +507,7 @@ export const Header: React.FC = () => {
       <header className="w-full bg-white select-none relative z-40 border-b border-gray-100 shadow-xs">
         <div className="sm:hidden w-full h-7 overflow-hidden bg-[#d70018] text-white flex items-center">
           <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] font-bold">
-            {[0, 1].map((copy) => (
+            {[0, 1, 2, 3].map((copy) => (
               <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
                 {marqueeItems.map((item) => (
                   <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">
@@ -522,7 +522,7 @@ export const Header: React.FC = () => {
 
         <div className="hidden sm:flex w-full h-7 overflow-hidden bg-[#d70018] text-white items-center">
           <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] md:text-xs lg:text-[13px] font-bold">
-            {[0, 1].map((copy) => (
+            {[0, 1, 2, 3].map((copy) => (
               <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
                 {marqueeItems.map((item) => (
                   <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">

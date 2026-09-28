@@ -238,7 +238,8 @@ export default function MacBookDetail({
         (v: any) =>
           (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
           (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase() &&
-          (!selectedOrigin || (v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase())
+          (!selectedOrigin || (v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase()) &&
+          (!v.size || !selectedSize || String(v.size).trim().toLowerCase() === selectedSize.trim().toLowerCase())
       );
       if (exact) return exact;
     }
@@ -258,7 +259,7 @@ export default function MacBookDetail({
       stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
       images: sample?.images || product.variants[0]?.images || [],
     };
-  }, [product, selectedStorage, selectedColor, selectedOrigin]);
+  }, [product, selectedStorage, selectedColor, selectedOrigin, selectedSize]);
 
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
