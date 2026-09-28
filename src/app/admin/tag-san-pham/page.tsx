@@ -5,6 +5,26 @@ import { ProductTagEditor } from '@/components/admin/ProductTagEditor';
 
 type Product = TaggedProduct & { id: string; name: string };
 const API = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+const getAdminToken = () => {
+  if (typeof window === 'undefined') return '';
+  const keys = ['fogo_admin_token', 'admin_token', 'fogo_token', 'token', 'accessToken'];
+  for (const key of keys) {
+    const value = localStorage.getItem(key);
+    if (value) return value;
+  }
+  for (const key of ['user', 'currentUser']) {
+    try {
+      const user = JSON.parse(localStorage.getItem(key) || 'null');
+      if (user?.token || user?.accessToken) return user.token || user.accessToken;
+    } catch { /* Bỏ qua dữ liệu phiên không hợp lệ. */ }
+  }
+  return '';
+};
+async function readApiResponse(response: Response) {
+  const text = await response.text();
+  try { return JSON.parse(text); }
+  catch { throw Error(response.ok ? 'API trả về dữ liệu không hợp lệ' : `API lỗi (${response.status}). Vui lòng kiểm tra URL backend.`); }
+}
 export default function ProductTagsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState('');
@@ -24,8 +44,8 @@ export default function ProductTagsPage() {
   const [newTag, setNewTag] = useState('');
   useEffect(() => {
     const controller = new AbortController();
-    fetch(API + '/api/admin/inventory', { signal: controller.signal, cache: 'no-store' })
-      .then(async res => { if (!res.ok) throw Error('Không thể tải sản phẩm'); return res.json(); })
+    fetch(API + '/api/admin/inventory', { signal: controller.signal, cache: 'no-store', headers: { Authorization: `Bearer ${getAdminToken()}` } })
+      .then(async res => { const json = await readApiResponse(res); if (!res.ok) throw Error(json.message || json.error || 'Không thể tải sản phẩm'); return json; })
       .then(json => {
         if (!json.success || !Array.isArray(json.data)) throw Error('Không thể tải sản phẩm');
         const map = new Map<string, Product>();
@@ -40,11 +60,12 @@ export default function ProductTagsPage() {
     if (!editing) return;
     setSaving(true); setMessage('');
     try {
-      const token = localStorage.getItem('fogo_token') || localStorage.getItem('token') || localStorage.getItem('fogo_admin_token') || '';
+      const token = getAdminToken();
+      if (!token) throw Error('Chưa có token đăng nhập admin. Vui lòng đăng nhập lại.');
       const res = await fetch(API + '/api/admin/products/' + editing.id + '/tags', {
         method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ tags }),
       });
-      const json = await res.json();
+      const json = await readApiResponse(res);
       if (!res.ok || !json.success) throw Error(json.error || json.message || 'Không thể lưu tag');
       setProducts(previous => previous.map(product => product.id === editing.id ? { ...product, specs: { ...(product.specs as object || {}), productTags: tags } } : product));
       setEditing(null); setMessage('Đã lưu tag sản phẩm.');
