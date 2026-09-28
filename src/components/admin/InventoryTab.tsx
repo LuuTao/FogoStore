@@ -72,7 +72,7 @@ const PRESET_STORAGES = [
   'Tiêu chuẩn',
 ];
 
-const PRESET_ORIGINS = ['Việt Nam', 'Nhập Khẩu', 'VN/A', 'LL/A', 'ZA/A', 'Chính Hãng'];
+const PRESET_ORIGINS = ['Việt Nam', 'Nhập khẩu', 'Nhập Khẩu', 'VN/A', 'LL/A', 'ZA/A', 'Chính Hãng'];
 
 const PRESET_CHIPS = ['A18 Pro', 'A18', 'A17 Pro', 'A16 Bionic', 'M5', 'M4', 'M3', 'M2', 'M1', 'S10', 'S9'];
 

@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ProductCardTags } from '@/components/common/ProductCardExtras';
+import { getProductTags } from '@/lib/productTags';
 import DOMPurify from 'dompurify';
 import {
   ChevronLeft,
@@ -374,6 +376,7 @@ export default function IPhoneDetail({
 
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
+  const currentOrigin = currentVariant?.origin || product?.origin || 'Việt Nam';
 
   const formattedDescription = useMemo(() => {
     if (!product?.description) return '';
@@ -499,8 +502,10 @@ export default function IPhoneDetail({
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
-                  {cleanProductName} {selectedStorage} - Chính hãng Apple VN
+                  {cleanProductName} {selectedStorage}
                 </h1>
+                <ProductCardTags name={product.name} tags={getProductTags(product)} />
+                <p className="mt-1 text-sm font-semibold text-gray-600">Xuất xứ: {currentOrigin}</p>
               </div>
 
               {/* Mức giá */}
@@ -536,8 +541,6 @@ export default function IPhoneDetail({
                   <div className="flex flex-wrap gap-2.5 w-full">
                     {storageList.map((st) => {
                       const isSelected = selectedStorage.trim().toLowerCase() === st.trim().toLowerCase();
-                      const sample = product?.variants?.find((v: any) => (v.storage || '').trim().toLowerCase() === st.toLowerCase() && Number(v.price) > 0);
-                      const priceSub = sample ? `${(Number(sample.price) / 1000000).toFixed(1)}Tr` : '';
 
                       return (
                         <button
@@ -551,9 +554,6 @@ export default function IPhoneDetail({
                           }`}
                         >
                           <div>{st}</div>
-                          {priceSub && (
-                            <div className="text-[10px] font-bold text-[#d70018] mt-0.5">{priceSub}</div>
-                          )}
                         </button>
                       );
                     })}
