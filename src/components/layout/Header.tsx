@@ -489,7 +489,7 @@ export const Header: React.FC = () => {
             </Link>
           </div>
 
-          <div ref={searchContainerRef} className="flex-1 min-w-0 max-w-lg relative hidden min-[500px]:block">
+          <div ref={searchContainerRef} className="flex-1 min-w-0 max-w-lg relative">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
@@ -781,74 +781,6 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className="min-[500px]:hidden px-3 pb-2.5 pt-0.5 relative">
-          <form onSubmit={handleSearchSubmit} className="relative w-full">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onFocus={() => {
-                if (searchTerm.trim() && searchResults.length > 0) setShowDropdown(true);
-              }}
-              placeholder="Bạn cần tìm gì hôm nay..."
-              className="w-full pl-3 pr-14 py-1.5 rounded-sm text-xs text-gray-900 bg-white border border-[#d70018] outline-hidden placeholder-gray-400"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSearchResults([]);
-                  setShowDropdown(false);
-                }}
-                className="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 p-1 cursor-pointer"
-              >
-                <X size={13} />
-              </button>
-            )}
-            <button
-              type="submit"
-              aria-label="Tìm kiếm"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#d70018] cursor-pointer"
-            >
-              {isSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={15} strokeWidth={2.5} />}
-            </button>
-          </form>
-
-          {showDropdown && (
-            <div className="absolute top-full left-3 right-3 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
-              <div className="max-h-[300px] overflow-y-auto divide-y divide-gray-100">
-                {searchResults.length > 0 ? (
-                  searchResults.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/san-pham/${item.slug}`}
-                      onClick={() => setShowDropdown(false)}
-                      className="flex items-center gap-2.5 p-2.5 hover:bg-red-50/50"
-                    >
-                      <div className="w-10 h-10 rounded border border-gray-100 p-0.5 flex items-center justify-center shrink-0 bg-white">
-                        <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-800 truncate">{item.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[11px] font-black text-[#d70018] block">{formatVnd(item.price)}</span>
-                          {!item.isUsed && (
-                            <span className="text-[9px] bg-red-50 text-[#d70018] font-bold px-1 py-0.5 rounded">
-                              MỚI
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-xs text-gray-500">Không tìm thấy sản phẩm.</div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       </header>
 
       {/* DRAWER MENU MOBILE */}
