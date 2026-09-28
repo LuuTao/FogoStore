@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 const defaults = [1, 2, 3].map((n) => ({ name: `Ảnh mẫu ${n}`, imageUrl: `/card-badges/sample-${n}.svg` }));
@@ -48,6 +48,65 @@ const labelPattern = /Like\s*New\s*99%|Chính\s*hãng(?:\s*VN\s*\/\s*A)?|New\s*S
 
 export function productCardTitle(name: string) {
   return name.replace(labelPattern, '').replace(/\s*\bVN\s*\/\s*A\b/gi, '').replace(/\s+/g, ' ').replace(/^[\s|–-]+|[\s|–-]+$/g, '').trim();
+}
+
+const storagePattern = /\b(\d+(?:[.,]\d+)?\s*(?:TB|GB))\b\s*$/i;
+
+export function splitProductCardTitle(name: string) {
+  const cleanedName = productCardTitle(name);
+  const storageMatch = cleanedName.match(storagePattern);
+  if (!storageMatch) return { model: cleanedName, storage: '' };
+
+  return {
+    model: cleanedName.slice(0, storageMatch.index).trim(),
+    storage: storageMatch[1].replace(/\s+/g, '').toUpperCase(),
+  };
+}
+
+export function ProductCardTitle({ name }: { name: string }) {
+  const { model, storage } = splitProductCardTitle(name);
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const modelRef = useRef<HTMLSpanElement>(null);
+  const storageRef = useRef<HTMLSpanElement>(null);
+  const [fontSize, setFontSize] = useState(13);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const modelLine = modelRef.current;
+    const storageLine = storageRef.current;
+    if (!container || !modelLine) return;
+
+    const fitText = () => {
+      const availableWidth = container.clientWidth;
+      if (!availableWidth) return;
+
+      let low = 9;
+      let high = 16;
+      for (let index = 0; index < 8; index += 1) {
+        const candidate = (low + high) / 2;
+        modelLine.style.fontSize = `${candidate}px`;
+        if (storageLine) storageLine.style.fontSize = `${candidate}px`;
+        const fits = modelLine.scrollWidth <= availableWidth
+          && (!storageLine || storageLine.scrollWidth <= availableWidth);
+        if (fits) low = candidate;
+        else high = candidate;
+      }
+      setFontSize(Math.floor(low * 10) / 10);
+    };
+
+    fitText();
+    const observer = new ResizeObserver(fitText);
+    observer.observe(container);
+    void document.fonts?.ready.then(fitText);
+    return () => observer.disconnect();
+  }, [model, storage]);
+
+  return (
+    <span ref={containerRef} className="block w-full min-w-0 leading-tight">
+      <span ref={modelRef} className="block w-full whitespace-nowrap text-left" style={{ fontSize }}>{model}</span>
+      {storage && <span ref={storageRef} className="block w-full whitespace-nowrap text-left" style={{ fontSize }}>{storage}</span>}
+    </span>
+  );
 }
 
 export function ProductCardTags({ name, tags }: { name: string; tags?: string[] }) {

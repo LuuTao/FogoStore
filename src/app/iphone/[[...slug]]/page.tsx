@@ -1,7 +1,7 @@
 'use client';
 
 import { getProductTags, isUsedProduct } from '@/lib/productTags';
-import { ProductCardTags, productCardTitle } from '@/components/common/ProductCardExtras';
+import { ProductCardTags, ProductCardTitle } from '@/components/common/ProductCardExtras';
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -699,7 +699,7 @@ export default function DynamicIPhonePage() {
                       href={product.href}
                       className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
                     >
-                      {productCardTitle(product.name)}
+                      <ProductCardTitle name={product.name} />
                     </Link>
                     <ProductCardTags name={product.name} tags={product.tags} />
                   </div>
