@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   CheckSquare,
   Square,
+  Megaphone,
 } from 'lucide-react';
 
 interface Props {
@@ -37,6 +38,8 @@ interface Props {
 }
 
 type BannerGroup =
+  | 'product_card_images'
+  | 'mobile_marquee'     // Thanh thông báo chạy trên mobile
   | 'hero_banners'       // Banner Lớn Đầu Trang
   | 'promo_cards'        // 2 Banner Nhỏ Đè Hero
   | 'category_banners'   // 4 Banner Category (Render 350x250)
@@ -69,6 +72,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onre
 
 const resolveImageUrl = (url?: string | null): string => {
   if (!url) return '';
+  if (url.startsWith('/card-badges/')) return url;
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
     if (url.includes('localhost:')) {
       return url.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
@@ -134,6 +138,11 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
 };
 
 const INITIAL_ITEMS: ItemConfig[] = [
+  ...[1, 2, 3].map((n): ItemConfig => ({ id: `card-image-${n}`, name: `Ảnh mẫu ${n}`, group: 'product_card_images', imageUrl: `/card-badges/sample-${n}.svg` })),
+  { id: 'marquee-1', name: 'Apple chính hãng', group: 'mobile_marquee', imageUrl: '' },
+  { id: 'marquee-2', name: 'Thu cũ đổi mới', group: 'mobile_marquee', imageUrl: '♻' },
+  { id: 'marquee-3', name: 'Miễn phí vận chuyển', group: 'mobile_marquee', imageUrl: '🚚' },
+  { id: 'marquee-4', name: 'Hỗ trợ trả góp', group: 'mobile_marquee', imageUrl: '✦' },
   {
     id: 'hero-1',
     name: 'Đại Tiệc Mua Sắm Apple - Giảm Sốc Đến 40%',
@@ -284,16 +293,21 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
             name: b.title || b.name || 'Banner',
             link: b.linkUrl || b.link || '/',
             group: (b.position || b.group || 'hero_banners') as BannerGroup,
-            imageUrl: resolveImageUrl(b.imageUrl),
+            imageUrl:
+              (b.position || b.group) === 'mobile_marquee'
+                ? String(b.imageUrl || '✦')
+                : resolveImageUrl(b.imageUrl),
             subtitle: b.subtitle || '',
             tag: b.tag || '',
             priceText: b.priceText || '',
           }));
 
-          const hasCategories = mapped.some((it) => it.group === 'all_categories');
-          const finalItems = hasCategories
-            ? mapped
-            : [...mapped, ...INITIAL_ITEMS.filter((i) => i.group === 'all_categories')];
+          const missingDefaults = INITIAL_ITEMS.filter(
+            (item) =>
+              (item.group === 'all_categories' || item.group === 'mobile_marquee' || item.group === 'product_card_images') &&
+              !mapped.some((mappedItem) => mappedItem.group === item.group)
+          );
+          const finalItems = [...mapped, ...missingDefaults];
 
           setItems(finalItems);
           try {
@@ -430,6 +444,10 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
 
  // LƯU CẤU HÌNH VÀO DATABASE
   const handleSaveAllConfig = async () => {
+    if (items.filter((item) => item.group === 'product_card_images').length !== 3) {
+      alert('Vui lòng giữ đúng 3 ảnh trong nhóm Ảnh Thẻ Sản Phẩm trước khi lưu.');
+      return;
+    }
     setIsSaving(true);
     try {
       const payloadItems = items.map((it, idx) => ({
@@ -540,7 +558,11 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   const handleSaveModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim() || !itemImageUrl.trim()) {
-      alert('Vui lòng nhập tên và chọn ảnh');
+      alert(
+        activeGroup === 'mobile_marquee'
+          ? 'Vui lòng nhập nội dung và icon'
+          : 'Vui lòng nhập tên và chọn ảnh'
+      );
       return;
     }
 
@@ -648,6 +670,8 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
       {/* TABS DANH MỤC */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-gray-200 text-xs">
         {[
+          { id: 'product_card_images', label: '3 Ảnh Thẻ Sản Phẩm', icon: ImageIcon },
+          { id: 'mobile_marquee', label: 'Thông Báo Chạy Mobile', icon: Megaphone },
           { id: 'hero_banners', label: 'Banner Lớn (Hero)', icon: Sliders },
           { id: 'promo_cards', label: '2 Banner Nhỏ Đè Hero', icon: CreditCard },
           { id: 'category_banners', label: '4 Banner Category (350x250)', icon: LayoutGrid },
@@ -774,20 +798,26 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                     {/* Thumbnail */}
                     <div
                       className={`rounded bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center ${
-                        activeGroup === 'all_categories'
+                        activeGroup === 'mobile_marquee'
+                          ? 'w-14 h-14 bg-red-50 text-2xl'
+                          : activeGroup === 'all_categories'
                           ? 'w-14 h-14 rounded-full p-1 bg-white'
                           : activeGroup === 'category_banners'
                           ? 'w-24 aspect-[7/5]'
                           : 'w-28 h-14'
                       }`}
                     >
-                      <img
-                        src={resolveImageUrl(item.imageUrl)}
-                        alt={item.name}
-                        className={`w-full h-full pointer-events-none ${
-                          activeGroup === 'all_categories' ? 'object-contain rounded-full' : 'object-cover'
-                        }`}
-                      />
+                      {activeGroup === 'mobile_marquee' ? (
+                        <span aria-hidden="true">{item.imageUrl}</span>
+                      ) : (
+                        <img
+                          src={resolveImageUrl(item.imageUrl)}
+                          alt={item.name}
+                          className={`w-full h-full pointer-events-none ${
+                            activeGroup === 'all_categories' ? 'object-contain rounded-full' : 'object-cover'
+                          }`}
+                        />
+                      )}
                     </div>
 
                     {/* Text */}
@@ -801,7 +831,9 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                         )}
                       </div>
                       {item.subtitle && <p className="text-[11px] text-gray-500 truncate">{item.subtitle}</p>}
-                      <p className="text-[10px] text-gray-400 font-mono truncate">{item.link || '/'}</p>
+                      {activeGroup !== 'mobile_marquee' && (
+                        <p className="text-[10px] text-gray-400 font-mono truncate">{item.link || '/'}</p>
+                      )}
                     </div>
                   </div>
 
@@ -906,21 +938,47 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
             </div>
             <form onSubmit={handleSaveModal} className="space-y-3">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">Tiêu đề / Tên *</label>
+                <label className="font-bold text-gray-700 block mb-1">
+                  {activeGroup === 'mobile_marquee' ? 'Nội dung thông báo *' : 'Tiêu đề / Tên *'}
+                </label>
                 <input type="text" required value={itemName} onChange={(e) => setItemName(e.target.value)} className="w-full border rounded p-2 outline-none font-bold" />
               </div>
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Đường dẫn khi click (URL)</label>
-                <input type="text" value={itemLink} onChange={(e) => setItemLink(e.target.value)} className="w-full border rounded p-2 outline-none font-mono text-xs" />
-              </div>
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Phụ đề (Subtitle)</label>
-                <input type="text" value={itemSubtitle} onChange={(e) => setItemSubtitle(e.target.value)} className="w-full border rounded p-2 outline-none" />
-              </div>
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">Nhãn Tag (VD: MỚI, HOT, TRỢ GIÁ...)</label>
-                <input type="text" value={itemTag} onChange={(e) => setItemTag(e.target.value)} className="w-full border rounded p-2 outline-none" />
-              </div>
+              {activeGroup !== 'mobile_marquee' && (
+                <>
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">Đường dẫn khi click (URL)</label>
+                    <input type="text" value={itemLink} onChange={(e) => setItemLink(e.target.value)} className="w-full border rounded p-2 outline-none font-mono text-xs" />
+                  </div>
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">Phụ đề (Subtitle)</label>
+                    <input type="text" value={itemSubtitle} onChange={(e) => setItemSubtitle(e.target.value)} className="w-full border rounded p-2 outline-none" />
+                  </div>
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">Nhãn Tag (VD: MỚI, HOT, TRỢ GIÁ...)</label>
+                    <input type="text" value={itemTag} onChange={(e) => setItemTag(e.target.value)} className="w-full border rounded p-2 outline-none" />
+                  </div>
+                </>
+              )}
+              {activeGroup === 'mobile_marquee' ? (
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Icon / Emoji *</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      required
+                      value={itemImageUrl}
+                      onChange={(e) => setItemImageUrl(e.target.value)}
+                      placeholder="Ví dụ: ✦, 🚚, ♻, "
+                      maxLength={8}
+                      className="flex-1 border rounded p-2 outline-none text-lg"
+                    />
+                    <div className="w-11 h-11 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-2xl">
+                      {itemImageUrl || '✦'}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">Có thể nhập emoji hoặc ký tự biểu tượng bất kỳ.</p>
+                </div>
+              ) : (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-gray-700 block">Hình ảnh (Đường dẫn hoặc tải trực tiếp) *</label>
@@ -960,6 +1018,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                   )}
                 </div>
               </div>
+              )}
 
               <div className="pt-3 flex justify-end gap-2 border-t">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded cursor-pointer font-semibold">Hủy</button>

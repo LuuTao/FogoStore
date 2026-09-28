@@ -210,6 +210,19 @@ interface SearchItem {
   isUsed?: boolean;
 }
 
+interface MarqueeItem {
+  id: string;
+  icon: string;
+  text: string;
+}
+
+const DEFAULT_MARQUEE_ITEMS: MarqueeItem[] = [
+  { id: 'marquee-1', icon: '', text: 'Apple chính hãng' },
+  { id: 'marquee-2', icon: '♻', text: 'Thu cũ đổi mới' },
+  { id: 'marquee-3', icon: '🚚', text: 'Miễn phí vận chuyển' },
+  { id: 'marquee-4', icon: '✦', text: 'Hỗ trợ trả góp' },
+];
+
 const formatSearchImage = (url?: string | null): string => {
   if (!url) return '/placeholder.png';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('/')) {
@@ -232,6 +245,7 @@ export const Header: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [productsCache, setProductsCache] = useState<any[]>([]);
+  const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(DEFAULT_MARQUEE_ITEMS);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
@@ -258,6 +272,34 @@ export const Header: React.FC = () => {
       }
     };
     fetchMenuData();
+  }, []);
+
+  useEffect(() => {
+    const fetchMarqueeItems = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+
+        const json = await res.json();
+        const data = json.data || json;
+        if (!Array.isArray(data)) return;
+
+        const configuredItems = (data as Array<Record<string, unknown>>)
+          .filter((item) => (item.position || item.group) === 'mobile_marquee')
+          .map((item, index) => ({
+            id: String(item.id || `marquee-${index}`),
+            icon: String(item.imageUrl || '✦'),
+            text: String(item.title || item.name || '').trim(),
+          }))
+          .filter((item: MarqueeItem) => item.text);
+
+        if (configuredItems.length > 0) setMarqueeItems(configuredItems);
+      } catch {
+        // Giữ nội dung mặc định khi backend chưa sẵn sàng.
+      }
+    };
+
+    fetchMarqueeItems();
   }, []);
 
   // Nạp toàn bộ danh mục sản phẩm (kèm tất cả các biến thể) vào Cache
@@ -467,10 +509,12 @@ export const Header: React.FC = () => {
           <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] font-bold">
             {[0, 1].map((copy) => (
               <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
-                <span> Apple chính hãng</span>
-                <span>✦ Thu cũ đổi mới</span>
-                <span>✦ Miễn phí vận chuyển</span>
-                <span>✦ Hỗ trợ trả góp</span>
+                {marqueeItems.map((item) => (
+                  <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">
+                    <span aria-hidden="true">{item.icon}</span>
+                    <span>{item.text}</span>
+                  </span>
+                ))}
               </div>
             ))}
           </div>

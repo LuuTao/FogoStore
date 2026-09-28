@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ShoppingCart, CreditCard, Wallet, Percent } from 'lucide-react';
+import { ArrowRight, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
+
+import { ProductCardImages, ProductCardTags, productCardTitle } from '@/components/common/ProductCardExtras';
 
 interface TabItem {
   id: string;
@@ -265,7 +267,7 @@ export const MacBookShowcaseSection: React.FC = () => {
 
       <div className="bg-[#fff9f1] border border-[#fbe9d2] rounded-xl p-3 sm:p-5 md:p-8 shadow-xs">
         {/* 1. HÀNG ICON DANH MỤC SERIES */}
-        <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 md:gap-x-10 gap-y-3 mb-6 sm:mb-8 max-w-3xl mx-auto w-full">
+        <div className="flex flex-nowrap items-start justify-center gap-1 sm:items-center sm:gap-6 md:gap-10 mb-6 sm:mb-8 max-w-3xl mx-auto w-full">
           {MACBOOK_SERIES_TABS.map((tab) => {
             const isSelected = selectedSeries === tab.series;
             return (
@@ -273,10 +275,10 @@ export const MacBookShowcaseSection: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => handleTabClick(tab.series)}
-                className="flex flex-col items-center gap-1.5 group cursor-pointer w-[72px] sm:w-[88px] md:w-[100px] transition-transform active:scale-95"
+                className="flex min-w-0 flex-1 flex-col items-center gap-1.5 group cursor-pointer sm:w-[88px] md:w-[100px] sm:flex-none transition-transform active:scale-95"
               >
                 <div
-                  className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
+                  className={`w-12 h-12 min-[380px]:w-14 min-[380px]:h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-1.5 sm:p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                     isSelected
                       ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
                       : 'border-2 border-transparent bg-white hover:border-gray-200 shadow-xs'
@@ -290,7 +292,7 @@ export const MacBookShowcaseSection: React.FC = () => {
                 </div>
 
                 <span
-                  className={`text-[11px] sm:text-xs md:text-sm text-center whitespace-nowrap transition-colors w-full ${
+                  className={`w-full truncate whitespace-nowrap px-0.5 text-[10px] min-[380px]:text-[11px] sm:text-xs md:text-sm text-center transition-colors ${
                     isSelected
                       ? 'text-[#d70018] font-black'
                       : 'text-gray-700 font-semibold group-hover:text-[#d70018]'
@@ -340,47 +342,23 @@ export const MacBookShowcaseSection: React.FC = () => {
                   href={product.href}
                   className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
                 >
-                  {product.name}
+                  {productCardTitle(product.name)}
                 </Link>
+                <ProductCardTags name={product.name} />
               </div>
 
               <div className="mt-1.5">
                 {/* Khối trả góp co giãn linh hoạt */}
-                <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
-                  <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                    <CreditCard size={10} className="shrink-0 sm:w-3 sm:h-3" />
-                    <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                      Trả góp
-                    </span>
-                  </div>
-
-                  <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
-
-                  <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                    <Wallet size={10} className="shrink-0 sm:w-3 sm:h-3" />
-                    <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                      Trả trước
-                    </span>
-                  </div>
-
-                  <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
-
-                  <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                    <Percent size={9} className="shrink-0 sm:w-2.5 sm:h-2.5" />
-                    <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                      Phí
-                    </span>
-                  </div>
-                </div>
+                <ProductCardImages />
 
                 {/* Nhãn trạng thái */}
-                <span className="mt-1 bg-[#ffe8e8] text-[#d70018] text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block">
+                <span className="mt-1 bg-green-50 text-green-700 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block">
                   {product.statusTag || 'Sẵn hàng'}
                 </span>
 
                 {/* Mức giá */}
                 <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
-                  <span className="font-black text-[#d70018] text-xs sm:text-sm md:text-base leading-none">
+                  <span className="font-black text-[#d70018] text-sm sm:text-base md:text-lg leading-none">
                     {product.currentPrice}
                   </span>
                   {product.originalPrice && (

@@ -527,7 +527,7 @@ export default function DynamicIPhonePage() {
 
           {/* HÀNG SERIES CHA */}
           <div className="my-6 py-2 w-full">
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 w-full px-2">
+            <div className="grid grid-cols-5 items-start gap-1 w-full px-0 sm:flex sm:flex-nowrap sm:items-center sm:justify-center sm:gap-6 md:gap-8 sm:px-2">
               {seriesTabs.map((series, idx) => {
                 const isAllButton = series.queryTag === null;
                 const isSelected = isAllButton
@@ -539,10 +539,10 @@ export default function DynamicIPhonePage() {
                   <Link
                     key={series.slug || idx}
                     href={isAllButton ? '/iphone' : `/iphone/${series.slug || `iphone-${series.queryTag}`}`}
-                    className="group flex flex-col items-center gap-2 cursor-pointer w-[76px] sm:w-[90px] md:w-[105px] transition-transform active:scale-95 shrink-0"
+                    className="group flex min-w-0 w-full flex-col items-center gap-1.5 cursor-pointer sm:w-[90px] md:w-[105px] sm:gap-2 transition-transform active:scale-95 sm:shrink-0"
                   >
                     <div
-                      className={`w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
+                      className={`w-12 h-12 min-[380px]:w-14 min-[380px]:h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full p-1.5 sm:p-2 bg-white flex items-center justify-center overflow-hidden transition-all duration-200 ${
                         isSelected
                           ? 'border-2 border-[#d70018] shadow-md shadow-red-100 scale-105 ring-2 ring-red-100/50'
                           : 'border-2 border-transparent hover:border-gray-200 bg-[#f8f9fa] shadow-2xs'
@@ -555,7 +555,7 @@ export default function DynamicIPhonePage() {
                       />
                     </div>
                     <span
-                      className={`text-xs sm:text-sm font-semibold text-center transition-colors line-clamp-1 w-full ${
+                      className={`w-full truncate whitespace-nowrap px-0.5 text-[10px] min-[380px]:text-[11px] sm:text-sm font-semibold text-center transition-colors ${
                         isSelected ? 'text-[#d70018] font-bold' : 'text-gray-800 group-hover:text-[#d70018]'
                       }`}
                     >
