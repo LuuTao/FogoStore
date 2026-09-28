@@ -34,6 +34,9 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+import { getProductTags, isUsedProduct } from '@/lib/productTags';
+import { ProductTagEditor } from '@/components/admin/ProductTagEditor';
+
 interface Props {
   inventory: any[];
   onRefresh: () => void;
@@ -150,9 +153,9 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     },
   ]);
 
-  const getProductSeries = (name: string, catName: string = '') => {
+  const getProductSeries = (name: string, catName: string = '', usedOverride?: boolean) => {
     const lower = (name + ' ' + catName).toLowerCase();
-    const isUsed = lower.includes('cũ') || lower.includes('like new') || lower.includes('99%');
+    const isUsed = usedOverride ?? (lower.includes('cũ') || lower.includes('like new') || lower.includes('99%') || lower.includes('cpo'));
 
     if (lower.includes('iphone')) {
       if (lower.includes('18')) return isUsed ? 'iPhone 18 Series Cũ' : 'iPhone 18 Series';
@@ -244,7 +247,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     let filtered = groupedProducts.filter(({ product, variants }) => {
       const catSlug = (product.category?.slug || '').toLowerCase();
       const prodName = (product.name || '').toLowerCase();
-      const isUsed = prodName.includes('cũ') || prodName.includes('like new') || prodName.includes('99%') || catSlug.includes('cu');
+      const isUsed = isUsedProduct(product);
 
       if (selectedCategory !== 'ALL') {
         if (selectedCategory === 'iPhone Cũ') {
@@ -323,7 +326,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
 
     const result: Record<string, { product: any; variants: any[] }[]> = {};
     filtered.forEach((item) => {
-      const series = getProductSeries(item.product.name, item.product.category?.name);
+      const series = getProductSeries(item.product.name, item.product.category?.name, isUsedProduct(item.product));
       if (!result[series]) result[series] = [];
       result[series].push(item);
     });
@@ -422,7 +425,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       let stt = 1;
 
       groupedProducts.forEach(({ product, variants }) => {
-        const seriesName = getProductSeries(product.name, product.category?.name);
+        const seriesName = getProductSeries(product.name, product.category?.name, isUsedProduct(product));
         const categoryName = product.category?.name || 'Apple';
 
         if (variants && variants.length > 0) {
@@ -1151,7 +1154,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                           {/* CỘT 9: THAO TÁC */}
                                           <td className="py-3 px-4 text-right space-x-1">
                                             <button
-                                              onClick={() => setEditingVariant({ ...v, images: v.images || [], origin: v.origin || 'Việt Nam' })}
+                                              onClick={() => setEditingVariant({ ...v, tags: getProductTags(product), images: v.images || [], origin: v.origin || 'Việt Nam' })}
                                               className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
                                               title="Sửa biến thể & Quản lý ảnh"
                                             >
@@ -1257,6 +1260,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             </div>
 
             <form onSubmit={handleSaveEditVariant} className="space-y-4">
+              <ProductTagEditor value={editingVariant.tags || []} onChange={(tags) => setEditingVariant({ ...editingVariant, tags })} />
               <div>
                 <label className="font-bold text-gray-700 block mb-1">Dung Lượng / Kích Thước *</label>
                 <div className="flex gap-2">

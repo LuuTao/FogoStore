@@ -1,5 +1,7 @@
 'use client';
 
+import { getProductTags, isUsedProduct } from '@/lib/productTags';
+import { ProductCardTags, productCardTitle } from '@/components/common/ProductCardExtras';
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -256,6 +258,7 @@ export default function DynamicIPhonePage() {
     const result: any[] = [];
 
     rawDbProducts.forEach((prod: any) => {
+      if (isUsedProduct(prod)) return;
       const variants: any[] = Array.isArray(prod.variants) && prod.variants.length > 0
         ? prod.variants
         : [{ price: prod.price || 0, images: prod.images, storage: 'Tiêu chuẩn', color: '' }];
@@ -277,7 +280,7 @@ export default function DynamicIPhonePage() {
         const curPrice = prices.length > 0 ? Math.min(...prices) : Number(varList[0]?.price || prod.price || 0);
 
         const firstVar = varList.find((v) => Number(v.price) > 0) || varList[0] || {};
-        const origPrice = Number(firstVar.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+        const origPrice = Number(firstVar.originalPrice || prod.originalPrice || 0);
 
         const isStandard = stKey === 'Tiêu chuẩn';
         const displayName = buildProductNameWithStorage(prod.name, isStandard ? '' : stKey);
@@ -315,6 +318,7 @@ export default function DynamicIPhonePage() {
           id: `${prod.id}-${stKey}`,
           variantId: firstVar.id || prod.id,
           name: displayName,
+          tags: getProductTags(prod),
           slug: cleanCap ? `${baseSlug}-${cleanCap}` : baseSlug,
           modelSlug: baseSlug,
           storage: isStandard ? '' : stKey,
@@ -664,7 +668,7 @@ export default function DynamicIPhonePage() {
                 >
                   <div>
                     <div className="flex items-center justify-between h-4 sm:h-5">
-                      {product.rawPrice > 0 ? (
+                      {product.rawPrice > 0 && product.discountPercent > 0 ? (
                         <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
                           -{product.discountPercent}%
                         </span>
@@ -695,8 +699,9 @@ export default function DynamicIPhonePage() {
                       href={product.href}
                       className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
                     >
-                      {product.name}
+                      {productCardTitle(product.name)}
                     </Link>
+                    <ProductCardTags name={product.name} tags={product.tags} />
                   </div>
 
                   <div className="mt-1.5">

@@ -1,5 +1,7 @@
 'use client';
 
+import { getProductTags, isUsedProduct } from '@/lib/productTags';
+import { ProductCardTags, productCardTitle } from '@/components/common/ProductCardExtras';
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -254,7 +256,7 @@ export default function DynamicUsedPage() {
     const fetchLiveUsedProducts = async () => {
       try {
         setLoading(true);
-        let res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
+        let res = await fetch(`${API_URL}/api/products?all=true&limit=all`, { cache: 'no-store' });
         let json = await res.json();
 
         const itemsList = json.success && Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
@@ -264,16 +266,7 @@ export default function DynamicUsedPage() {
           const lowerName = (item.name || '').toLowerCase();
           const catName = (item.category?.name || item.category?.slug || '').toLowerCase();
 
-          const isExplicitUsed =
-            lowerName.includes('cũ') ||
-            lowerName.includes('like new') ||
-            lowerName.includes('likenew') ||
-            lowerName.includes('99%') ||
-            lowerName.includes('98%') ||
-            lowerName.includes('qua sử dụng') ||
-            item.isUsed === true ||
-            catName.includes('cũ') ||
-            catName.includes('hang-cu');
+          const isExplicitUsed = isUsedProduct(item);
 
           const isAccessory =
             lowerName.includes('củ sạc') ||
@@ -285,11 +278,7 @@ export default function DynamicUsedPage() {
           return isExplicitUsed && !isAccessory;
         });
 
-        setRawDbProducts(
-          usedItems.length > 0
-            ? usedItems
-            : itemsList.filter((p: any) => !(p.name || '').toLowerCase().includes('new seal'))
-        );
+        setRawDbProducts(usedItems);
       } catch (err) {
         console.error('Lỗi khi fetch hàng cũ từ API:', err);
         setRawDbProducts([]);
@@ -333,7 +322,7 @@ export default function DynamicUsedPage() {
       if (storageMap.size <= 1) {
         const v = variants[0] || {};
         const curPrice = Number(v.price || prod.price || 0);
-        const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+        const origPrice = Number(v.originalPrice || prod.originalPrice || 0);
         const stKey = Array.from(storageMap.keys())[0] || '';
         const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
         const finalName = buildProductNameWithStorage(prod.name, stKey);
@@ -343,27 +332,28 @@ export default function DynamicUsedPage() {
           id: prod.id,
           variantId: v.id || prod.id,
           name: finalName,
+          tags: getProductTags(prod),
           rawName: prod.name,
           modelSlug: prod.slug,
           slug: `${prod.slug}${slugSuffix}`,
           href: `/san-pham/${prod.slug}${slugSuffix}`,
           deviceType,
           currentPrice: formatVndPrice(curPrice),
-          originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+          originalPrice: hasPrice && origPrice > curPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
           storage: stKey,
           color: v.color || '',
-          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12,
+          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 0,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
           statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-          conditionTag: '99% Zin Đẹp',
+          conditionTag: '',
           searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
         });
       } else {
         storageMap.forEach((varList, stKey) => {
           const v = varList[0];
           const curPrice = Number(v.price || prod.price || 0);
-          const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+          const origPrice = Number(v.originalPrice || prod.originalPrice || 0);
           const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
           const finalName = buildProductNameWithStorage(prod.name, stKey);
           const hasPrice = curPrice > 0;
@@ -372,20 +362,21 @@ export default function DynamicUsedPage() {
             id: `${prod.id}-${stKey || 'base'}`,
             variantId: v.id || `${prod.id}-${stKey}`,
             name: finalName,
+          tags: getProductTags(prod),
             rawName: prod.name,
             modelSlug: prod.slug,
             slug: `${prod.slug}${slugSuffix}`,
             href: `/san-pham/${prod.slug}${slugSuffix}`,
             deviceType,
             currentPrice: formatVndPrice(curPrice),
-            originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+            originalPrice: hasPrice && origPrice > curPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
             rawPrice: curPrice,
             storage: stKey,
             color: v.color || '',
-            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 12,
+            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 0,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
             statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
-            conditionTag: '99% Zin Đẹp',
+            conditionTag: '',
             searchIndex: `${prod.name} ${stKey} ${prod.description || ''} ${prod.category?.name || ''}`.toLowerCase(),
           });
         });
@@ -707,7 +698,7 @@ export default function DynamicUsedPage() {
                   <div>
                     {/* TAG GIẢM GIÁ VÀ TÌNH TRẠNG LIKENEW */}
                     <div className="flex items-center justify-between h-4 sm:h-5">
-                      {product.rawPrice > 0 ? (
+                      {product.rawPrice > 0 && product.discountPercent > 0 ? (
                         <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
                           -{product.discountPercent}%
                         </span>
@@ -716,9 +707,6 @@ export default function DynamicUsedPage() {
                           Hot
                         </span>
                       )}
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-xs">
-                        {product.conditionTag}
-                      </span>
                     </div>
 
                     {/* KHUNG ẢNH VUÔNG TỰ CO GIÃN */}
@@ -742,8 +730,9 @@ export default function DynamicUsedPage() {
                       href={product.href}
                       className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight cursor-pointer"
                     >
-                      {product.name}
+                      {productCardTitle(product.name)}
                     </Link>
+                    <ProductCardTags name={product.name} tags={product.tags} />
                   </div>
 
                   <div className="mt-1.5">

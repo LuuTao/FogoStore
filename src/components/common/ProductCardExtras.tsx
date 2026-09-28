@@ -44,17 +44,17 @@ export function ProductCardImages() {
   </div>;
 }
 
-const labelPattern = /Chính\s*hãng(?:\s*VN\s*\/\s*A)?|New\s*Seal|CPO|Chưa\s*Active|Đã\s*Kích\s*Hoạt/gi;
+const labelPattern = /Like\s*New\s*99%|Chính\s*hãng(?:\s*VN\s*\/\s*A)?|New\s*Seal|CPO|Chưa\s*Active|Đã\s*Kích\s*Hoạt/gi;
 
 export function productCardTitle(name: string) {
   return name.replace(labelPattern, '').replace(/\s*\bVN\s*\/\s*A\b/gi, '').replace(/\s+/g, ' ').replace(/^[\s|–-]+|[\s|–-]+$/g, '').trim();
 }
 
-export function ProductCardTags({ name }: { name: string }) {
-  const labels = Array.from(new Set((name.match(labelPattern) || []).map((label) =>
+export function ProductCardTags({ name, tags }: { name: string; tags?: string[] }) {
+  const labels = tags ?? Array.from(new Set((name.match(labelPattern) || []).map((label) =>
     /^chính/i.test(label) ? 'Chính hãng' : /^new/i.test(label) ? 'New Seal' : label)));
   if (!labels.length) return null;
-  return <div className="flex flex-wrap gap-1 mt-1">
+  return <div className="flex flex-wrap justify-center gap-1 mt-1">
     {labels.map((label) => <span key={label} className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold text-gray-600">{label}</span>)}
   </div>;
 }

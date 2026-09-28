@@ -1,5 +1,7 @@
 'use client';
 
+import { getProductTags, isUsedProduct } from '@/lib/productTags';
+import { ProductCardTags, productCardTitle } from '@/components/common/ProductCardExtras';
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -268,6 +270,7 @@ export default function DynamicMacBookPage() {
     const result: any[] = [];
 
     rawDbProducts.forEach((prod) => {
+      if (isUsedProduct(prod)) return;
       const variants: any[] = Array.isArray(prod.variants) ? prod.variants : [];
 
       const storageMap = new Map<string, any[]>();
@@ -283,7 +286,7 @@ export default function DynamicMacBookPage() {
       if (storageMap.size <= 1) {
         const v = variants[0] || {};
         const curPrice = Number(v.price || prod.price || 0);
-        const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+        const origPrice = Number(v.originalPrice || prod.originalPrice || 0);
         const stKey = Array.from(storageMap.keys())[0] || '';
         const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
         const finalName = buildProductNameWithStorage(prod.name, stKey);
@@ -293,16 +296,17 @@ export default function DynamicMacBookPage() {
           id: prod.id,
           variantId: v.id || prod.id,
           name: finalName,
+          tags: getProductTags(prod),
           rawName: prod.name,
           modelSlug: prod.slug,
           slug: `${prod.slug}${slugSuffix}`,
           href: `/san-pham/${prod.slug}${slugSuffix}`,
           currentPrice: formatVndPrice(curPrice),
-          originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+          originalPrice: hasPrice && origPrice > curPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
           rawPrice: curPrice,
           storage: stKey,
           color: v.color || '',
-          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+          discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 0,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
           statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
         });
@@ -310,7 +314,7 @@ export default function DynamicMacBookPage() {
         storageMap.forEach((varList, stKey) => {
           const v = varList[0];
           const curPrice = Number(v.price || prod.price || 0);
-          const origPrice = Number(v.originalPrice || prod.originalPrice || Math.round(curPrice * 1.15));
+          const origPrice = Number(v.originalPrice || prod.originalPrice || 0);
           const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
           const finalName = buildProductNameWithStorage(prod.name, stKey);
           const hasPrice = curPrice > 0;
@@ -319,16 +323,17 @@ export default function DynamicMacBookPage() {
             id: `${prod.id}-${stKey || 'base'}`,
             variantId: v.id || `${prod.id}-${stKey}`,
             name: finalName,
+          tags: getProductTags(prod),
             rawName: prod.name,
             modelSlug: prod.slug,
             slug: `${prod.slug}${slugSuffix}`,
             href: `/san-pham/${prod.slug}${slugSuffix}`,
             currentPrice: formatVndPrice(curPrice),
-            originalPrice: hasPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
+            originalPrice: hasPrice && origPrice > curPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
             rawPrice: curPrice,
             storage: stKey,
             color: v.color || '',
-            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+            discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 0,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
             statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
           });
@@ -660,9 +665,9 @@ export default function DynamicMacBookPage() {
                 >
                   <div>
                     <div className="flex items-center justify-between h-4 sm:h-5">
-                      <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
+                      {product.discountPercent > 0 && (<span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
                         -{product.discountPercent}%
-                      </span>
+                      </span>)}
                       <span />
                     </div>
 
@@ -685,8 +690,9 @@ export default function DynamicMacBookPage() {
                       href={product.href}
                       className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
                     >
-                      {product.name}
+                      {productCardTitle(product.name)}
                     </Link>
+                    <ProductCardTags name={product.name} tags={product.tags} />
                   </div>
 
                   <div className="mt-1.5">

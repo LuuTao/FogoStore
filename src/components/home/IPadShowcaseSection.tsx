@@ -8,6 +8,8 @@ import { ToastNotification } from '@/components/common/ToastNotification';
 
 import { ProductCardImages, ProductCardTags, productCardTitle } from '@/components/common/ProductCardExtras';
 
+import { getProductTags, isUsedProduct } from '@/lib/productTags';
+
 interface TabItem {
   id: string;
   series: string | null;
@@ -105,6 +107,7 @@ export const IPadShowcaseSection: React.FC = () => {
           const formatted: any[] = [];
 
           json.data.forEach((item: any) => {
+            if (isUsedProduct(item)) return;
             const variants: any[] = Array.isArray(item.variants) ? item.variants : [];
 
             // Gom nhóm các biến thể theo dung lượng
@@ -124,7 +127,7 @@ export const IPadShowcaseSection: React.FC = () => {
 
               if (curPrice <= 0) return;
 
-              const origPrice = Number(v.originalPrice || item.originalPrice || Math.round(curPrice * 1.15));
+              const origPrice = Number(v.originalPrice ?? item.originalPrice ?? 0);
               const stKey = Array.from(storageMap.keys())[0] || '';
               const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
               const finalName = buildProductNameWithStorage(item.name, stKey);
@@ -134,15 +137,16 @@ export const IPadShowcaseSection: React.FC = () => {
                 variantId: v.id || item.id,
                 name: finalName,
                 rawName: item.name,
+                tags: getProductTags(item),
                 modelSlug: item.slug,
                 slug: `${item.slug}${slugSuffix}`,
                 href: `/san-pham/${item.slug}${slugSuffix}`,
                 currentPrice: formatVndPrice(curPrice),
-                originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                originalPrice: origPrice > curPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
                 rawPrice: curPrice,
                 storage: stKey,
                 color: v.color || '',
-                discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 0,
                 imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
                 statusTag: 'Sẵn hàng',
                 isFeatured: item.isFeatured,
@@ -154,7 +158,7 @@ export const IPadShowcaseSection: React.FC = () => {
 
                 if (curPrice <= 0) return;
 
-                const origPrice = Number(v.originalPrice || item.originalPrice || Math.round(curPrice * 1.15));
+                const origPrice = Number(v.originalPrice ?? item.originalPrice ?? 0);
                 const slugSuffix = stKey ? `-${stKey.toLowerCase()}` : '';
                 const finalName = buildProductNameWithStorage(item.name, stKey);
 
@@ -163,15 +167,16 @@ export const IPadShowcaseSection: React.FC = () => {
                   variantId: v.id || `${item.id}-${stKey}`,
                   name: finalName,
                   rawName: item.name,
+                tags: getProductTags(item),
                   modelSlug: item.slug,
                   slug: `${item.slug}${slugSuffix}`,
                   href: `/san-pham/${item.slug}${slugSuffix}`,
                   currentPrice: formatVndPrice(curPrice),
-                  originalPrice: origPrice.toLocaleString('vi-VN') + 'đ',
+                  originalPrice: origPrice > curPrice ? origPrice.toLocaleString('vi-VN') + 'đ' : '',
                   rawPrice: curPrice,
                   storage: stKey,
                   color: v.color || '',
-                  discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
+                  discountPercent: origPrice > curPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 0,
                   imageUrl: formatProductImageUrl(v.images?.[0] || item.imageUrl || item.image),
                   statusTag: 'Sẵn hàng',
                   isFeatured: item.isFeatured,
@@ -326,9 +331,9 @@ export const IPadShowcaseSection: React.FC = () => {
               <div>
                 {/* Badge giảm giá */}
                 <div className="flex items-center justify-between h-4 sm:h-5">
-                  <span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
+                  {product.discountPercent > 0 && (<span className="bg-[#d70018] text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs">
                     -{product.discountPercent}%
-                  </span>
+                  </span>)}
                   <span />
                 </div>
 
@@ -351,11 +356,11 @@ export const IPadShowcaseSection: React.FC = () => {
                 {/* Tên sản phẩm cố định 2 dòng */}
                 <Link
                   href={product.href}
-                  className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
+                  className="font-bold text-[13px] sm:text-sm md:text-base text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
                 >
                   {productCardTitle(product.name)}
                 </Link>
-                <ProductCardTags name={product.name} />
+                <ProductCardTags name={product.name} tags={product.tags} />
               </div>
 
               <div className="mt-1.5">
