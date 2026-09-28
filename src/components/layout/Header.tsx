@@ -656,8 +656,8 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4 text-xs md:text-sm font-semibold shrink-0">
-            <a
-              href="tel:0566003333"
+            <Link
+              href="/lien-he"
               className="hidden sm:flex items-center gap-1.5 hover:opacity-80 transition-opacity py-1 shrink-0 text-[#d70018]"
             >
               <div className="w-8 h-8 rounded-full lg:rounded-sm bg-[#d70018]/10 flex items-center justify-center text-[#d70018]">
@@ -667,7 +667,7 @@ export const Header: React.FC = () => {
                 <span className="text-[14px] text-gray-500 font-medium">Hotline</span>
                 <span className="text-[16px] font-black tracking-tight text-[#d70018]">056.600.3333</span>
               </div>
-            </a>
+            </Link>
 
             <Link
               href="/gio-hang"

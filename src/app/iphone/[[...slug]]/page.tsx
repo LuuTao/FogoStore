@@ -712,9 +712,9 @@ export default function DynamicIPhonePage() {
                     </div>
 
                     <span
-                      className={`mt-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
+                      className={`mt-1 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
                         product.statusTag === 'Sẵn hàng'
-                          ? 'bg-[#ffe8e8] text-[#d70018]'
+                          ? 'bg-green-50 text-green-700'
                           : 'bg-gray-100 text-gray-500'
                       }`}
                     >
@@ -722,7 +722,7 @@ export default function DynamicIPhonePage() {
                     </span>
 
                     <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
-                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-xs sm:text-sm md:text-base leading-none' : 'text-xs sm:text-sm'}`}>
+                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm sm:text-base md:text-lg leading-none' : 'text-sm sm:text-base'}`}>
                         {product.currentPrice}
                       </span>
                       {product.rawPrice > 0 && product.originalPrice && (

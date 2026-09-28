@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ChevronDown, ChevronUp, ShoppingCart, CreditCard, Wallet, Percent } from 'lucide-react';
+import { ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -11,6 +11,7 @@ import { WATCH_HELPFUL_NEWS } from '@/data/watchCatalog';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
+import { ProductCardTitle } from '@/components/common/ProductCardExtras';
 
 interface SeriesTabItem {
   name: string;
@@ -726,52 +727,23 @@ export default function DynamicWatchPage() {
 
                     <Link
                       href={product.href}
-                      className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
+                      className="font-bold text-[11px] sm:text-xs md:text-sm text-gray-800 hover:text-[#d70018] transition-colors leading-tight"
                     >
-                      {product.name}
+                      <ProductCardTitle name={product.name} singleLine />
                     </Link>
                   </div>
 
                   <div className="mt-1.5">
-                    {product.rawPrice > 0 ? (
-                      <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
-                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                          <CreditCard size={10} className="shrink-0 sm:w-3 sm:h-3" />
-                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                            Trả góp
-                          </span>
-                        </div>
-
-                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
-
-                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                          <Wallet size={10} className="shrink-0 sm:w-3 sm:h-3" />
-                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                            Trả trước
-                          </span>
-                        </div>
-
-                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
-
-                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                          <Percent size={9} className="shrink-0 sm:w-2.5 sm:h-2.5" />
-                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                            Phí
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-xs py-1 px-1.5 text-center">
-                        <span className="text-[9px] font-bold text-gray-500 truncate block">
-                          Liên hệ báo giá
-                        </span>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="rounded-sm bg-[#d70018] px-1 py-1 text-center text-[9px] font-black text-white">FOGO</span>
+                      <span className="rounded-sm bg-[#087aa8] px-1 py-1 text-center text-[9px] font-black text-white">CARE</span>
+                      <span className="rounded-sm bg-[#168542] px-1 py-1 text-center text-[9px] font-black text-white">PLUS</span>
+                    </div>
 
                     <span
-                      className={`mt-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
+                      className={`mt-1 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${
                         product.statusTag === 'Sẵn hàng'
-                          ? 'bg-[#ffe8e8] text-[#d70018]'
+                          ? 'bg-green-50 text-green-700'
                           : 'bg-gray-100 text-gray-500'
                       }`}
                     >
@@ -779,7 +751,7 @@ export default function DynamicWatchPage() {
                     </span>
 
                     <div className="mt-1 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
-                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-xs sm:text-sm md:text-base leading-none' : 'text-xs sm:text-sm'}`}>
+                      <span className={`font-black text-[#d70018] ${product.rawPrice > 0 ? 'text-sm sm:text-base md:text-lg leading-none' : 'text-sm sm:text-base'}`}>
                         {product.currentPrice}
                       </span>
                       {product.rawPrice > 0 && product.originalPrice && (
