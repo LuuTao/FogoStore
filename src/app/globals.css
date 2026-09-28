@@ -14,6 +14,26 @@ input, button, select, textarea {
   font-family: inherit;
 }
 
+@keyframes fogo-mobile-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.fogo-mobile-marquee {
+  animation: fogo-mobile-marquee 18s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fogo-mobile-marquee {
+    animation-play-state: paused;
+  }
+}
+
 /* Ẩn scrollbar nhưng vẫn vuốt trượt ngang mượt mà */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {

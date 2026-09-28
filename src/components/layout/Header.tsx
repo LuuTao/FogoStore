@@ -463,8 +463,21 @@ export const Header: React.FC = () => {
   return (
     <>
       <header className="w-full bg-white select-none relative z-40 border-b border-gray-100 shadow-xs">
-        <div className="w-full pt-2 sm:pt-3 pb-1 bg-white flex items-center justify-center px-3">
-          <h1 className="text-xs sm:text-base md:text-2xl lg:text-[32px] font-black uppercase tracking-wider text-[#d70018] leading-tight text-center drop-shadow-xs truncate">
+        <div className="sm:hidden w-full h-7 overflow-hidden bg-[#d70018] text-white flex items-center">
+          <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] font-bold">
+            {[0, 1].map((copy) => (
+              <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
+                <span> Apple chính hãng</span>
+                <span>✦ Thu cũ đổi mới</span>
+                <span>✦ Miễn phí vận chuyển</span>
+                <span>✦ Hỗ trợ trả góp</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="hidden sm:flex w-full pt-3 pb-1 bg-white items-center justify-center px-3">
+          <h1 className="text-base md:text-2xl lg:text-[32px] font-black uppercase tracking-wider text-[#d70018] leading-tight text-center drop-shadow-xs truncate">
             THE BEST APPLE RETAIL STORE IN HCM
           </h1>
         </div>
