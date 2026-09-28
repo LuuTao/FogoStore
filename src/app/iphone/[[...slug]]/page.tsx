@@ -5,7 +5,7 @@ import { ProductCardTags, ProductCardTitle } from '@/components/common/ProductCa
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ShoppingCart, CreditCard, Wallet, Percent } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -705,40 +705,11 @@ export default function DynamicIPhonePage() {
                   </div>
 
                   <div className="mt-1.5">
-                    {product.rawPrice > 0 ? (
-                      <div className="bg-[#fff1f2] border border-[#ffccd2] rounded-xs py-1 px-1 sm:px-1.5 flex items-center justify-between text-[#d70018]">
-                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                          <CreditCard size={10} className="shrink-0 sm:w-3 sm:h-3" />
-                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                            Trả góp
-                          </span>
-                        </div>
-
-                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
-
-                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                          <Wallet size={10} className="shrink-0 sm:w-3 sm:h-3" />
-                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                            Trả trước
-                          </span>
-                        </div>
-
-                        <span className="text-gray-300 font-light text-[8px] sm:text-[10px] shrink-0">|</span>
-
-                        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                          <Percent size={9} className="shrink-0 sm:w-2.5 sm:h-2.5" />
-                          <span className="text-[8px] sm:text-[9.5px] md:text-[10px] font-black tracking-tighter truncate">
-                            Phí
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-xs py-1 px-1.5 text-center">
-                        <span className="text-[9px] font-bold text-gray-500 truncate block">
-                          Liên hệ báo giá
-                        </span>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="rounded-sm bg-[#d70018] px-1 py-1 text-center text-[9px] font-black text-white">FOGO</span>
+                      <span className="rounded-sm bg-[#087aa8] px-1 py-1 text-center text-[9px] font-black text-white">CARE</span>
+                      <span className="rounded-sm bg-[#168542] px-1 py-1 text-center text-[9px] font-black text-white">PLUS</span>
+                    </div>
 
                     <span
                       className={`mt-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-xs w-fit block ${

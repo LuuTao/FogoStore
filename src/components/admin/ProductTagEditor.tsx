@@ -1,11 +1,11 @@
 'use client';
 import { PRODUCT_TAGS } from '@/lib/productTags';
 
-export function ProductTagEditor({ value, onChange }: { value: string[]; onChange: (tags: string[]) => void }) {
+export function ProductTagEditor({ value, onChange, availableTags = PRODUCT_TAGS }: { value: string[]; onChange: (tags: string[]) => void; availableTags?: readonly string[] }) {
   return <fieldset className="space-y-2">
     <legend className="font-bold">Tag sản phẩm</legend>
     <div className="flex flex-wrap gap-3">
-      {PRODUCT_TAGS.map(tag => <label key={tag} className="flex items-center gap-1.5 text-sm">
+      {availableTags.map(tag => <label key={tag} className="flex items-center gap-1.5 text-sm">
         <input type="checkbox" checked={value.includes(tag)} onChange={e => onChange(e.target.checked ? [...value, tag] : value.filter(t => t !== tag))} />
         {tag}
       </label>)}
