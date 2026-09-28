@@ -353,12 +353,12 @@ export const IPadShowcaseSection: React.FC = () => {
                   />
                 </Link>
 
-                {/* Tên sản phẩm cố định 2 dòng */}
+                {/* Tên sản phẩm một dòng, tự co để vừa thẻ */}
                 <Link
                   href={product.href}
-                  className="font-bold text-[13px] sm:text-sm md:text-base text-gray-800 hover:text-[#d70018] line-clamp-2 transition-colors min-h-[32px] sm:min-h-[36px] leading-tight"
+                  className="font-bold text-[13px] sm:text-sm md:text-base text-gray-800 hover:text-[#d70018] transition-colors leading-tight"
                 >
-                  <ProductCardTitle name={product.name} />
+                  <ProductCardTitle name={product.name} singleLine />
                 </Link>
                 <ProductCardTags name={product.name} tags={product.tags} />
               </div>

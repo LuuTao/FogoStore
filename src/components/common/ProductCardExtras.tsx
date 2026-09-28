@@ -63,8 +63,10 @@ export function splitProductCardTitle(name: string) {
   };
 }
 
-export function ProductCardTitle({ name }: { name: string }) {
+export function ProductCardTitle({ name, singleLine = false }: { name: string; singleLine?: boolean }) {
   const { model, storage } = splitProductCardTitle(name);
+  const visibleModel = singleLine ? productCardTitle(name) : model;
+  const visibleStorage = singleLine ? '' : storage;
   const containerRef = useRef<HTMLSpanElement>(null);
   const modelRef = useRef<HTMLSpanElement>(null);
   const storageRef = useRef<HTMLSpanElement>(null);
@@ -99,12 +101,12 @@ export function ProductCardTitle({ name }: { name: string }) {
     observer.observe(container);
     void document.fonts?.ready.then(fitText);
     return () => observer.disconnect();
-  }, [model, storage]);
+  }, [visibleModel, visibleStorage]);
 
   return (
     <span ref={containerRef} className="block w-full min-w-0 leading-tight">
-      <span ref={modelRef} className="block w-full whitespace-nowrap text-left" style={{ fontSize }}>{model}</span>
-      {storage && <span ref={storageRef} className="block w-full whitespace-nowrap text-left" style={{ fontSize }}>{storage}</span>}
+      <span ref={modelRef} className="block w-full whitespace-nowrap text-left" style={{ fontSize }}>{visibleModel}</span>
+      {visibleStorage && <span ref={storageRef} className="block w-full whitespace-nowrap text-left" style={{ fontSize }}>{visibleStorage}</span>}
     </span>
   );
 }
