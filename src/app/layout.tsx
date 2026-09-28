@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers/Providers';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+import { BackToTop } from '@/components/layout/BackToTop';
 
 const inter = Inter({
   subsets: ['latin', 'vietnamese'],
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className={`${inter.className} pb-16 lg:pb-0`}>
         <Providers>
           {children}
+          <BackToTop />
           <MobileBottomNav />
         </Providers>
       </body>
