@@ -474,7 +474,7 @@ export const Header: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden w-9 h-9 rounded-md bg-gray-100 flex items-center justify-center text-gray-800 hover:text-[#d70018] hover:bg-red-50 transition-colors cursor-pointer"
+              className="hidden sm:flex lg:hidden w-9 h-9 rounded-md bg-gray-100 items-center justify-center text-gray-800 hover:text-[#d70018] hover:bg-red-50 transition-colors cursor-pointer"
               aria-label="Mở menu danh mục"
             >
               <MenuIcon size={22} />
@@ -601,7 +601,7 @@ export const Header: React.FC = () => {
           <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4 text-xs md:text-sm font-semibold shrink-0">
             <a
               href="tel:0566003333"
-              className="flex items-center gap-1.5 hover:opacity-80 transition-opacity py-1 shrink-0 text-[#d70018]"
+              className="hidden sm:flex items-center gap-1.5 hover:opacity-80 transition-opacity py-1 shrink-0 text-[#d70018]"
             >
               <div className="w-8 h-8 rounded-full lg:rounded-sm bg-[#d70018]/10 flex items-center justify-center text-[#d70018]">
                 <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -614,7 +614,7 @@ export const Header: React.FC = () => {
 
             <Link
               href="/gio-hang"
-              className="flex items-center gap-1.5 sm:gap-2 hover:opacity-90 transition-opacity cursor-pointer text-gray-700"
+              className="hidden sm:flex items-center gap-1.5 sm:gap-2 hover:opacity-90 transition-opacity cursor-pointer text-gray-700"
             >
               <div className="relative w-8 h-8 rounded-full lg:rounded-sm bg-[#d70018]/10 lg:bg-transparent flex items-center justify-center">
                 <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-[#d70018]" />
