@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ProductCardTags } from '@/components/common/ProductCardExtras';
+import { getProductTags } from '@/lib/productTags';
 import DOMPurify from 'dompurify';
 import {
   ChevronLeft,
@@ -69,6 +71,8 @@ export default function IPadDetail({
 
   const [selectedStorage, setSelectedStorage] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedOrigin, setSelectedOrigin] = useState<string>('');
+  const [selectedVersion, setSelectedVersion] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isImageTransitioning, setIsImageTransitioning] = useState<boolean>(false);
@@ -119,6 +123,8 @@ export default function IPadDetail({
 
     setSelectedStorage(activeSt);
     setSelectedColor(firstValidVar?.color || 'Space Gray');
+    setSelectedOrigin(firstValidVar?.origin || 'Việt Nam');
+    setSelectedVersion(firstValidVar?.version || firstValidVar?.connectivity || firstValidVar?.network || 'Wifi');
 
     // Lấy danh sách iPad liên quan từ DB
     fetch(`${API_URL}/api/products/filter?category=ipad`, { cache: 'no-store' })
@@ -235,7 +241,9 @@ export default function IPadDetail({
       const exact = product.variants.find(
         (v: any) =>
           (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
-          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
+          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase() &&
+          (!selectedOrigin || (v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase()) &&
+          (!v.version && !v.connectivity && !v.network || String(v.version || v.connectivity || v.network).trim().toLowerCase() === selectedVersion.trim().toLowerCase())
       );
       if (exact) return exact;
     }
@@ -255,7 +263,7 @@ export default function IPadDetail({
       stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
       images: sample?.images || product.variants[0]?.images || [],
     };
-  }, [product, selectedStorage, selectedColor]);
+  }, [product, selectedStorage, selectedColor, selectedOrigin, selectedVersion]);
 
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
@@ -299,6 +307,10 @@ export default function IPadDetail({
     const price = Number(currentVariant.price || 0);
     return price <= 0;
   }, [currentVariant]);
+  const originList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.origin || 'Việt Nam').trim()).filter(Boolean)));
+  const versionList = ['5G', 'Wifi'];
+  const currentOrigin = currentVariant?.origin || selectedOrigin || 'Việt Nam';
+  const currentVersion = String(currentVariant?.version || currentVariant?.connectivity || currentVariant?.network || selectedVersion || 'Wifi');
 
   // SỬA: CẬP NHẬT TỨC THÌ VÀ SÁNG VIỀN ĐỎ RÕ RÀNG
   const handleSelectStorage = (st: string) => {
@@ -481,8 +493,9 @@ export default function IPadDetail({
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
-                  {cleanProductName} {selectedStorage} - Chính hãng Apple VN
+                  {cleanProductName} {selectedStorage}
                 </h1>
+                <ProductCardTags name={product.name} tags={getProductTags(product)} align="left" size="large" />
               </div>
 
               {/* Mức giá */}
@@ -506,6 +519,22 @@ export default function IPadDetail({
                       Sẵn hàng
                     </span>
                   )}
+                </div>
+              </div>
+
+              {originList.length > 0 && (
+                <div>
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Xuất xứ:</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {originList.map((origin) => <button key={origin} type="button" onClick={() => setSelectedOrigin(origin)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${currentOrigin.toLowerCase() === origin.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{origin}</button>)}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Phiên bản:</label>
+                <div className="flex flex-wrap gap-2.5">
+                  {versionList.map((version) => <button key={version} type="button" onClick={() => setSelectedVersion(version)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${currentVersion.toLowerCase() === version.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{version}</button>)}
                 </div>
               </div>
 

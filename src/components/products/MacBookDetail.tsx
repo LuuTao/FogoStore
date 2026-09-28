@@ -25,6 +25,8 @@ import {
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { ProductCardTags } from '@/components/common/ProductCardExtras';
+import { getProductTags } from '@/lib/productTags';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
@@ -69,6 +71,8 @@ export default function MacBookDetail({
 
   const [selectedStorage, setSelectedStorage] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedOrigin, setSelectedOrigin] = useState<string>('');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isImageTransitioning, setIsImageTransitioning] = useState<boolean>(false);
@@ -120,6 +124,8 @@ export default function MacBookDetail({
 
     setSelectedStorage(activeSt);
     setSelectedColor(firstValidVar?.color || 'Space Gray');
+    setSelectedOrigin(firstValidVar?.origin || 'Việt Nam');
+    setSelectedSize(firstValidVar?.size || firstValidVar?.screenSize || firstValidVar?.inch || ((product.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/i)?.[0] || '14 inch'));
 
     // Lấy danh sách MacBook liên quan từ DB
     fetch(`${API_URL}/api/products/filter?category=macbook`, { cache: 'no-store' })
@@ -231,7 +237,8 @@ export default function MacBookDetail({
       const exact = product.variants.find(
         (v: any) =>
           (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
-          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
+          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase() &&
+          (!selectedOrigin || (v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase())
       );
       if (exact) return exact;
     }
@@ -251,7 +258,7 @@ export default function MacBookDetail({
       stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
       images: sample?.images || product.variants[0]?.images || [],
     };
-  }, [product, selectedStorage, selectedColor]);
+  }, [product, selectedStorage, selectedColor, selectedOrigin]);
 
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
@@ -352,6 +359,11 @@ export default function MacBookDetail({
 
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
+  const currentOrigin = currentVariant?.origin || selectedOrigin || product?.origin || 'Việt Nam';
+  const originList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.origin || 'Việt Nam').trim()).filter(Boolean)));
+  const sizeList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean))).length > 0
+    ? Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean)))
+    : Array.from(new Set(((product?.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/gi) || []).map((size: string) => size.replace(/\s+/g, ' '))));
 
   const formattedDescription = useMemo(() => {
     if (!product?.description) return '';
@@ -477,8 +489,9 @@ export default function MacBookDetail({
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
-                  {cleanProductName} {selectedStorage} - Chính hãng Apple VN
+                  {cleanProductName} {selectedStorage}
                 </h1>
+                <ProductCardTags name={product.name} tags={getProductTags(product)} align="left" size="large" />
               </div>
 
               {/* Mức giá */}
@@ -504,6 +517,24 @@ export default function MacBookDetail({
                   )}
                 </div>
               </div>
+
+              {originList.length > 0 && (
+                <div>
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Xuất xứ:</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {originList.map((origin) => <button key={origin} type="button" onClick={() => setSelectedOrigin(origin)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${currentOrigin.toLowerCase() === origin.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{origin}</button>)}
+                  </div>
+                </div>
+              )}
+
+              {sizeList.length > 0 && (
+                <div>
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Kích thước:</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {sizeList.map((size) => <button key={size} type="button" onClick={() => setSelectedSize(size)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${selectedSize.toLowerCase() === size.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{size}</button>)}
+                  </div>
+                </div>
+              )}
 
               {/* CHỌN DUNG LƯỢNG SSD: TỰ ĐỘNG XUỐNG DÒNG VÀ VIỀN ĐỎ RÕ RÀNG */}
               {storageList.length > 0 && (

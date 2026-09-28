@@ -520,10 +520,19 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className="hidden sm:flex w-full pt-3 pb-1 bg-white items-center justify-center px-3">
-          <h1 className="text-base md:text-2xl lg:text-[32px] font-black uppercase tracking-wider text-[#d70018] leading-tight text-center drop-shadow-xs truncate">
-            THE BEST APPLE RETAIL STORE IN HCM
-          </h1>
+        <div className="hidden sm:flex w-full h-7 overflow-hidden bg-[#d70018] text-white items-center">
+          <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] md:text-xs lg:text-[13px] font-bold">
+            {[0, 1].map((copy) => (
+              <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
+                {marqueeItems.map((item) => (
+                  <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">
+                    <span aria-hidden="true">{item.icon}</span>
+                    <span>{item.text}</span>
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4 md:gap-6">

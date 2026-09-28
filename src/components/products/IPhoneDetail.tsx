@@ -72,6 +72,7 @@ export default function IPhoneDetail({
 
   const [selectedStorage, setSelectedStorage] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedOrigin, setSelectedOrigin] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isImageTransitioning, setIsImageTransitioning] = useState<boolean>(false);
@@ -160,6 +161,7 @@ export default function IPhoneDetail({
 
     setSelectedStorage(defaultSt);
     setSelectedColor(defaultCl);
+    setSelectedOrigin(targetVar?.origin || 'Việt Nam');
 
     // Fetch sản phẩm liên quan
     fetch(`${API_URL}/api/products/filter?category=iphone`, { cache: 'no-store' })
@@ -258,7 +260,8 @@ export default function IPhoneDetail({
       const exact = product.variants.find(
         (v: any) =>
           (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
-          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
+          (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase() &&
+          (!selectedOrigin || (v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase())
       );
       if (exact) return exact;
     }
@@ -268,7 +271,7 @@ export default function IPhoneDetail({
     );
 
     return sample || product.variants[0];
-  }, [product, selectedStorage, selectedColor]);
+  }, [product, selectedStorage, selectedColor, selectedOrigin]);
 
   // 6. DANH SÁCH ẢNH CỦA MÀU ĐANG CHỌN (KHÔNG BỊ LẶP ẢNH CÙNG MÀU)
   const imagesList: string[] = useMemo(() => {
@@ -376,7 +379,8 @@ export default function IPhoneDetail({
 
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
-  const currentOrigin = currentVariant?.origin || product?.origin || 'Việt Nam';
+  const currentOrigin = currentVariant?.origin || selectedOrigin || product?.origin || 'Việt Nam';
+  const originList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.origin || 'Việt Nam').trim()).filter(Boolean)));
 
   const formattedDescription = useMemo(() => {
     if (!product?.description) return '';
@@ -504,8 +508,7 @@ export default function IPhoneDetail({
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
                   {cleanProductName} {selectedStorage}
                 </h1>
-                <ProductCardTags name={product.name} tags={getProductTags(product)} />
-                <p className="mt-1 text-sm font-semibold text-gray-600">Xuất xứ: {currentOrigin}</p>
+                <ProductCardTags name={product.name} tags={getProductTags(product)} align="left" size="large" />
               </div>
 
               {/* Mức giá */}
@@ -531,6 +534,19 @@ export default function IPhoneDetail({
                   )}
                 </div>
               </div>
+
+              {originList.length > 0 && (
+                <div>
+                  <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Xuất xứ:</label>
+                  <div className="flex flex-wrap gap-2.5 w-full">
+                    {originList.map((origin) => (
+                      <button key={origin} type="button" onClick={() => setSelectedOrigin(origin)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 text-center transition-all cursor-pointer ${currentOrigin.toLowerCase() === origin.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20 shadow-sm' : 'border-gray-200 text-gray-800 hover:border-gray-400 bg-white'}`}>
+                        {origin}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* CHỌN DUNG LƯỢNG */}
               {storageList.length > 0 && (

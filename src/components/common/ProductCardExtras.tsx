@@ -111,11 +111,11 @@ export function ProductCardTitle({ name, singleLine = false }: { name: string; s
   );
 }
 
-export function ProductCardTags({ name, tags }: { name: string; tags?: string[] }) {
+export function ProductCardTags({ name, tags, align = 'center', size = 'default' }: { name: string; tags?: string[]; align?: 'left' | 'center'; size?: 'default' | 'large' }) {
   const labels = tags ?? Array.from(new Set((name.match(labelPattern) || []).map((label) =>
     /^chính/i.test(label) ? 'Chính hãng' : /^new/i.test(label) ? 'New Seal' : label)));
   if (!labels.length) return null;
-  return <div className="flex flex-wrap justify-center gap-1 mt-1">
-    {labels.map((label) => <span key={label} className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold text-gray-600">{label}</span>)}
+  return <div className={`flex flex-wrap ${align === 'left' ? 'justify-start' : 'justify-center'} gap-1 mt-1`}>
+    {labels.map((label) => <span key={label} className={`rounded bg-gray-100 font-semibold text-gray-600 ${size === 'large' ? 'px-2 py-1 text-[13px] sm:text-sm' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'}`}>{label}</span>)}
   </div>;
 }
