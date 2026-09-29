@@ -315,6 +315,15 @@ export default function IPadDetail({
   const sizeList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean)));
   const currentOrigin = currentVariant?.origin || selectedOrigin || 'Việt Nam';
   const currentVersion = String(currentVariant?.version || currentVariant?.connectivity || currentVariant?.network || selectedVersion || 'Wifi');
+  const updateVariantUrl = (variant: any) => {
+    if (typeof window === 'undefined' || !variant?.id) return;
+    const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
+    const storageSlug = String(variant.storage || selectedStorage || '').toLowerCase().replace(/\s+/g, '-');
+    window.history.replaceState(null, '', `/san-pham/${cleanBase}-${storageSlug}?proid=${variant.id}`);
+  };
+  useEffect(() => {
+    if (currentVariant?.id) updateVariantUrl(currentVariant);
+  }, [currentVariant?.id, selectedOrigin, selectedVersion, selectedSize]);
 
   // SỬA: CẬP NHẬT TỨC THÌ VÀ SÁNG VIỀN ĐỎ RÕ RÀNG
   const handleSelectStorage = (st: string) => {
@@ -333,6 +342,23 @@ export default function IPadDetail({
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `/san-pham/${cleanBase}-${targetStorage}${proidParam}`);
     }
+  };
+
+  const handleSelectVariantOption = (field: 'origin' | 'version' | 'size', value: string) => {
+    if (field === 'origin') setSelectedOrigin(value);
+    if (field === 'version') setSelectedVersion(value);
+    if (field === 'size') setSelectedSize(value);
+    const matched = product?.variants?.find((v: any) => {
+      const origin = String(v.origin || 'Việt Nam').toLowerCase();
+      const version = String(v.version || 'Wifi').toLowerCase();
+      const size = String(v.size || '').toLowerCase();
+      return (!selectedStorage || String(v.storage || '').toLowerCase() === selectedStorage.toLowerCase()) &&
+        (!selectedColor || String(v.color || '').toLowerCase() === selectedColor.toLowerCase()) &&
+        (field === 'origin' ? origin === value.toLowerCase() : !selectedOrigin || origin === selectedOrigin.toLowerCase()) &&
+        (field === 'version' ? version === value.toLowerCase() : !selectedVersion || version === selectedVersion.toLowerCase()) &&
+        (field === 'size' ? size === value.toLowerCase() : !selectedSize || size === selectedSize.toLowerCase());
+    });
+    updateVariantUrl(matched);
   };
 
   const handleSelectColor = (colorName: string) => {

@@ -368,6 +368,12 @@ export default function MacBookDetail({
   const sizeList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean))).length > 0
     ? Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean)))
     : Array.from(new Set(((product?.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/gi) || []).map((size: string) => size.replace(/\s+/g, ' '))));
+  useEffect(() => {
+    if (typeof window === 'undefined' || !currentVariant?.id) return;
+    const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
+    const storageSlug = String(currentVariant.storage || selectedStorage || '').toLowerCase().replace(/\s+/g, '-');
+    window.history.replaceState(null, '', `/san-pham/${cleanBase}-${storageSlug}?proid=${currentVariant.id}`);
+  }, [currentVariant?.id, selectedOrigin, selectedSize, selectedVersion]);
 
   const formattedDescription = useMemo(() => {
     if (!product?.description) return '';
