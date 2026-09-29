@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   Trash2,
@@ -23,6 +23,12 @@ interface Props {
 }
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+interface ProductOption {
+  id: string;
+  name: string;
+  category?: { name?: string };
+}
 
 export default function PostsTab({ posts = [], onRefresh }: Props) {
   const [isOpenModal, setIsOpenModal] = useState(false);
@@ -56,7 +62,10 @@ export default function PostsTab({ posts = [], onRefresh }: Props) {
     thumbnail: '',
     metaTitle: '',
     metaDesc: '',
+    relatedProductIds: [] as string[],
   });
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [relatedProductSearch, setRelatedProductSearch] = useState('');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -68,6 +77,34 @@ export default function PostsTab({ posts = [], onRefresh }: Props) {
     localStorage.getItem('token') ||
     localStorage.getItem('fogo_admin_token') ||
     '';
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/products?all=true&limit=all`);
+        const json = await res.json();
+        const list = Array.isArray(json.data) ? json.data : Array.isArray(json.data?.products) ? json.data.products : Array.isArray(json) ? json : [];
+        setProducts(list);
+      } catch {
+        setProducts([]);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  const visibleRelatedProducts = useMemo(() => {
+    const keyword = relatedProductSearch.trim().toLowerCase();
+    return products.filter((product) => !keyword || product.name.toLowerCase().includes(keyword)).slice(0, 20);
+  }, [products, relatedProductSearch]);
+
+  const toggleRelatedProduct = (productId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      relatedProductIds: prev.relatedProductIds.includes(productId)
+        ? prev.relatedProductIds.filter((id) => id !== productId)
+        : [...prev.relatedProductIds, productId],
+    }));
+  };
 
   // Tự động sinh slug khi gõ tiêu đề thủ công
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,6 +193,7 @@ export default function PostsTab({ posts = [], onRefresh }: Props) {
           thumbnail: '',
           metaTitle: '',
           metaDesc: '',
+          relatedProductIds: [],
         });
         showToast('Đã lưu bài viết mới thành công!', 'success');
         onRefresh();
@@ -534,6 +572,27 @@ export default function PostsTab({ posts = [], onRefresh }: Props) {
                   onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                   className="w-full border rounded-md p-2 text-xs outline-none focus:border-red-500"
                 />
+              </div>
+
+              <div>
+                <label className="font-bold text-gray-700 block mb-1">Sản phẩm liên quan</label>
+                <input
+                  type="search"
+                  placeholder="Tìm sản phẩm để thêm..."
+                  value={relatedProductSearch}
+                  onChange={(e) => setRelatedProductSearch(e.target.value)}
+                  className="w-full border rounded-md p-2 text-xs outline-none focus:border-red-500"
+                />
+                <div className="mt-2 max-h-36 overflow-y-auto rounded-md border divide-y bg-white">
+                  {visibleRelatedProducts.map((product) => (
+                    <label key={product.id} className="flex items-center gap-2 px-2.5 py-2 hover:bg-red-50/50 cursor-pointer">
+                      <input type="checkbox" checked={formData.relatedProductIds.includes(product.id)} onChange={() => toggleRelatedProduct(product.id)} className="accent-[#d70018]" />
+                      <span className="truncate font-medium text-gray-800">{product.name}</span>
+                    </label>
+                  ))}
+                  {visibleRelatedProducts.length === 0 && <p className="px-2.5 py-2 text-gray-500">Không tìm thấy sản phẩm.</p>}
+                </div>
+                {formData.relatedProductIds.length > 0 && <p className="mt-1 text-[11px] font-semibold text-[#d70018]">Đã chọn {formData.relatedProductIds.length} sản phẩm.</p>}
               </div>
 
               <div>

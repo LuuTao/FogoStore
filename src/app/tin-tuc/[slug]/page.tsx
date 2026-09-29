@@ -22,7 +22,22 @@ interface Post {
   summary: string | null;
   content: string | null;
   thumbnail: string | null;
+  relatedProductIds?: string | null;
   createdAt: string;
+}
+
+interface RelatedProduct {
+  id: string;
+  name: string;
+  slug?: string;
+  imageUrl?: string | null;
+  images?: string[];
+  variants?: Array<{
+    slug?: string;
+    price?: number;
+    imageUrl?: string | null;
+    images?: string[];
+  }>;
 }
 
 interface TocItem {
@@ -39,6 +54,7 @@ export default function PostDetailPage() {
 
   const [post, setPost] = useState<Post | null>(null);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [products, setProducts] = useState<RelatedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [showToc, setShowToc] = useState(true);
 
@@ -47,6 +63,12 @@ export default function PostDetailPage() {
     if (url.startsWith('http')) return url;
     if (url.startsWith('/uploads')) return `${API_URL}${url}`;
     return url;
+  };
+
+  const getProductImageUrl = (product: RelatedProduct) => {
+    const variant = product.variants?.find((item) => Number(item.price) > 0) || product.variants?.[0];
+    const image = variant?.images?.[0] || variant?.imageUrl || product.images?.[0] || product.imageUrl;
+    return getSafeImageUrl(image);
   };
 
   const formatDate = (isoString?: string) => {
@@ -73,6 +95,19 @@ export default function PostDetailPage() {
           setAllPosts(json.data);
           const current = json.data.find((p: Post) => p.slug === slug);
           setPost(current || null);
+        }
+
+        const productRes = await fetch(`${API_URL}/api/products?all=true&limit=all`, { cache: 'no-store' });
+        if (productRes.ok) {
+          const productJson = await productRes.json();
+          const productList = Array.isArray(productJson.data)
+            ? productJson.data
+            : Array.isArray(productJson.data?.products)
+              ? productJson.data.products
+              : Array.isArray(productJson)
+                ? productJson
+                : [];
+          setProducts(productList);
         }
       } catch (error) {
         console.error('Lỗi nạp bài viết:', error);
@@ -142,6 +177,18 @@ export default function PostDetailPage() {
   // Chỉ lấy đúng 4 bài mới nhất cho Widget
   const recentPosts = useMemo(() => allPosts.slice(0, 4), [allPosts]);
   const relatedPosts = useMemo(() => allPosts.filter((p) => p.slug !== slug).slice(0, 4), [allPosts, slug]);
+  const relatedProducts = useMemo(() => {
+    if (!post?.relatedProductIds) return [];
+    try {
+      const ids = JSON.parse(post.relatedProductIds);
+      if (!Array.isArray(ids)) return [];
+      return ids
+        .map((id) => products.find((product) => product.id === String(id)))
+        .filter((product): product is RelatedProduct => Boolean(product));
+    } catch {
+      return [];
+    }
+  }, [post?.relatedProductIds, products]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between select-none">
@@ -375,6 +422,31 @@ export default function PostDetailPage() {
                     </li>
                   </ul>
                 </div>
+
+                {relatedProducts.length > 0 && (
+                  <div className="bg-white rounded-xl border border-gray-200/90 shadow-xs overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-gray-100">
+                      <h3 className="text-[17px] font-black text-gray-900 tracking-tight">Sản phẩm liên quan</h3>
+                    </div>
+                    <div className="p-3 space-y-3">
+                      {relatedProducts.map((product) => {
+                        const variant = product.variants?.find((item) => Number(item.price) > 0) || product.variants?.[0];
+                        const href = `/san-pham/${variant?.slug || product.slug || product.id}`;
+                        return (
+                          <Link key={product.id} href={href} className="flex items-center gap-3 rounded-lg p-2 hover:bg-red-50/60 group transition-colors">
+                            <div className="w-16 h-16 shrink-0 rounded-lg border border-gray-100 bg-gray-50 p-1.5 flex items-center justify-center overflow-hidden">
+                              <img src={getProductImageUrl(product)} alt={product.name} className="max-w-full max-h-full object-contain" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-800 group-hover:text-[#d70018] line-clamp-2 leading-snug">{product.name}</p>
+                              <span className="mt-1 inline-block text-[11px] font-semibold text-[#d70018]">Xem sản phẩm →</span>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

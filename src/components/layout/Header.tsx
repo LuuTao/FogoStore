@@ -606,7 +606,7 @@ export const Header: React.FC = () => {
 
         <div className="hidden sm:flex w-full h-7 overflow-hidden bg-[#d70018] text-white items-center">
           <div className="w-1/2 shrink-0 h-full bg-white text-[#d70018] flex items-center justify-center border-r border-red-100 px-3">
-            <span className="whitespace-nowrap text-[14px] md:text-[15px] lg:text-[17px] font-extrabold tracking-tight">
+            <span className="whitespace-nowrap text-[16px] md:text-[19px] lg:text-[21px] font-extrabold tracking-tight">
               THE BEST APPLE RETAIL STORE IN HCM
             </span>
           </div>
