@@ -146,7 +146,7 @@ export const FeaturedProductsSection: React.FC = () => {
                   const href = `/san-pham/${variant.slug || product.slug}${variant.id ? `?proid=${variant.id}` : ''}`;
 
                   return (
-                    <Link key={product.id} data-flash-card href={href} className="group min-w-[47%] snap-start rounded-2xl bg-white p-3 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:min-w-[31%] md:min-w-[23%] lg:min-w-[18.9%]">
+                    <Link key={product.id} data-flash-card href={href} className="group w-[47%] flex-none snap-start rounded-2xl bg-white p-2.5 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[18.9%] lg:p-3">
                       <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f7f7f9]">
                         {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-[#d70018] px-2 py-1 text-[10px] font-black text-white">-{discount}%</span>}
                         <img src={image} alt={product.name} className="h-full w-full object-contain p-3 transition duration-500 group-hover:scale-105" />
