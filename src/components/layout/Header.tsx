@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -252,6 +252,25 @@ export const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const { totalQuantity } = useCart();
 
+  const trendingProducts = useMemo<SearchItem[]>(() => {
+    const wanted = ['iphone 18 pro', 'iphone 18 pro max', 'iphone duo', 'ipad pro m5', 'ipad gen 11', 'macbook air m5', 'macbook pro m5', 'ipad mini 7', 'iphone 18 series', 'ipad pro series'];
+    return wanted.map((keyword) => {
+      const product = productsCache.find((item: any) => String(item.name || '').toLowerCase().includes(keyword));
+      if (!product) return null;
+      const variant = Array.isArray(product.variants) ? product.variants.find((item: any) => Number(item.price) > 0) || product.variants[0] : null;
+      const image = Array.isArray(variant?.images) ? variant.images[0] : variant?.imageUrl || product.imageUrl || product.images?.[0];
+      return {
+        id: `trend-${product.id}`,
+        name: product.name,
+        slug: variant?.slug || product.slug || product.id,
+        price: Number(variant?.price || product.price || 0),
+        imageUrl: formatSearchImage(image),
+        categoryName: product.category?.name || product.categoryName,
+        isUsed: /cũ|like new|99%|cpo/i.test(product.name || ''),
+      };
+    }).filter((item): item is SearchItem => Boolean(item)).slice(0, 10);
+  }, [productsCache]);
+
   const toggleSubMenu = (id: string) => {
     setExpandedMenuId(expandedMenuId === id ? null : id);
   };
@@ -336,7 +355,6 @@ export const Header: React.FC = () => {
     const rawQuery = searchTerm.trim().toLowerCase();
     if (!rawQuery) {
       setSearchResults([]);
-      setShowDropdown(false);
       return;
     }
 
@@ -561,9 +579,7 @@ export const Header: React.FC = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onFocus={() => {
-                  if (searchTerm.trim() && searchResults.length > 0) setShowDropdown(true);
-                }}
+                onFocus={() => setShowDropdown(true)}
                 placeholder="Bạn cần tìm gì hôm nay..."
                 className="w-full pl-4 pr-16 py-2 lg:py-2.5 rounded-sm text-sm text-gray-900 bg-white border-2 border-[#d70018] outline-hidden placeholder-gray-400 focus:ring-1 focus:ring-[#d70018]"
               />
@@ -594,13 +610,13 @@ export const Header: React.FC = () => {
             {showDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                  <span>Gợi ý cho &quot;{searchTerm}&quot;</span>
-                  <span>{searchResults.length} lựa chọn</span>
+                  <span>{searchTerm.trim() ? `Gợi ý cho “${searchTerm}”` : '🔥 Xu hướng tìm kiếm'}</span>
+                  <span>{searchTerm.trim() ? searchResults.length : trendingProducts.length} lựa chọn</span>
                 </div>
 
                 <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-100">
-                  {searchResults.length > 0 ? (
-                    searchResults.map((item) => (
+                  {(searchTerm.trim() ? searchResults : trendingProducts).length > 0 ? (
+                    (searchTerm.trim() ? searchResults : trendingProducts).map((item) => (
                       <Link
                         key={item.id}
                         href={`/san-pham/${item.slug}`}
@@ -646,12 +662,12 @@ export const Header: React.FC = () => {
                     ))
                   ) : (
                     <div className="p-5 text-center text-xs text-gray-500">
-                      Không tìm thấy sản phẩm nào khớp với &quot;<b className="text-gray-800">{searchTerm}</b>&quot;.
+                      {searchTerm.trim() ? <>Không tìm thấy sản phẩm nào khớp với &quot;<b className="text-gray-800">{searchTerm}</b>&quot;.</> : 'Chưa có sản phẩm xu hướng trong kho.'}
                     </div>
                   )}
                 </div>
 
-                {searchResults.length > 0 && (
+                {searchTerm.trim() && searchResults.length > 0 && (
                   <button
                     type="button"
                     onClick={handleSearchSubmit}
