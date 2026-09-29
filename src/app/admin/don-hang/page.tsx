@@ -284,29 +284,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleConfirmPayment = async (orderId: string) => {
-    setUpdatingId(orderId);
-    try {
-      const token = getAdminToken();
-      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ paymentStatus: 'PAID' }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Không thể xác nhận thanh toán');
-      setOrders((prev) => prev.map((order) => order.id === orderId ? { ...order, paymentStatus: 'PAID' } : order));
-      showAlert('Đã xác nhận đã nhận tiền cho đơn hàng.', 'success');
-    } catch (error: any) {
-      showAlert(error.message || 'Không thể xác nhận thanh toán.', 'error');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
   const handleOpenEdit = (order: any) => {
     setEditingOrder(order);
     setEditForm({
@@ -740,16 +717,6 @@ export default function AdminOrdersPage() {
                         >
                           {isPaid ? 'Đã chuyển tiền' : 'Chưa thanh toán'}
                         </span>
-                        {isQrMethod && !isPaid && (
-                          <button
-                            type="button"
-                            disabled={updatingId === ord.id}
-                            onClick={() => handleConfirmPayment(ord.id)}
-                            className="mt-1 block mx-auto text-[10px] font-bold text-[#d70018] hover:underline disabled:opacity-50"
-                          >
-                            Xác nhận đã nhận tiền
-                          </button>
-                        )}
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
