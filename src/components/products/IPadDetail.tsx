@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ProductCardTags } from '@/components/common/ProductCardExtras';
@@ -88,6 +88,7 @@ export default function IPadDetail({
     show: false,
     message: '',
   });
+  const initializedProductRef = useRef<string>('');
 
   // ĐỒNG BỘ DỮ LIỆU THÔNG SỐ VÀ MÔ TẢ TỪ ADMIN (LOCALSTORAGE)
   useEffect(() => {
@@ -115,6 +116,10 @@ export default function IPadDetail({
 
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
+
+    const initializationKey = `${product.id || product.slug}:${currentSlug || product.slug}`;
+    if (initializedProductRef.current === initializationKey) return;
+    initializedProductRef.current = initializationKey;
 
     const requestedVariant = searchParams.get('proid');
     const firstValidVar = (requestedVariant && product.variants.find((v: any) => String(v.id) === requestedVariant)) || product.variants.find((v: any) => {
@@ -362,8 +367,23 @@ export default function IPadDetail({
     const matched = product?.variants?.find(
       (v: any) =>
         (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase() &&
+        (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
+        (!selectedOrigin || String(v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase()) &&
+        (!selectedVersion || !String(v.version || v.connectivity || v.network || '').trim() || String(v.version || v.connectivity || v.network).trim().toLowerCase() === selectedVersion.trim().toLowerCase()) &&
+        (!selectedSize || !String(v.size || v.screenSize || v.inch || '').trim() || String(v.size || v.screenSize || v.inch).trim().toLowerCase() === selectedSize.trim().toLowerCase())
+    ) || product?.variants?.find(
+      (v: any) =>
+        (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase() &&
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     ) || product?.variants?.find((v: any) => (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase());
+
+    if (matched) {
+      setSelectedColor(matched.color || selectedColor);
+      setSelectedOrigin(matched.origin || selectedOrigin || 'Việt Nam');
+      setSelectedVersion(matched.version || matched.connectivity || matched.network || selectedVersion || 'Wifi');
+      setSelectedSize(matched.size || matched.screenSize || matched.inch || selectedSize);
+      setCurrentImageIndex(0);
+    }
 
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
     const targetStorage = st.toLowerCase().replace(/\s+/g, '-');

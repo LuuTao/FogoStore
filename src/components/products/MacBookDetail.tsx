@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import DOMPurify from 'dompurify';
@@ -88,6 +88,7 @@ export default function MacBookDetail({
     show: false,
     message: '',
   });
+  const initializedProductRef = useRef<string>('');
 
   // ĐỒNG BỘ ĐẦY ĐỦ MÔ TẢ, CHÍNH SÁCH VÀ THÔNG SỐ TỪ ADMIN
   useEffect(() => {
@@ -115,6 +116,10 @@ export default function MacBookDetail({
 
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
+
+    const initializationKey = `${product.id || product.slug}:${currentSlug || product.slug}`;
+    if (initializedProductRef.current === initializationKey) return;
+    initializedProductRef.current = initializationKey;
 
     // Tìm biến thể hợp lệ đầu tiên
     const requestedVariant = searchParams.get('proid');
@@ -342,8 +347,23 @@ export default function MacBookDetail({
     const matched = product?.variants?.find(
       (v: any) =>
         (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase() &&
+        (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase() &&
+        (!selectedOrigin || String(v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase()) &&
+        (!selectedVersion || !String(v.version || '').trim() || String(v.version).trim().toLowerCase() === selectedVersion.trim().toLowerCase()) &&
+        (!selectedSize || !String(v.size || v.screenSize || v.inch || '').trim() || String(v.size || v.screenSize || v.inch).trim().toLowerCase() === selectedSize.trim().toLowerCase())
+    ) || product?.variants?.find(
+      (v: any) =>
+        (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase() &&
         (v.color || '').trim().toLowerCase() === selectedColor.toLowerCase()
     ) || product?.variants?.find((v: any) => (v.storage || '').trim().toLowerCase() === st.trim().toLowerCase());
+
+    if (matched) {
+      setSelectedColor(matched.color || selectedColor);
+      setSelectedOrigin(matched.origin || selectedOrigin || 'Việt Nam');
+      setSelectedVersion(matched.version || selectedVersion || 'Wifi');
+      setSelectedSize(matched.size || matched.screenSize || matched.inch || selectedSize);
+      setCurrentImageIndex(0);
+    }
 
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
     const targetStorage = st.toLowerCase().replace(/\s+/g, '-');
