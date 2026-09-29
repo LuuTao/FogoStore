@@ -9,6 +9,10 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onre
 type FlashSaleVariant = {
   id?: string;
   slug?: string;
+  storage?: string;
+  color?: string;
+  size?: string | null;
+  version?: string | null;
   price?: number | string;
   originalPrice?: number | string;
   stock?: number | string;
@@ -50,6 +54,10 @@ export const FeaturedProductsSection: React.FC = () => {
   const [now, setNow] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+
+  const flashItems = useMemo(() => products.flatMap((product) =>
+    (Array.isArray(product.variants) ? product.variants : []).map((variant) => ({ product, variant }))
+  ), [products]);
 
   useEffect(() => {
     fetch(`${API_URL}/api/flash-sale`, { cache: 'no-store' })
@@ -109,10 +117,10 @@ export const FeaturedProductsSection: React.FC = () => {
   };
 
   useEffect(() => {
-    if (products.length < 2 || isHovered || !['UPCOMING', 'ACTIVE'].includes(status)) return;
+    if (flashItems.length < 2 || isHovered || !['UPCOMING', 'ACTIVE'].includes(status)) return;
     const timer = window.setInterval(() => moveSlider(1), 5000);
     return () => window.clearInterval(timer);
-  }, [products.length, isHovered, status]);
+  }, [flashItems.length, isHovered, status]);
 
   // Lịch Flash Sale và danh sách sản phẩm là hai phần cấu hình độc lập.
   // Không ẩn toàn bộ bảng chỉ vì quản trị viên chưa tick sản phẩm.
@@ -161,15 +169,11 @@ export const FeaturedProductsSection: React.FC = () => {
           </div>
 
           <div className="relative" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-          {products.length > 0 ? (
+          {flashItems.length > 0 ? (
             <>
               <button type="button" onClick={() => moveSlider(-1)} aria-label="Sản phẩm trước" className="absolute -left-1 top-1/2 z-10 flex h-10 w-7 -translate-y-1/2 items-center justify-center rounded-r-full bg-white/95 text-gray-800 shadow-lg transition hover:scale-105 sm:h-12 sm:w-9"><ChevronLeft size={24} /></button>
               <div ref={trackRef} className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-3">
-                {products.map((product) => {
-                  const variants = (Array.isArray(product.variants) ? product.variants : [])
-                    .filter((variant) => Number(variant.price) > 0)
-                    .sort((a, b) => Number(a.price) - Number(b.price));
-                  const variant = variants.find((item) => Number(item.stock) > 0) || variants[0] || {};
+                {flashItems.map(({ product, variant }) => {
                   const price = Number(variant.price || 0);
                   const originalPrice = Number(variant.originalPrice || price);
                   const discount = originalPrice > price && price > 0 ? Math.round((1 - price / originalPrice) * 100) : 0;
@@ -177,12 +181,13 @@ export const FeaturedProductsSection: React.FC = () => {
                   const href = `/san-pham/${variant.slug || product.slug}${variant.id ? `?proid=${variant.id}` : ''}`;
 
                   return (
-                    <Link key={product.id} data-flash-card href={href} className="group w-[47%] flex-none snap-start overflow-hidden rounded-xl bg-white p-2 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[19.1%] lg:p-2.5">
+                    <Link key={variant.id || `${product.id}-${variant.slug}`} data-flash-card href={href} className="group w-[47%] flex-none snap-start overflow-hidden rounded-xl bg-white p-2 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[19.1%] lg:p-2.5">
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-white">
                         {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-[#d70018] px-2 py-1 text-[10px] font-black text-white">-{discount}%</span>}
                         <img src={image} alt={product.name} className="h-full w-full object-contain p-2 transition duration-500 group-hover:scale-105" />
                       </div>
                       <h3 className="mt-2 min-h-10 line-clamp-2 text-xs font-bold leading-5 sm:text-sm">{product.name}</h3>
+                      <p className="mt-0.5 truncate text-[10px] font-semibold text-gray-500">{[variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ')}</p>
                       <div className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
                         <span className="text-sm font-black text-[#d70018] sm:text-base">{price > 0 ? `${price.toLocaleString('vi-VN')}đ` : 'Liên hệ'}</span>
                         {originalPrice > price && <span className="text-[11px] text-gray-400 line-through">{originalPrice.toLocaleString('vi-VN')}đ</span>}

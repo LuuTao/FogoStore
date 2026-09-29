@@ -140,7 +140,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const [newProdCategory, setNewProdCategory] = useState('iPhone');
   const [selectedSubSeries, setSelectedSubSeries] = useState('iPhone 16 Series');
   const [isFeatured, setIsFeatured] = useState(false);
-  const [isFlashSale, setIsFlashSale] = useState(false);
   const [isHot, setIsHot] = useState(false);
   const [variantsList, setVariantsList] = useState([
     {
@@ -150,6 +149,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       price: 29990000,
       originalPrice: 31990000,
       stock: 20,
+      isFlashSale: false,
       images: [] as string[],
     },
   ]);
@@ -350,17 +350,18 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     );
   };
 
-  const toggleFlashSaleProduct = async (product: any, nextValue: boolean) => {
+  const toggleFlashSaleVariant = async (variant: any, product: any, nextValue: boolean) => {
     try {
-      setFlashSaleUpdatingId(product.id);
-      const res = await fetch(`${API_BASE}/api/admin/products/${product.id}/flash-sale`, {
+      setFlashSaleUpdatingId(variant.id);
+      const res = await fetch(`${API_BASE}/api/admin/variants/${variant.id}/flash-sale`, {
         method: 'PATCH',
         headers: getAuthHeader(),
         body: JSON.stringify({ isFlashSale: nextValue }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể cập nhật Flash Sale');
-      showToast(nextValue ? `Đã thêm “${product.name}” vào Flash Sale` : `Đã gỡ “${product.name}” khỏi Flash Sale`);
+      const detail = [variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ');
+      showToast(nextValue ? `Đã thêm “${product.name} — ${detail}” vào Flash Sale` : `Đã gỡ “${product.name} — ${detail}” khỏi Flash Sale`);
       await onRefresh();
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Không thể cập nhật Flash Sale', 'error');
@@ -635,7 +636,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           categoryName: newProdCategory,
           subSeriesName: selectedSubSeries,
           isFeatured,
-          isFlashSale,
           isHot,
           variants: variantsList,
         }),
@@ -645,7 +645,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         setIsOpenAddProductModal(false);
         setNewProdName('');
         setVariantsList([
-          { storage: '128GB', color: 'Titan Tự Nhiên', origin: 'Việt Nam', price: 29990000, originalPrice: 31990000, stock: 20, images: [] },
+          { storage: '128GB', color: 'Titan Tự Nhiên', origin: 'Việt Nam', price: 29990000, originalPrice: 31990000, stock: 20, isFlashSale: false, images: [] },
         ]);
         showToast('Đã đăng sản phẩm thành công!');
         onRefresh();
@@ -1019,9 +1019,9 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                   <span className="bg-red-50 text-[#d70018] text-[10px] font-bold px-2 py-0.5 rounded border border-red-200">
                                     {product.category?.name || 'Apple'}
                                   </span>
-                                  {product.isFlashSale && (
+                                  {variants.some((variant) => variant.isFlashSale) && (
                                     <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-200 flex items-center gap-0.5">
-                                      <Zap size={10} /> Flash Sale
+                                      <Zap size={10} /> {variants.filter((variant) => variant.isFlashSale).length} cấu hình Flash Sale
                                     </span>
                                   )}
                                   {product.isFeatured && (
@@ -1040,27 +1040,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <label
-                                onClick={(event) => event.stopPropagation()}
-                                className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition ${
-                                  product.isFlashSale
-                                    ? 'border-amber-300 bg-amber-50 text-amber-700'
-                                    : 'border-gray-300 bg-white text-gray-600 hover:border-amber-300 hover:text-amber-700'
-                                }`}
-                                title="Hiển thị sản phẩm trong bảng Flash Sale trang chủ"
-                              >
-                                {flashSaleUpdatingId === product.id ? (
-                                  <Loader2 size={13} className="animate-spin" />
-                                ) : (
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(product.isFlashSale)}
-                                    onChange={(event) => toggleFlashSaleProduct(product, event.target.checked)}
-                                    className="accent-amber-600"
-                                  />
-                                )}
-                                <Zap size={12} /> Flash Sale
-                              </label>
                               <button
                                 onClick={() => setAddingVariantProduct(product)}
                                 className="bg-white hover:bg-red-50 hover:text-[#d70018] text-gray-700 border border-gray-300 hover:border-[#d70018] px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -1200,6 +1179,26 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
 
                                           {/* CỘT 9: THAO TÁC */}
                                           <td className="py-3 px-4 text-right space-x-1">
+                                            <label
+                                              className={`mr-1 inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1.5 text-[10px] font-bold transition ${
+                                                v.isFlashSale
+                                                  ? 'border-amber-300 bg-amber-50 text-amber-700'
+                                                  : 'border-gray-300 bg-white text-gray-500 hover:border-amber-300 hover:text-amber-700'
+                                              }`}
+                                              title="Chọn đúng cấu hình này lên Flash Sale"
+                                            >
+                                              {flashSaleUpdatingId === v.id ? (
+                                                <Loader2 size={12} className="animate-spin" />
+                                              ) : (
+                                                <input
+                                                  type="checkbox"
+                                                  checked={Boolean(v.isFlashSale)}
+                                                  onChange={(event) => toggleFlashSaleVariant(v, product, event.target.checked)}
+                                                  className="h-3.5 w-3.5 accent-amber-600"
+                                                />
+                                              )}
+                                              <Zap size={11} /> Flash Sale
+                                            </label>
                                             <button
                                               onClick={() => setEditingVariant({ ...v, tags: getProductTags(product), images: v.images || [], origin: v.origin || 'Việt Nam' })}
                                               className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
@@ -1675,15 +1674,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                     <label className="flex items-center gap-1 cursor-pointer font-semibold text-gray-700 text-xs">
                       <input
                         type="checkbox"
-                        checked={isFlashSale}
-                        onChange={(e) => setIsFlashSale(e.target.checked)}
-                        className="accent-[#d70018]"
-                      />
-                      Flash Sale
-                    </label>
-                    <label className="flex items-center gap-1 cursor-pointer font-semibold text-gray-700 text-xs">
-                      <input
-                        type="checkbox"
                         checked={isHot}
                         onChange={(e) => setIsHot(e.target.checked)}
                         className="accent-[#d70018]"
@@ -1702,7 +1692,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 {variantsList.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-gray-50 border rounded-lg grid grid-cols-1 md:grid-cols-5 gap-2 items-center"
+                    className="p-3 bg-gray-50 border rounded-lg grid grid-cols-1 md:grid-cols-6 gap-2 items-center"
                   >
                     <select
                       value={item.storage}
@@ -1767,6 +1757,19 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                       }}
                       className="border p-1.5 rounded bg-white text-center font-bold"
                     />
+                    <label className={`flex cursor-pointer items-center justify-center gap-1 rounded border px-2 py-2 text-[11px] font-bold ${item.isFlashSale ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-gray-300 bg-white text-gray-500'}`}>
+                      <input
+                        type="checkbox"
+                        checked={item.isFlashSale}
+                        onChange={(e) => {
+                          const up = [...variantsList];
+                          up[idx].isFlashSale = e.target.checked;
+                          setVariantsList(up);
+                        }}
+                        className="accent-amber-600"
+                      />
+                      <Zap size={11} /> Flash Sale
+                    </label>
                   </div>
                 ))}
               </div>

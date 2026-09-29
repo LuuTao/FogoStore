@@ -1,14 +1,7 @@
 import React from 'react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
-import { HeroSection } from '@/components/home/HeroSection';
-import { CategoryGrid } from '@/components/home/CategoryGrid';
-import { FeaturedProductsSection } from '@/components/home/FeaturedProductsSection';
-import { IPhoneShowcaseSection } from '@/components/home/IPhoneShowcaseSection';
-import { IPadShowcaseSection } from '@/components/home/IPadShowcaseSection';
-import { MacBookShowcaseSection } from '@/components/home/MacBookShowcaseSection';
-import { LatestNewsSection } from '@/components/home/LatestNewsSection';
-import { CommitmentSection } from '@/components/home/CommitmentSection';
+import { HomeContentSections } from '@/components/home/HomeContentSections';
 import { Footer } from '@/components/layout/Footer';
 
 export default function HomePage() {
@@ -24,32 +17,8 @@ export default function HomePage() {
         <Navbar />
       </div>
 
-      {/* ================= NỘI DUNG TRANG CHỦ ================= */}
-      {/* 3. Hero Banner tràn viền & 2 Banner phụ trượt đôi */}
-      <HeroSection />
-
-      {/* 5. Khối Sản phẩm Flash Sale */}
-      <FeaturedProductsSection />
-
-      {/* 4. Dải ưu đãi tiện ích & Bảng icon danh mục */}
-      <CategoryGrid />
-
-      {/* 6. Khối iPhone */}
-      <IPhoneShowcaseSection />
-
-      {/* 7. Khối iPad */}
-      <IPadShowcaseSection />
-
-      {/* 8. Khối MacBook */}
-      <MacBookShowcaseSection />
-      
-      {/* 10. Khối Cam kết uy tín */}
-      <CommitmentSection />
-
-      {/* 9. Khối Tin tức */}
-      <LatestNewsSection />
-
-      
+      {/* Nội dung có thể đổi thứ tự tại Admin > Quản lý Home */}
+      <HomeContentSections />
 
       {/* 11. Chân trang (Footer) */}
       <Footer />

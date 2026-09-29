@@ -78,6 +78,7 @@ export default function FlashSaleAdminPage() {
     ENDED: 'Đã kết thúc',
     INACTIVE: 'Đang tắt',
   };
+  const selectedVariantCount = selectedProducts.reduce((total, product) => total + (Array.isArray(product.variants) ? product.variants.length : 0), 0);
 
   if (loading) return <div className="flex items-center justify-center p-20 text-sm font-bold text-gray-500"><Loader2 className="mr-2 animate-spin text-[#d70018]" /> Đang tải Flash Sale...</div>;
 
@@ -93,7 +94,7 @@ export default function FlashSaleAdminPage() {
 
         {message && <div className={`rounded-xl border px-4 py-3 text-sm font-bold ${message.type === 'success' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-[#d70018]'}`}>{message.text}</div>}
 
-        {isActive && selectedProducts.length === 0 && (
+        {isActive && selectedVariantCount === 0 && (
           <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-black">Flash Sale đang chạy nhưng chưa có sản phẩm</p>
@@ -116,9 +117,14 @@ export default function FlashSaleAdminPage() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between"><div><h2 className="font-black text-gray-900">Sản phẩm đang được chọn</h2><p className="text-xs text-gray-500">Tick hoặc bỏ tick tại trang Quản lý Tồn kho.</p></div><span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-[#d70018]">{selectedProducts.length} sản phẩm</span></div>
+          <div className="flex items-center justify-between"><div><h2 className="font-black text-gray-900">Cấu hình đang được chọn</h2><p className="text-xs text-gray-500">Tick hoặc bỏ tick từng màu/dung lượng tại trang Quản lý Tồn kho.</p></div><span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-[#d70018]">{selectedVariantCount} cấu hình</span></div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {selectedProducts.length > 0 ? selectedProducts.map((product) => <div key={product.id} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700">{product.name}</div>) : <p className="text-sm text-gray-400">Chưa có sản phẩm nào được chọn.</p>}
+            {selectedVariantCount > 0 ? selectedProducts.flatMap((product) => (product.variants || []).map((variant: any) => (
+              <div key={variant.id} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700">
+                <p className="font-black">{product.name}</p>
+                <p className="mt-1 text-[11px] text-gray-500">{[variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ')}</p>
+              </div>
+            ))) : <p className="text-sm text-gray-400">Chưa có cấu hình sản phẩm nào được chọn.</p>}
           </div>
         </div>
       </div>
