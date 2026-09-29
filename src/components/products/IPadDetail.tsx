@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ProductCardTags } from '@/components/common/ProductCardExtras';
 import { getProductTags } from '@/lib/productTags';
 import DOMPurify from 'dompurify';
+import { ProductFaq } from '@/components/products/ProductFaq';
 import {
   ChevronLeft,
   ChevronRight,
@@ -965,6 +966,7 @@ export default function IPadDetail({
                     )}
                   </button>
                 </div>
+                <ProductFaq />
               </div>
             )}
 

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import DOMPurify from 'dompurify';
+import { ProductFaq } from '@/components/products/ProductFaq';
 import {
   ChevronLeft,
   ChevronRight,
@@ -941,6 +942,7 @@ export default function MacBookDetail({
                     )}
                   </button>
                 </div>
+                <ProductFaq />
               </div>
             )}
 

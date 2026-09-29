@@ -19,6 +19,7 @@ import {
   LogOut,
   X,
   ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
 
 interface Props {
@@ -40,6 +41,7 @@ const MENU_ITEMS = [
   { href: '/admin/menu', label: 'Quản Lý Menu', icon: MenuIcon },
   { href: '/admin/manage-seo', label: 'Quản Lý SEO', icon: Search },
   { href: '/admin/manage-specifications', label: 'Thông Số Kỹ Thuật', icon: SlidersHorizontal },
+  { href: '/admin/faq-san-pham', label: 'FAQ Sản Phẩm', icon: HelpCircle },
   { href: '/admin/bao-mat', label: 'Bảo Mật & Log Nguy Cơ', icon: ShieldAlert },
 ];
 
