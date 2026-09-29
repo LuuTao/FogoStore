@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Zap,
   LayoutDashboard,
+  ClipboardList,
 } from 'lucide-react';
 
 interface Props {
@@ -36,6 +37,7 @@ const MENU_ITEMS = [
   { href: '/admin/ton-kho', label: 'Quản Lý Tồn Kho', icon: Layers },
   { href: '/admin/flash-sale', label: 'Quản Lý Flash Sale', icon: Zap },
   { href: '/admin/home', label: 'Quản Lý Trang Home', icon: LayoutDashboard },
+  { href: '/admin/nhat-ky-hoat-dong', label: 'Nhật Ký Hoạt Động', icon: ClipboardList },
   { href: '/admin/tag-san-pham', label: 'Quản Lý Tag Sản Phẩm', icon: Layers },
   { href: '/admin/nhap-excel', label: 'Nhập Sản Phẩm Excel', icon: FileSpreadsheet },
   { href: '/admin/nhap-bai-viet-seo', label: 'Nhập Bài Viết SEO', icon: FileText },

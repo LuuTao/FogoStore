@@ -219,6 +219,13 @@ export default function OrderDetailPage() {
 
   const renderStatusBadge = (st: string) => {
     switch (st?.toUpperCase()) {
+      case 'PENDING_PAYMENT':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-sm font-bold text-amber-700">
+            <Clock size={16} />
+            Đang giữ hàng — chờ thanh toán
+          </span>
+        );
       case 'CONFIRMED':
       case 'PROCESSING':
         return (
@@ -256,6 +263,7 @@ export default function OrderDetailPage() {
 
   const isCancelled = order?.orderStatus === 'CANCELLED';
   const isPaid = order?.paymentStatus === 'PAID';
+  const isPaymentExpired = order?.paymentStatus === 'EXPIRED';
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col justify-between select-none relative text-gray-800">
@@ -291,11 +299,13 @@ export default function OrderDetailPage() {
 
                 <div className="space-y-1.5">
                   <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
-                    {isCancelled ? 'Đơn Hàng Đã Bị Hủy' : 'Đặt Hàng Thành Công!'}
+                    {isPaymentExpired ? 'Phiên Thanh Toán Đã Hết Hạn' : isCancelled ? 'Đơn Hàng Đã Bị Hủy' : 'Đặt Hàng Thành Công!'}
                   </h1>
                   <p className="text-sm sm:text-base text-gray-500 max-w-lg mx-auto">
-                    {isCancelled 
-                      ? 'Đơn hàng này đã được hủy theo yêu cầu của bạn.' 
+                    {isPaymentExpired
+                      ? 'Thời gian giữ hàng đã kết thúc và sản phẩm đã được tự động trả về tồn kho.'
+                      : isCancelled
+                      ? 'Đơn hàng này đã được hủy và sản phẩm đã được trả về tồn kho.'
                       : 'Cảm ơn bạn đã tin tưởng mua sắm tại Fogo Store. Đơn hàng của bạn đã sẵn sàng xử lý!'}
                   </p>
                 </div>
@@ -664,6 +674,7 @@ export default function OrderDetailPage() {
         isOpen={isQrOpen}
         orderCode={orderCode}
         totalAmount={order?.totalAmount || 0}
+        reservationExpiresAt={order?.stockReservedUntil || null}
         onClose={() => setIsQrOpen(false)}
         onSuccess={handleConfirmQrPaid}
       />

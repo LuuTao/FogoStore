@@ -17,6 +17,7 @@ interface QrPaymentModalProps {
   isOpen: boolean;
   orderCode: string;
   totalAmount: number;
+  reservationExpiresAt?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -35,12 +36,14 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
   isOpen,
   orderCode,
   totalAmount,
+  reservationExpiresAt,
   onClose,
   onSuccess,
 }) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isPaid, setIsPaid] = useState<boolean>(false);
-  const [timeLeft, setTimeLeft] = useState<number>(600); // Đếm ngược 10 phút (600 giây)
+  const [isExpired, setIsExpired] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<number>(900);
 
   // Cú pháp nội dung chuyển khoản chuẩn hóa cho hệ thống tự động gạch nợ
   const transferContent = orderCode.trim();
@@ -59,24 +62,30 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
   // Đếm ngược thời gian phiên giao dịch
   useEffect(() => {
     if (!isOpen || isPaid) return;
-    setTimeLeft(600);
+    const expiresAt = reservationExpiresAt ? new Date(reservationExpiresAt).getTime() : Date.now() + 900_000;
+    const getRemainingSeconds = () => Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+    const frame = window.requestAnimationFrame(() => {
+      setIsExpired(false);
+      setTimeLeft(getRemainingSeconds());
+    });
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const remaining = getRemainingSeconds();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [isOpen, isPaid]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      clearInterval(timer);
+    };
+  }, [isOpen, isPaid, reservationExpiresAt]);
 
   // Polling tự động kiểm tra trạng thái thanh toán từ backend mỗi 3 giây
   useEffect(() => {
-    if (!isOpen || !orderCode || isPaid) return;
+    if (!isOpen || !orderCode || isPaid || isExpired) return;
 
     const checkStatusInterval = setInterval(async () => {
       try {
@@ -94,6 +103,10 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
             setTimeout(() => {
               onSuccess();
             }, 1600);
+          } else if (json.success && (json.data?.paymentStatus === 'EXPIRED' || json.data?.stockReservationStatus === 'RELEASED')) {
+            setIsExpired(true);
+            setTimeLeft(0);
+            clearInterval(checkStatusInterval);
           }
         }
       } catch {
@@ -102,7 +115,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
     }, 3000);
 
     return () => clearInterval(checkStatusInterval);
-  }, [isOpen, orderCode, isPaid, onSuccess]);
+  }, [isOpen, orderCode, isPaid, isExpired, onSuccess]);
 
   if (!isOpen) return null;
 
@@ -131,6 +144,13 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
               <p className="text-gray-500 text-xs">
                 Hệ thống đang chuẩn bị đơn hàng và chuyển hướng ngay...
               </p>
+            </div>
+          ) : isExpired ? (
+            <div className="space-y-3 py-8 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600"><AlertCircle size={32} /></div>
+              <h3 className="text-base font-black text-gray-900">PHIÊN GIỮ HÀNG ĐÃ HẾT HẠN</h3>
+              <p className="text-xs leading-5 text-gray-500">Sản phẩm đã được trả về tồn kho. Vui lòng tạo đơn mới để nhận mã QR và giữ hàng lại.</p>
+              <button type="button" onClick={onClose} className="rounded-lg bg-[#d70018] px-5 py-2.5 text-xs font-black text-white">Đóng</button>
             </div>
           ) : (
             <>

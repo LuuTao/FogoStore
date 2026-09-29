@@ -28,6 +28,12 @@ import {
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export const STATUS_LABELS: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  PENDING_PAYMENT: {
+    label: 'Đang giữ hàng — chờ thanh toán',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    border: 'border-amber-200',
+  },
   CONFIRMED: {
     label: 'Đã xác nhận',
     bg: 'bg-blue-50',
@@ -631,6 +637,8 @@ export default function AdminOrdersPage() {
                   const rawMethod = (ord.paymentMethod || '').toLowerCase();
                   const isQrMethod = ['vnpay-qr', 'momo', 'qr', 'bank'].includes(rawMethod);
                   const isPaid = ord.paymentStatus === 'PAID';
+                  const isExpired = ord.paymentStatus === 'EXPIRED';
+                  const isHoldingStock = ord.stockReservationStatus === 'HELD' && ord.stockReservedUntil;
 
                   return (
                     <tr key={ord.id} className={`hover:bg-gray-50/70 transition-colors ${isSelected ? 'bg-red-50/30' : ''}`}>
@@ -712,11 +720,14 @@ export default function AdminOrdersPage() {
                           className={`text-[10px] font-bold px-2 py-0.5 rounded mt-1 inline-block ${
                             isPaid
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : isExpired
+                              ? 'bg-red-50 text-red-700 border border-red-200'
                               : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}
                         >
-                          {isPaid ? 'Đã chuyển tiền' : 'Chưa thanh toán'}
+                          {isPaid ? 'Đã chuyển tiền' : isExpired ? 'Đã hết hạn' : 'Chưa thanh toán'}
                         </span>
+                        {isHoldingStock && <span className="mt-1 block text-[9px] font-bold text-amber-600">Giữ kho đến {new Date(ord.stockReservedUntil).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>}
                       </td>
 
                       <td className="py-3.5 px-4 text-center">

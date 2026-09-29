@@ -244,6 +244,14 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     return Array.from(map.values());
   }, [inventory]);
 
+  const stockAlerts = useMemo(() => {
+    const low = inventory
+      .filter((variant) => Number(variant.stock || 0) > 0 && Number(variant.stock || 0) <= 5)
+      .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
+    const out = inventory.filter((variant) => Number(variant.stock || 0) <= 0);
+    return { low, out };
+  }, [inventory]);
+
   const groupedBySeries = useMemo(() => {
     let filtered = groupedProducts.filter(({ product, variants }) => {
       const catSlug = (product.category?.slug || '').toLowerCase();
@@ -288,7 +296,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       }
 
       if (stockStatusFilter === 'LOW') {
-        if (!variants.some((v) => v.stock <= 5)) return false;
+        if (!variants.some((v) => v.stock > 0 && v.stock <= 5)) return false;
       } else if (stockStatusFilter === 'IN_STOCK') {
         if (!variants.every((v) => v.stock > 5)) return false;
       } else if (stockStatusFilter === 'OUT_OF_STOCK') {
@@ -749,6 +757,19 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           </button>
         </div>
       </div>
+
+      {(stockAlerts.low.length > 0 || stockAlerts.out.length > 0) && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-black text-amber-900"><AlertTriangle size={18} /> Cảnh báo tồn kho</h3>
+              <p className="mt-1 text-xs text-amber-800"><strong>{stockAlerts.low.length}</strong> cấu hình sắp hết (còn từ 1–5 máy) · <strong>{stockAlerts.out.length}</strong> cấu hình đã hết hàng.</p>
+              {stockAlerts.low.length > 0 && <p className="mt-2 line-clamp-2 text-[11px] text-amber-700">Sắp hết: {stockAlerts.low.slice(0, 5).map((variant) => `${variant.product?.name || 'Sản phẩm'} ${variant.storage || ''} ${variant.color || ''} (${variant.stock})`).join(' · ')}</p>}
+            </div>
+            <button type="button" onClick={() => setStockStatusFilter('LOW')} className="shrink-0 rounded-lg bg-amber-500 px-4 py-2 text-xs font-black text-white hover:bg-amber-600">Xem sản phẩm sắp hết</button>
+          </div>
+        </div>
+      )}
 
       {/* THANH THAO TÁC HÀNG LOẠT */}
       {selectedProductIds.length > 0 && (

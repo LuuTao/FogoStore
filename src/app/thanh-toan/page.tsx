@@ -95,7 +95,7 @@ const VIETNAM_STREAMLINED_LOCATIONS: Record<string, string[]> = {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, updateQuantity, removeItem, clearCart, totalPrice } = useCart();
+  const { cartItems, updateQuantity, removeFromCart: removeItem, clearCart, totalPrice } = useCart();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -114,6 +114,7 @@ export default function CheckoutPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [createdOrderCode, setCreatedOrderCode] = useState('');
   const [createdTotalAmount, setCreatedTotalAmount] = useState(0);
+  const [createdReservationExpiresAt, setCreatedReservationExpiresAt] = useState<string | null>(null);
 
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'store'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<string>('cod');
@@ -257,13 +258,13 @@ export default function CheckoutPage() {
           paymentMethod,
           items: cartItems.map((item) => ({
             id: item.id,
-            variantId: item.variantId || item.id,
-            name: item.name || item.productName,
+            variantId: item.id,
+            name: item.name,
             storage: item.storage || 'Tiêu chuẩn',
             color: item.color || 'Mặc định',
             price: Number(item.price || 0),
             quantity: Number(item.quantity || 1),
-            imageUrl: item.imageUrl || item.image || '',
+            imageUrl: item.imageUrl || '',
           })),
           subTotal: totalPrice,
           totalAmount: finalPrice,
@@ -301,6 +302,7 @@ export default function CheckoutPage() {
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
         setCreatedOrderCode(orderCode);
         setCreatedTotalAmount(finalPrice);
+        setCreatedReservationExpiresAt(result.data?.stockReservedUntil || null);
         setIsQrModalOpen(true);
       } else {
         setTimeout(() => {
@@ -871,6 +873,7 @@ export default function CheckoutPage() {
         isOpen={isQrModalOpen}
         orderCode={createdOrderCode}
         totalAmount={createdTotalAmount}
+        reservationExpiresAt={createdReservationExpiresAt}
         onClose={() => setIsQrModalOpen(false)}
         onSuccess={handleConfirmQrSuccess}
       />
