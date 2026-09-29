@@ -604,9 +604,9 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className="hidden sm:flex w-full h-10 md:h-11 overflow-hidden bg-[#d70018] text-white items-center">
+        <div className="hidden sm:flex w-full h-[clamp(28px,2.7vw,44px)] overflow-hidden bg-[#d70018] text-white items-center">
           <div className="w-1/2 shrink-0 h-full bg-white text-[#d70018] flex items-center justify-center border-r border-red-100 px-3">
-            <span className="whitespace-nowrap text-[26px] md:text-[29px] lg:text-[31px] font-extrabold tracking-tight leading-none">
+            <span className="whitespace-nowrap text-[clamp(16px,1.9vw,31px)] font-extrabold tracking-tight leading-none">
               THE BEST APPLE RETAIL STORE IN HCM
             </span>
           </div>
