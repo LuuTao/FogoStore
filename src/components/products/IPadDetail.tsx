@@ -114,7 +114,8 @@ export default function IPadDetail({
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
 
-    const firstValidVar = product.variants.find((v: any) => {
+    const requestedVariant = searchParams.get('proid');
+    const firstValidVar = (requestedVariant && product.variants.find((v: any) => String(v.id) === requestedVariant)) || product.variants.find((v: any) => {
       const st = (v.storage || '').trim().toUpperCase();
       return st && st !== 'TIÊU CHUẨN';
     }) || product.variants[0];
@@ -189,7 +190,7 @@ export default function IPadDetail({
     } catch (e) {
       console.warn('Lỗi đọc recent viewed:', e);
     }
-  }, [product, urlStorage, currentSlug]);
+  }, [product, urlStorage, currentSlug, searchParams]);
 
   const storageList = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return IPAD_STORAGES;
@@ -251,9 +252,14 @@ export default function IPadDetail({
       if (exact) return exact;
     }
 
-    const sample = product.variants.find(
-      (v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()
-    );
+    const sample = product.variants.find((v: any) => {
+      const version = String(v.version || v.connectivity || v.network || '').trim().toLowerCase();
+      const origin = String(v.origin || 'Việt Nam').trim().toLowerCase();
+      return (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
+        (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase() &&
+        (!selectedVersion || !version || version === selectedVersion.trim().toLowerCase()) &&
+        (!selectedOrigin || origin === selectedOrigin.trim().toLowerCase());
+    }) || product.variants.find((v: any) => (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase());
 
     const samplePrice = sample?.price || product.variants[0]?.price || 0;
 
@@ -315,6 +321,7 @@ export default function IPadDetail({
   const sizeList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean)));
   const currentOrigin = currentVariant?.origin || selectedOrigin || 'Việt Nam';
   const currentVersion = String(currentVariant?.version || currentVariant?.connectivity || currentVariant?.network || selectedVersion || 'Wifi');
+  const hasVersionVariants = product?.variants?.some((variant: any) => variant.version || variant.connectivity || variant.network) || false;
   const updateVariantUrl = (variant: any) => {
     if (typeof window === 'undefined' || !variant?.id) return;
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
@@ -393,7 +400,7 @@ export default function IPadDetail({
   };
 
   const cleanProductName = product?.name
-    ? product.name.replace(/\b(64GB|128GB|256GB|512GB|1TB|2TB|Tiêu chuẩn)\b/gi, '').trim()
+    ? product.name.replace(/\b(64GB|128GB|256GB|512GB|1TB|2TB|Tiêu chuẩn|Wi-?Fi|5G(?:\s*\(Cellular\))?)\b/gi, '').trim()
     : 'iPad';
 
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
@@ -523,7 +530,7 @@ export default function IPadDetail({
             <div className="lg:col-span-5 space-y-4 w-full">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
-                  {cleanProductName} {selectedStorage}
+                  {cleanProductName}{hasVersionVariants ? ` ${currentVersion}` : ''} {selectedStorage}
                 </h1>
                 <ProductCardTags name={product.name} tags={getProductTags(product)} align="left" size="large" />
               </div>
