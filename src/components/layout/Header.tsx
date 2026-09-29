@@ -582,24 +582,31 @@ export const Header: React.FC = () => {
   return (
     <>
       <header className="w-full bg-white select-none relative z-40 border-b border-gray-100 shadow-xs">
-        <div className="sm:hidden w-full h-7 overflow-hidden bg-[#d70018] text-white flex items-center">
-          <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] font-bold">
-            {[0, 1, 2, 3].map((copy) => (
-              <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
-                {marqueeItems.map((item) => (
-                  <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">
-                    <span aria-hidden="true">{item.icon}</span>
-                    <span>{item.text}</span>
-                  </span>
-                ))}
-              </div>
-            ))}
+        <div className="sm:hidden w-full">
+          <div className="h-7 bg-white text-[#d70018] flex items-center justify-center px-2 border-b border-red-100">
+            <span className="whitespace-nowrap text-[13px] font-extrabold tracking-tight">
+              THE BEST APPLE RETAIL STORE IN HCM
+            </span>
+          </div>
+          <div className="h-7 overflow-hidden bg-[#d70018] text-white flex items-center">
+            <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] font-bold">
+              {[0, 1, 2, 3].map((copy) => (
+                <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
+                  {marqueeItems.map((item) => (
+                    <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">
+                      <span aria-hidden="true">{item.icon}</span>
+                      <span>{item.text}</span>
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="hidden sm:flex w-full h-7 overflow-hidden bg-[#d70018] text-white items-center">
-          <div className="w-1/2 shrink-0 h-full flex items-center justify-center border-r border-white/25 px-3">
-            <span className="whitespace-nowrap text-[11px] md:text-xs lg:text-[13px] font-extrabold tracking-wide">
+          <div className="w-1/2 shrink-0 h-full bg-white text-[#d70018] flex items-center justify-center border-r border-red-100 px-3">
+            <span className="whitespace-nowrap text-[14px] md:text-[15px] lg:text-[17px] font-extrabold tracking-tight">
               THE BEST APPLE RETAIL STORE IN HCM
             </span>
           </div>
