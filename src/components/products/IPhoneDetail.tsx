@@ -254,6 +254,12 @@ export default function IPhoneDetail({
     return Array.from(map.values());
   }, [product, selectedStorage]);
 
+  // Mỗi màu của cùng dung lượng là một ảnh trong thư viện. Ví dụ bản 2TB có
+  // 4 màu thì luôn có 4 thumbnail để khách xem và chọn trực tiếp.
+  const colorImageGallery = useMemo(() => currentColorOptions
+    .filter((option) => Boolean(option.image))
+    .map((option) => ({ color: option.color, image: option.image })), [currentColorOptions]);
+
   // 5. BIẾN THỂ ĐANG ĐƯỢC CHỌN HIỆN TẠI
   const currentVariant = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return null;
@@ -275,8 +281,12 @@ export default function IPhoneDetail({
     return sample || product.variants[0];
   }, [product, selectedStorage, selectedColor, selectedOrigin]);
 
-  // 6. DANH SÁCH ẢNH CỦA MÀU ĐANG CHỌN (KHÔNG BỊ LẶP ẢNH CÙNG MÀU)
+  // 6. DANH SÁCH ẢNH: ƯU TIÊN ẢNH ĐẠI DIỆN CỦA TẤT CẢ MÀU CÙNG DUNG LƯỢNG
   const imagesList: string[] = useMemo(() => {
+    if (colorImageGallery.length > 0) {
+      return colorImageGallery.map((item) => item.image);
+    }
+
     const list: string[] = [];
 
     if (currentVariant) {
@@ -303,9 +313,15 @@ export default function IPhoneDetail({
     }
 
     return list.length > 0 ? list : ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600'];
-  }, [currentVariant, product]);
+  }, [colorImageGallery, currentVariant, product]);
 
-  const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
+  const selectedColorImageIndex = colorImageGallery.findIndex(
+    (item) => item.color.trim().toLowerCase() === selectedColor.trim().toLowerCase()
+  );
+  const activeImageIndex = selectedColorImageIndex >= 0
+    ? selectedColorImageIndex
+    : Math.min(currentImageIndex, Math.max(0, imagesList.length - 1));
+  const displayImage = formatImg(imagesList[activeImageIndex] || imagesList[0]);
 
   const isOutOfStock = useMemo(() => {
     if (!currentVariant) return true;
@@ -338,11 +354,17 @@ export default function IPhoneDetail({
 
   // SỰ KIỆN: BẤM CHỌN MÀU SẮC (GIỮ NGUYÊN DUNG LƯỢNG, CHỈ ĐỔI PROID)
   const handleSelectColor = (colorName: string) => {
-    if (selectedColor.toLowerCase() === colorName.toLowerCase()) return;
+    const galleryIndex = colorImageGallery.findIndex(
+      (item) => item.color.trim().toLowerCase() === colorName.trim().toLowerCase()
+    );
+    if (selectedColor.toLowerCase() === colorName.toLowerCase()) {
+      if (galleryIndex >= 0) setCurrentImageIndex(galleryIndex);
+      return;
+    }
 
     setIsImageTransitioning(true);
     setSelectedColor(colorName);
-    setCurrentImageIndex(0);
+    setCurrentImageIndex(galleryIndex >= 0 ? galleryIndex : 0);
 
     setTimeout(() => {
       setIsImageTransitioning(false);
@@ -465,13 +487,23 @@ export default function IPhoneDetail({
                 {imagesList.length > 1 && (
                   <>
                     <button
-                      onClick={() => setCurrentImageIndex((p) => (p - 1 + imagesList.length) % imagesList.length)}
+                      onClick={() => {
+                        const nextIndex = (activeImageIndex - 1 + imagesList.length) % imagesList.length;
+                        const galleryItem = colorImageGallery[nextIndex];
+                        if (galleryItem) handleSelectColor(galleryItem.color);
+                        else setCurrentImageIndex(nextIndex);
+                      }}
                       className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
                       <ChevronLeft size={18} />
                     </button>
                     <button
-                      onClick={() => setCurrentImageIndex((p) => (p + 1) % imagesList.length)}
+                      onClick={() => {
+                        const nextIndex = (activeImageIndex + 1) % imagesList.length;
+                        const galleryItem = colorImageGallery[nextIndex];
+                        if (galleryItem) handleSelectColor(galleryItem.color);
+                        else setCurrentImageIndex(nextIndex);
+                      }}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
                       <ChevronRight size={18} />
@@ -490,15 +522,21 @@ export default function IPhoneDetail({
                   <button
                     key={idx}
                     onClick={() => {
-                      setIsImageTransitioning(true);
-                      setCurrentImageIndex(idx);
-                      setTimeout(() => setIsImageTransitioning(false), 150);
+                      const galleryItem = colorImageGallery[idx];
+                      if (galleryItem) {
+                        handleSelectColor(galleryItem.color);
+                      } else {
+                        setIsImageTransitioning(true);
+                        setCurrentImageIndex(idx);
+                        setTimeout(() => setIsImageTransitioning(false), 150);
+                      }
                     }}
+                    title={colorImageGallery[idx] ? `Màu ${colorImageGallery[idx].color}` : 'Xem ảnh sản phẩm'}
                     className={`w-14 h-14 border rounded-xl p-0.5 bg-white shrink-0 cursor-pointer transition-all ${
-                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
+                      activeImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <img src={formatImg(img)} alt="" className="w-full h-full object-contain" />
+                    <img src={formatImg(img)} alt={colorImageGallery[idx]?.color || ''} className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
