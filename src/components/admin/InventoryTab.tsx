@@ -1053,7 +1053,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                     <tr>
                                       <th className="py-2.5 px-4 text-center">ẢNH (&gt;1 ẢNH)</th>
                                       <th className="py-2.5 px-4">DUNG LƯỢNG / KÍCH THƯỚC</th>
-                                      {showVariantDetails && <th className="py-2.5 px-4">KÍCH THƯỚC / PHIÊN BẢN</th>}
+                                      {variants.some((variant) => variant.size || variant.version) && <th className="py-2.5 px-4">KÍCH THƯỚC / PHIÊN BẢN</th>}
                                       <th className="py-2.5 px-4">MÀU SẮC</th>
                                       <th className="py-2.5 px-4 text-center">XUẤT XỨ</th>
                                       <th className="py-2.5 px-4 text-right">GIÁ BÁN</th>
@@ -1066,7 +1066,6 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                   <tbody className="divide-y divide-gray-100">
                                     {variants.map((v) => {
                                       const isVn = (v.origin || '').toLowerCase().includes('việt nam') || (v.origin || '').toLowerCase().includes('vn');
-                                      const showVariantDetails = variants.some((variant) => variant.size || variant.version);
 
                                       return (
                                         <tr key={v.id} className="hover:bg-gray-50/80 transition-colors">
@@ -1096,7 +1095,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                           <td className="py-3 px-4 font-extrabold text-gray-900">
                                             {v.storage || 'Tiêu chuẩn'}
                                           </td>
-                                          {showVariantDetails && <td className="py-3 px-4 font-semibold text-gray-700">{[v.size, v.version].filter(Boolean).join(' · ') || '—'}</td>}
+                                          {variants.some((variant) => variant.size || variant.version) && <td className="py-3 px-4 font-semibold text-gray-700">{[v.size, v.version].filter(Boolean).join(' · ') || '—'}</td>}
 
                                           {/* CỘT 3: MÀU SẮC THỰC TẾ (Lavender, Sage, Black, White...) */}
                                           <td className="py-3 px-4">

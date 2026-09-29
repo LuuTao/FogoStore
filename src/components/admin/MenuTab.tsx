@@ -258,7 +258,7 @@ export default function MenuTab() {
               name: inputTitle,
               href: inputHref,
               isNew: inputIsNew,
-            };
+            });
           }
         }
       }
