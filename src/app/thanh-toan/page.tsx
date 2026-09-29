@@ -294,12 +294,15 @@ export default function CheckoutPage() {
           : `Đặt hàng thành công! Mã đơn: ${orderCode}`,
       });
 
+      // Đơn đã được backend tạo thành công và tồn kho đã được giữ/trừ trong transaction.
+      // Xóa giỏ ngay ở thời điểm này, kể cả với đơn QR đang chờ thanh toán.
+      await clearCart();
+
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
         setCreatedOrderCode(orderCode);
         setCreatedTotalAmount(finalPrice);
         setIsQrModalOpen(true);
       } else {
-        clearCart();
         setTimeout(() => {
           router.push(`/tra-cuu-don-hang?code=${orderCode}`);
         }, 1200);
