@@ -229,10 +229,11 @@ export default function AdminOrdersPage() {
       const rawMethod = (currentOrder?.paymentMethod || '').toLowerCase();
       const isQrMethod = ['vnpay-qr', 'momo', 'qr', 'bank'].includes(rawMethod);
 
-      // Quy tắc thanh toán:
-      // - Chuyển khoản QR: Luôn là PAID
-      // - Tiền mặt (COD): Chỉ khi chọn Hoàn tất (COMPLETED) mới là PAID, còn lại là UNPAID
-      const expectedPaymentStatus = (isQrMethod || newStatus === 'COMPLETED') ? 'PAID' : 'UNPAID';
+      // QR/online chỉ được đánh dấu PAID sau khi hệ thống hoặc nhân viên xác nhận tiền.
+      // Việc đổi trạng thái giao hàng không tự xác nhận giao dịch ngân hàng.
+      const expectedPaymentStatus = isQrMethod
+        ? (currentOrder?.paymentStatus || 'PENDING')
+        : (newStatus === 'COMPLETED' ? 'PAID' : 'UNPAID');
 
       const token = getAdminToken();
       const headers: Record<string, string> = {
@@ -278,6 +279,29 @@ export default function AdminOrdersPage() {
       }
     } catch {
       showAlert('Không thể kết nối máy chủ!', 'error');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleConfirmPayment = async (orderId: string) => {
+    setUpdatingId(orderId);
+    try {
+      const token = getAdminToken();
+      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ paymentStatus: 'PAID' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Không thể xác nhận thanh toán');
+      setOrders((prev) => prev.map((order) => order.id === orderId ? { ...order, paymentStatus: 'PAID' } : order));
+      showAlert('Đã xác nhận đã nhận tiền cho đơn hàng.', 'success');
+    } catch (error: any) {
+      showAlert(error.message || 'Không thể xác nhận thanh toán.', 'error');
     } finally {
       setUpdatingId(null);
     }
@@ -626,12 +650,10 @@ export default function AdminOrdersPage() {
                   };
                   const isSelected = selectedIds.includes(ord.id);
 
-                  // QUY TẮC THANH TOÁN CHUẨN XÁC:
-                  // 1. Chuyển khoản QR: Luôn là Đã chuyển tiền (true)
-                  // 2. Tiền mặt (COD): Chỉ là Đã chuyển tiền khi trạng thái là Hoàn tất (COMPLETED) hoặc DB lưu PAID
+                  // Chỉ paymentStatus=PAID mới được hiển thị là đã thanh toán.
                   const rawMethod = (ord.paymentMethod || '').toLowerCase();
                   const isQrMethod = ['vnpay-qr', 'momo', 'qr', 'bank'].includes(rawMethod);
-                  const isPaid = isQrMethod || ord.orderStatus === 'COMPLETED' || ord.paymentStatus === 'PAID';
+                  const isPaid = ord.paymentStatus === 'PAID';
 
                   return (
                     <tr key={ord.id} className={`hover:bg-gray-50/70 transition-colors ${isSelected ? 'bg-red-50/30' : ''}`}>
@@ -718,6 +740,16 @@ export default function AdminOrdersPage() {
                         >
                           {isPaid ? 'Đã chuyển tiền' : 'Chưa thanh toán'}
                         </span>
+                        {isQrMethod && !isPaid && (
+                          <button
+                            type="button"
+                            disabled={updatingId === ord.id}
+                            onClick={() => handleConfirmPayment(ord.id)}
+                            className="mt-1 block mx-auto text-[10px] font-bold text-[#d70018] hover:underline disabled:opacity-50"
+                          >
+                            Xác nhận đã nhận tiền
+                          </button>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 text-center">

@@ -289,7 +289,9 @@ export default function CheckoutPage() {
       setToast({
         show: true,
         type: 'success',
-        message: `Đặt hàng thành công! Mã đơn: ${orderCode}`,
+        message: paymentMethod === 'vnpay-qr' || paymentMethod === 'momo'
+          ? `Đã tạo đơn ${orderCode}. Vui lòng thanh toán để hoàn tất đơn hàng.`
+          : `Đặt hàng thành công! Mã đơn: ${orderCode}`,
       });
 
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {

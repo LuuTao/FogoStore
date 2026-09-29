@@ -243,6 +243,8 @@ const DEFAULT_MARQUEE_ITEMS: MarqueeItem[] = [
   { id: 'marquee-4', icon: '✦', text: 'Hỗ trợ trả góp' },
 ];
 
+const SEARCH_HISTORY_KEY = 'fogo_search_history';
+
 const formatSearchImage = (url?: string | null): string => {
   if (!url) return '/placeholder.png';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('/')) {
@@ -262,6 +264,7 @@ export const Header: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [productsCache, setProductsCache] = useState<SearchProduct[]>([]);
@@ -271,6 +274,22 @@ export const Header: React.FC = () => {
 
   const { user, logout } = useAuth();
   const { totalQuantity } = useCart();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = localStorage.getItem(SEARCH_HISTORY_KEY);
+        if (!saved) return;
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setSearchHistory(parsed.filter((item): item is string => typeof item === 'string').slice(0, 10));
+        }
+      } catch {
+        // Bỏ qua dữ liệu lịch sử bị hỏng.
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const trendingProducts = useMemo<SearchItem[]>(() => {
     const wanted = [
@@ -543,9 +562,19 @@ export const Header: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchTerm.trim()) return;
+    const query = searchTerm.trim();
+    if (!query) return;
+
+    const nextHistory = [query, ...searchHistory.filter((item) => item.toLowerCase() !== query.toLowerCase())].slice(0, 10);
+    setSearchHistory(nextHistory);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(nextHistory));
     setShowDropdown(false);
-    router.push(`/tim-kiem?q=${encodeURIComponent(searchTerm.trim())}`);
+    router.push(`/tim-kiem?q=${encodeURIComponent(query)}`);
+  };
+
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem(SEARCH_HISTORY_KEY);
   };
 
   const formatVnd = (num: number) => (!num || num <= 0 ? 'Liên hệ' : num.toLocaleString('vi-VN') + 'đ');
@@ -643,6 +672,38 @@ export const Header: React.FC = () => {
                   <span>{searchTerm.trim() ? `Gợi ý cho “${searchTerm}”` : '🔥 Xu hướng tìm kiếm'}</span>
                   <span>{searchTerm.trim() ? searchResults.length : trendingProducts.length} lựa chọn</span>
                 </div>
+
+                {!searchTerm.trim() && searchHistory.length > 0 && (
+                  <div className="border-b border-gray-100 bg-white">
+                    <div className="px-3.5 pt-2.5 pb-1.5 flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-gray-700">🕘 Lịch sử tìm kiếm</span>
+                      <button
+                        type="button"
+                        onClick={clearSearchHistory}
+                        className="text-[10px] font-semibold text-gray-500 hover:text-[#d70018] transition-colors"
+                      >
+                        Xóa lịch sử
+                      </button>
+                    </div>
+                    <div className="px-2 pb-2 flex flex-wrap gap-1.5">
+                      {searchHistory.map((item) => (
+                        <button
+                          type="button"
+                          key={item}
+                          onClick={() => {
+                            setSearchTerm(item);
+                            setShowDropdown(false);
+                            router.push(`/tim-kiem?q=${encodeURIComponent(item)}`);
+                          }}
+                          className="max-w-full truncate rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] text-gray-700 hover:border-[#d70018] hover:text-[#d70018] transition-colors"
+                          title={item}
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className={`max-h-[380px] overflow-y-auto ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
                   {(searchTerm.trim() ? searchResults : trendingProducts).length > 0 ? (

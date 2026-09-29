@@ -87,9 +87,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
           const json = await res.json();
           if (
             json.success &&
-            (json.data?.paymentStatus === 'PAID' ||
-              json.data?.status === 'CONFIRMED' ||
-              json.data?.status === 'PROCESSING')
+            json.data?.paymentStatus === 'PAID'
           ) {
             setIsPaid(true);
             clearInterval(checkStatusInterval);
@@ -254,19 +252,19 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
                 </div>
               </div>
 
-              {/* Nút hoàn tất thủ công khi đã gửi tiền */}
+              {/* Người dùng chỉ có thể đóng màn hình; trạng thái chỉ đổi khi hệ thống xác nhận tiền. */}
               <div className="pt-1">
                 <button
                   type="button"
-                  onClick={onSuccess}
-                  className="w-full py-2.5 bg-[#d70018] hover:bg-[#b50014] text-white font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-98"
+                  onClick={onClose}
+                  className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-98"
                 >
                   <CheckCircle2 size={16} />
-                  <span>TÔI ĐÃ CHUYỂN KHOẢN XONG</span>
+                  <span>ĐÃ CHUYỂN KHOẢN — CHỜ XÁC NHẬN</span>
                 </button>
                 <p className="text-[10px] text-gray-400 text-center mt-2 flex items-center justify-center gap-1">
                   <ShieldCheck size={12} className="text-emerald-600" />
-                  <span>Giao dịch bảo mật chuẩn mã hoá Napas 247</span>
+                  <span>Đơn sẽ chuyển sang đã thanh toán sau khi nhận được tiền</span>
                 </p>
               </div>
             </>
