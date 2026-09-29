@@ -15,6 +15,7 @@ import {
   Filter
 } from 'lucide-react';
 import { ToastNotification } from '@/components/common/ToastNotification';
+import { ProductFaqManager } from '@/app/admin/faq-san-pham/page';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -43,6 +44,7 @@ export default function ManageSpecificationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeries, setSelectedSeries] = useState('ALL'); // Thêm state lọc dòng sản phẩm
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -66,12 +68,13 @@ export default function ManageSpecificationsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/products`, { cache: 'no-store' });
+      const res = await fetch(`${API_URL}/api/products?all=true&limit=all`, { cache: 'no-store' });
       const json = await res.json();
       const list = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
       setProducts(list);
       if (list.length > 0) {
         selectProductToEdit(list[0]);
+        setSelectedProductIds([list[0].id]);
       }
     } catch (err) {
       console.error(err);
@@ -108,30 +111,41 @@ export default function ManageSpecificationsPage() {
     }
   };
 
-  // Các dòng sản phẩm mẫu để chọn nhanh
-  const seriesFilters = [
-    { label: 'Tất cả', value: 'ALL' },
-    { label: 'iPhone', value: 'iphone' },
-    { label: 'iPad', value: 'ipad' },
-    { label: 'MacBook', value: 'mac`book' },
-    { label: 'Watch', value: 'watch' },
-    { label: 'Hàng Cũ', value: 'cũ' },
-  ];
+  const seriesFilters = useMemo(() => [
+    { label: 'Tất cả nhóm', value: 'ALL' },
+    ...Array.from(new Set(products.map((product) => product.series?.name || product.category?.name).filter(Boolean)))
+      .map((name) => ({ label: String(name), value: String(name) })),
+  ], [products]);
 
   // Lọc sản phẩm theo từ khóa và dòng sản phẩm được chọn
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const name = (p.name || '').toLowerCase();
-      const category = (p.category?.name || p.categorySlug || '').toLowerCase();
+      const groupName = String(p.series?.name || p.category?.name || p.categorySlug || '');
       
       const matchSearch = name.includes(searchQuery.toLowerCase());
 
       if (selectedSeries === 'ALL') return matchSearch;
 
-      const matchSeries = name.includes(selectedSeries) || category.includes(selectedSeries);
+      const matchSeries = groupName === selectedSeries;
       return matchSearch && matchSeries;
     });
   }, [products, searchQuery, selectedSeries]);
+
+  const toggleProductSelection = (product: any) => {
+    const isSelected = selectedProductIds.includes(product.id);
+    const nextIds = isSelected
+      ? selectedProductIds.filter((id) => id !== product.id)
+      : [...selectedProductIds, product.id];
+    setSelectedProductIds(nextIds);
+
+    if (!isSelected && selectedProductIds.length === 0) selectProductToEdit(product);
+    if (isSelected && selectedProduct?.id === product.id) {
+      const nextProduct = products.find((item) => item.id === nextIds[0]) || null;
+      if (nextProduct) selectProductToEdit(nextProduct);
+      else setSelectedProduct(null);
+    }
+  };
 
   // Toggle tích chọn trường thông số có sẵn
   const toggleDefaultField = (fieldName: string) => {
@@ -161,18 +175,19 @@ export default function ManageSpecificationsPage() {
 
   // 3. Lưu thông số về backend
   const handleSave = async () => {
-    if (!selectedProduct) return;
+    if (selectedProductIds.length === 0) return;
     try {
       setIsSaving(true);
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('fogo_token') : null;
 
       const payload = {
+        productIds: selectedProductIds,
         description,
         salesPolicy,
         specifications: specsList,
       };
 
-      const res = await fetch(`${API_URL}/api/products/${selectedProduct.id}`, {
+      const res = await fetch(`${API_URL}/api/admin/products/specifications`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -181,14 +196,20 @@ export default function ManageSpecificationsPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        localStorage.setItem(`fogo_specs_${selectedProduct.id}`, JSON.stringify(payload));
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể lưu dữ liệu sản phẩm');
+
+      setProducts((items) => items.map((item) => selectedProductIds.includes(item.id)
+        ? { ...item, description, salesPolicy, specifications: specsList }
+        : item));
+      if (selectedProductIds.includes(selectedProduct?.id)) {
+        setSelectedProduct((item: any) => item ? { ...item, description, salesPolicy, specifications: specsList } : item);
       }
 
       setToast({
         show: true,
         type: 'success',
-        message: `Đã lưu thành công thông số cho sản phẩm ${selectedProduct.name}!`,
+        message: `Đã áp dụng dữ liệu cho ${selectedProductIds.length} sản phẩm đã chọn!`,
       });
     } catch (err) {
       console.error(err);
@@ -217,14 +238,14 @@ export default function ManageSpecificationsPage() {
               <span>QUẢN LÝ THÔNG SỐ & MÔ TẢ TỪNG SẢN PHẨM</span>
             </h1>
             <p className="text-xs text-gray-500 mt-1">
-              Chỉnh sửa Thông số kỹ thuật, Mô tả sản phẩm và Chính sách bảo hành áp dụng độc lập cho từng máy.
+              Chọn nhiều sản phẩm để áp dụng chung thông số kỹ thuật, mô tả và chính sách bán hàng.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving || !selectedProduct}
+            disabled={isSaving || selectedProductIds.length === 0}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#d70018] hover:bg-red-700 text-white font-bold text-xs uppercase rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-60"
           >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
@@ -237,7 +258,7 @@ export default function ManageSpecificationsPage() {
           {/* CỘT TRÁI: DANH SÁCH CHỌN SẢN PHẨM KÈM LỌC NHANH DÒNG */}
           <div className="lg:col-span-4 bg-white p-4 rounded-xl border border-gray-200 shadow-xs space-y-3">
             <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
-              Chọn sản phẩm ({filteredProducts.length})
+              Chọn sản phẩm ({selectedProductIds.length} đã chọn)
             </h2>
 
             {/* Ô tìm kiếm */}
@@ -284,13 +305,14 @@ export default function ManageSpecificationsPage() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => selectProductToEdit(item)}
+                    onClick={() => toggleProductSelection(item)}
                     className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                      selectedProduct?.id === item.id
+                      selectedProductIds.includes(item.id)
                         ? 'bg-red-50/70 border border-red-200 text-[#d70018]'
                         : 'hover:bg-gray-50 text-gray-800'
                     }`}
                   >
+                    {selectedProductIds.includes(item.id) ? <CheckSquare size={17} className="shrink-0" /> : <Square size={17} className="shrink-0 text-gray-400" />}
                     <img
                       src={item.imageUrl || item.image || '/placeholder.png'}
                       alt={item.name}
@@ -449,6 +471,10 @@ export default function ManageSpecificationsPage() {
                   className="w-full text-xs border border-gray-300 rounded-md p-3 focus:border-[#d70018] focus:outline-none leading-relaxed"
                 />
               </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+              <ProductFaqManager />
             </div>
 
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronDown, Plus, Save, Trash2 } from 'lucide-react';
 
 interface FaqItem {
@@ -18,7 +19,7 @@ const getAdminToken = () => {
   return localStorage.getItem('fogo_admin_token') || localStorage.getItem('admin_token') || localStorage.getItem('fogo_token') || localStorage.getItem('token') || '';
 };
 
-export default function ProductFaqAdminPage() {
+export function ProductFaqManager() {
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [draft, setDraft] = useState({ question: '', answer: '' });
   const [message, setMessage] = useState('');
@@ -27,7 +28,9 @@ export default function ProductFaqAdminPage() {
   const loadFaqs = async () => {
     try {
       const res = await fetch(`${API_URL}/api/admin/product-faqs`, { headers: { Authorization: `Bearer ${getAdminToken()}` }, cache: 'no-store' });
-      const json = await res.json();
+      const text = await res.text();
+      let json: any;
+      try { json = JSON.parse(text); } catch { throw new Error('Backend chưa được cập nhật chức năng FAQ. Vui lòng triển khai backend và chạy Prisma migration.'); }
       if (!res.ok || !json.success) throw new Error(json.error || 'Không thể tải FAQ');
       setFaqs(json.data);
     } catch (error) {
@@ -43,7 +46,9 @@ export default function ProductFaqAdminPage() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAdminToken()}` },
       body: body ? JSON.stringify(body) : undefined,
     });
-    const json = await res.json();
+    const text = await res.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch { throw new Error('Backend chưa được cập nhật chức năng FAQ. Vui lòng triển khai backend và chạy Prisma migration.'); }
     if (!res.ok || !json.success) throw new Error(json.error || json.message || 'Không thể lưu FAQ');
     return json;
   };
@@ -115,4 +120,14 @@ export default function ProductFaqAdminPage() {
       </div>
     </div>
   );
+}
+
+export default function ProductFaqAdminPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/admin/manage-specifications');
+  }, [router]);
+
+  return null;
 }

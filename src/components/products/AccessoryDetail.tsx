@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import DOMPurify from 'dompurify';
 import { ProductFaq } from '@/components/products/ProductFaq';
+import ProductSalesPolicy from '@/components/products/ProductSalesPolicy';
 import {
   ChevronLeft,
   ChevronRight,
@@ -884,11 +885,13 @@ export default function AccessoryDetail({
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
-                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                  <li>Lỗi 1 đổi 1 trong 12 tháng toàn diện nếu có lỗi từ NSX.</li>
-                  <li>Cam kết 100% sản phẩm chính hãng Apple và các thương hiệu hàng đầu.</li>
-                  <li>Giao hàng nhanh hỏa tốc trong 2 giờ tại TP.HCM.</li>
-                </ul>
+                <ProductSalesPolicy policy={product?.salesPolicy} fallback={
+                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                    <li>Lỗi 1 đổi 1 trong 12 tháng toàn diện nếu có lỗi từ NSX.</li>
+                    <li>Cam kết 100% sản phẩm chính hãng Apple và các thương hiệu hàng đầu.</li>
+                    <li>Giao hàng nhanh hỏa tốc trong 2 giờ tại TP.HCM.</li>
+                  </ul>
+                } />
               </div>
             )}
 

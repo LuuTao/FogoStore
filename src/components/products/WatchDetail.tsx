@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import DOMPurify from 'dompurify';
 import { ProductFaq } from '@/components/products/ProductFaq';
+import ProductSalesPolicy from '@/components/products/ProductSalesPolicy';
 import {
   ChevronLeft,
   ChevronRight,
@@ -897,12 +898,14 @@ export default function WatchDetail({
                 <h3 className="text-base sm:text-lg font-black text-[#1e3a8a]">
                   Chính Sách Bảo Hành & Khuyến Mãi:
                 </h3>
-                <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
-                  <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
-                  <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
-                  <li>Giảm giá 150.000đ khi mua kèm Dây đeo thể thao chính hãng.</li>
-                  <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
-                </ul>
+                <ProductSalesPolicy policy={product?.salesPolicy} fallback={
+                  <ul className="space-y-2.5 list-disc list-inside font-medium text-gray-700">
+                    <li>Lỗi 1 đổi 1 trong 18 tháng toàn diện nếu có lỗi phần cứng từ NSX.</li>
+                    <li>Tặng 1 lần thay Pin miễn phí trọn đời máy.</li>
+                    <li>Giảm giá 150.000đ khi mua kèm Dây đeo thể thao chính hãng.</li>
+                    <li>Thu cũ lên đời trợ giá đến 90% - tốt nhất thị trường.</li>
+                  </ul>
+                } />
               </div>
             )}
 
