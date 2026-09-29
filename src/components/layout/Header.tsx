@@ -208,6 +208,26 @@ interface SearchItem {
   imageUrl: string;
   categoryName?: string;
   isUsed?: boolean;
+  href?: string;
+}
+
+interface SearchProductVariant {
+  price?: number | string;
+  images?: string[];
+  imageUrl?: string;
+  slug?: string;
+}
+
+interface SearchProduct {
+  id: string;
+  name?: string;
+  slug?: string;
+  price?: number | string;
+  imageUrl?: string;
+  images?: string[];
+  category?: { name?: string };
+  categoryName?: string;
+  variants?: SearchProductVariant[];
 }
 
 interface MarqueeItem {
@@ -244,7 +264,7 @@ export const Header: React.FC = () => {
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [productsCache, setProductsCache] = useState<any[]>([]);
+  const [productsCache, setProductsCache] = useState<SearchProduct[]>([]);
   const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(DEFAULT_MARQUEE_ITEMS);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -253,22 +273,33 @@ export const Header: React.FC = () => {
   const { totalQuantity } = useCart();
 
   const trendingProducts = useMemo<SearchItem[]>(() => {
-    const wanted = ['iphone 18 pro', 'iphone 18 pro max', 'iphone duo', 'ipad pro m5', 'ipad gen 11', 'macbook air m5', 'macbook pro m5', 'ipad mini 7', 'iphone 18 series', 'ipad pro series'];
-    return wanted.map((keyword) => {
-      const product = productsCache.find((item: any) => String(item.name || '').toLowerCase().includes(keyword));
-      if (!product) return null;
-      const variant = Array.isArray(product.variants) ? product.variants.find((item: any) => Number(item.price) > 0) || product.variants[0] : null;
-      const image = Array.isArray(variant?.images) ? variant.images[0] : variant?.imageUrl || product.imageUrl || product.images?.[0];
+    const wanted = [
+      { name: 'iPhone 18 Pro', keyword: 'iphone 18 pro', href: '/iphone/iphone-18-pro' },
+      { name: 'iPhone 18 Pro Max', keyword: 'iphone 18 pro max', href: '/iphone/iphone-18-pro-max' },
+      { name: 'iPhone Duo', keyword: 'iphone duo', href: '/iphone/iphone-duo' },
+      { name: 'iPad Pro M5', keyword: 'ipad pro m5', href: '/ipad/ipad-pro-m5' },
+      { name: 'iPad Gen 11', keyword: 'ipad gen 11', href: '/ipad/ipad-gen-11' },
+      { name: 'MacBook Air M5', keyword: 'macbook air m5', href: '/macbook/macbook-air-m5' },
+      { name: 'MacBook Pro M5', keyword: 'macbook pro m5', href: '/macbook/macbook-pro-m5' },
+      { name: 'iPad Mini 7', keyword: 'ipad mini 7', href: '/ipad/ipad-mini-7' },
+      { name: 'iPhone 18 Series', keyword: 'iphone 18', href: '/iphone/iphone-18' },
+      { name: 'iPad Pro Series', keyword: 'ipad pro', href: '/ipad/ipad-pro' },
+    ];
+    return wanted.map(({ name, keyword, href }) => {
+      const product = productsCache.find((item) => String(item.name || '').toLowerCase().includes(keyword));
+      const variant = Array.isArray(product?.variants) ? product.variants.find((item) => Number(item.price) > 0) || product.variants[0] : null;
+      const image = Array.isArray(variant?.images) ? variant.images[0] : variant?.imageUrl || product?.imageUrl || product?.images?.[0];
       return {
-        id: `trend-${product.id}`,
-        name: product.name,
-        slug: variant?.slug || product.slug || product.id,
-        price: Number(variant?.price || product.price || 0),
+        id: `trend-${href}`,
+        name,
+        slug: variant?.slug || product?.slug || '',
+        price: Number(variant?.price || product?.price || 0),
         imageUrl: formatSearchImage(image),
-        categoryName: product.category?.name || product.categoryName,
-        isUsed: /cũ|like new|99%|cpo/i.test(product.name || ''),
+        categoryName: product?.category?.name || product?.categoryName,
+        isUsed: /cũ|like new|99%|cpo/i.test(product?.name || ''),
+        href,
       };
-    }).filter((item): item is SearchItem => Boolean(item)).slice(0, 10);
+    }).slice(0, 10);
   }, [productsCache]);
 
   const toggleSubMenu = (id: string) => {
@@ -354,7 +385,6 @@ export const Header: React.FC = () => {
   useEffect(() => {
     const rawQuery = searchTerm.trim().toLowerCase();
     if (!rawQuery) {
-      setSearchResults([]);
       return;
     }
 
@@ -614,14 +644,14 @@ export const Header: React.FC = () => {
                   <span>{searchTerm.trim() ? searchResults.length : trendingProducts.length} lựa chọn</span>
                 </div>
 
-                <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-100">
+                <div className={`max-h-[380px] overflow-y-auto ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
                   {(searchTerm.trim() ? searchResults : trendingProducts).length > 0 ? (
                     (searchTerm.trim() ? searchResults : trendingProducts).map((item) => (
                       <Link
                         key={item.id}
-                        href={`/san-pham/${item.slug}`}
+                        href={item.href || `/san-pham/${item.slug}`}
                         onClick={() => setShowDropdown(false)}
-                        className="flex items-center gap-3 p-3 hover:bg-red-50/50 transition-colors group cursor-pointer"
+                        className={`flex items-center gap-3 p-3 hover:bg-red-50/50 transition-colors group cursor-pointer bg-white ${!searchTerm.trim() ? 'min-w-0' : ''}`}
                       >
                         <div className="w-12 h-12 rounded-lg border border-gray-100 p-1 flex items-center justify-center shrink-0 bg-white shadow-2xs group-hover:scale-105 transition-transform">
                           <img
@@ -636,7 +666,7 @@ export const Header: React.FC = () => {
                               {item.name}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
+                          {searchTerm.trim() && <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs font-black text-[#d70018]">
                               {formatVnd(item.price)}
                             </span>
@@ -656,7 +686,7 @@ export const Header: React.FC = () => {
                                 MỚI
                               </span>
                             )}
-                          </div>
+                          </div>}
                         </div>
                       </Link>
                     ))
