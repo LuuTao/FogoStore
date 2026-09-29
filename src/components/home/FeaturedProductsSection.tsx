@@ -2,7 +2,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Clock3, Flame } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock3, Flame, ShoppingCart } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { ToastNotification } from '@/components/common/ToastNotification';
+import { ProductCardImages, ProductCardTags } from '@/components/common/ProductCardExtras';
+import { getProductTags } from '@/lib/productTags';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -25,6 +29,7 @@ type FlashSaleProduct = {
   name: string;
   slug: string;
   imageUrl?: string;
+  specs?: unknown;
   variants?: FlashSaleVariant[];
 };
 
@@ -48,11 +53,13 @@ const formatSaleSlot = (value?: string | null) => value
   : '--';
 
 export const FeaturedProductsSection: React.FC = () => {
+  const { addToCart } = useCart();
   const [products, setProducts] = useState<FlashSaleProduct[]>([]);
   const [config, setConfig] = useState<FlashSaleConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '' });
   const trackRef = useRef<HTMLDivElement>(null);
 
   const flashItems = useMemo(() => products.flatMap((product) =>
@@ -116,6 +123,23 @@ export const FeaturedProductsSection: React.FC = () => {
     track.scrollTo({ left, behavior: 'smooth' });
   };
 
+  const handleAddToCart = async (event: React.MouseEvent, product: FlashSaleProduct, variant: FlashSaleVariant, imageUrl: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await addToCart({
+      id: variant.id || product.id,
+      name: product.name,
+      modelSlug: product.slug,
+      price: Number(variant.price || 0),
+      originalPrice: Number(variant.originalPrice || variant.price || 0),
+      storage: variant.storage || 'Tiêu chuẩn',
+      color: variant.color || 'Tiêu chuẩn',
+      imageUrl,
+      quantity: 1,
+    });
+    setToast({ show: true, message: `Đã thêm ${product.name} vào giỏ hàng!` });
+  };
+
   useEffect(() => {
     if (flashItems.length < 2 || isHovered || !['UPCOMING', 'ACTIVE'].includes(status)) return;
     const timer = window.setInterval(() => moveSlider(1), 5000);
@@ -135,6 +159,7 @@ export const FeaturedProductsSection: React.FC = () => {
 
   return (
     <section className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-4 sm:py-9">
+      <ToastNotification show={toast.show} message={toast.message} onClose={() => setToast((current) => ({ ...current, show: false }))} />
       <div className="relative pt-7 sm:pt-9">
         <div className="pointer-events-none absolute inset-x-6 top-4 h-14 bg-gradient-to-r from-[#f13a22] via-[#ff5a3c] to-[#f13a22] [clip-path:polygon(4%_0,96%_0,100%_100%,0_100%)] sm:inset-x-10" />
         <div className="absolute left-1/2 top-0 z-20 w-[72%] max-w-[485px] -translate-x-1/2 rounded-t-2xl border-b-4 border-[#9d0012] bg-gradient-to-b from-[#ef3347] to-[#c41329] px-4 py-3 text-center text-white shadow-lg">
@@ -181,13 +206,16 @@ export const FeaturedProductsSection: React.FC = () => {
                   const href = `/san-pham/${variant.slug || product.slug}${variant.id ? `?proid=${variant.id}` : ''}`;
 
                   return (
-                    <Link key={variant.id || `${product.id}-${variant.slug}`} data-flash-card href={href} className="group w-[47%] flex-none snap-start overflow-hidden rounded-xl bg-white p-2 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[19.1%] lg:p-2.5">
-                      <div className="relative aspect-square overflow-hidden rounded-lg bg-white">
+                    <div key={variant.id || `${product.id}-${variant.slug}`} data-flash-card className="group w-[47%] flex-none snap-start overflow-hidden rounded-xl bg-white p-2 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[19.1%] lg:p-2.5">
+                      <Link href={href} className="relative block aspect-square overflow-hidden rounded-lg bg-white">
                         {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-[#d70018] px-2 py-1 text-[10px] font-black text-white">-{discount}%</span>}
                         <img src={image} alt={product.name} className="h-full w-full object-contain p-2 transition duration-500 group-hover:scale-105" />
-                      </div>
-                      <h3 className="mt-2 min-h-10 line-clamp-2 text-xs font-bold leading-5 sm:text-sm">{product.name}</h3>
+                      </Link>
+                      <Link href={href} className="mt-2 block min-h-10 line-clamp-2 text-xs font-bold leading-5 hover:text-[#d70018] sm:text-sm">{product.name}</Link>
                       <p className="mt-0.5 truncate text-[10px] font-semibold text-gray-500">{[variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ')}</p>
+                      <ProductCardTags name={product.name} tags={getProductTags(product)} />
+                      <ProductCardImages />
+                      <span className="mt-1 block w-fit rounded-xs bg-green-50 px-1.5 py-0.5 text-[8px] font-bold text-green-700 sm:text-[9px]">{Number(variant.stock || 0) > 0 ? 'Sẵn hàng' : 'Hết hàng'}</span>
                       <div className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
                         <span className="text-sm font-black text-[#d70018] sm:text-base">{price > 0 ? `${price.toLocaleString('vi-VN')}đ` : 'Liên hệ'}</span>
                         {originalPrice > price && <span className="text-[11px] text-gray-400 line-through">{originalPrice.toLocaleString('vi-VN')}đ</span>}
@@ -195,7 +223,10 @@ export const FeaturedProductsSection: React.FC = () => {
                       <div className="mt-2 h-4 overflow-hidden rounded-full bg-[#f8c3cb] text-center text-[8px] font-bold leading-4 text-white">
                         <span className="inline-flex items-center gap-1"><Flame size={10} fill="currentColor" /> Còn {Math.max(0, Number(variant.stock || 0))} suất</span>
                       </div>
-                    </Link>
+                      <button type="button" disabled={Number(variant.stock || 0) <= 0} onClick={(event) => handleAddToCart(event, product, variant, image)} className="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-[#d70018] py-1.5 text-[9px] font-black uppercase text-white transition hover:bg-[#b50014] disabled:cursor-not-allowed disabled:bg-gray-300 sm:text-[10px]">
+                        <ShoppingCart size={11} /> Thêm giỏ hàng
+                      </button>
+                    </div>
                   );
                 })}
               </div>

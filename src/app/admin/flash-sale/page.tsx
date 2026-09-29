@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarClock, Loader2, Save, TimerReset, Zap } from 'lucide-react';
+import { CalendarClock, Edit2, Loader2, Save, TimerReset, Trash2, X, Zap } from 'lucide-react';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -23,6 +23,8 @@ export default function FlashSaleAdminPage() {
   const [status, setStatus] = useState('INACTIVE');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [variantActionId, setVariantActionId] = useState<string | null>(null);
+  const [editingVariant, setEditingVariant] = useState<any | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadData = async () => {
@@ -69,6 +71,59 @@ export default function FlashSaleAdminPage() {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Không thể lưu Flash Sale' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const removeVariant = async (variant: any) => {
+    setVariantActionId(variant.id);
+    setMessage(null);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/variants/${variant.id}/flash-sale`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ isFlashSale: false }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.success) throw new Error(json?.error || 'Không thể gỡ cấu hình khỏi Flash Sale');
+      setSelectedProducts((current) => current
+        .map((product) => ({ ...product, variants: (product.variants || []).filter((item: any) => item.id !== variant.id) }))
+        .filter((product) => product.variants.length > 0));
+      setMessage({ type: 'success', text: 'Đã gỡ cấu hình khỏi Flash Sale.' });
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Không thể gỡ cấu hình khỏi Flash Sale' });
+    } finally {
+      setVariantActionId(null);
+    }
+  };
+
+  const saveVariant = async () => {
+    if (!editingVariant) return;
+    setVariantActionId(editingVariant.id);
+    setMessage(null);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/variants/${editingVariant.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          storage: editingVariant.storage,
+          color: editingVariant.color,
+          origin: editingVariant.origin,
+          size: editingVariant.size,
+          version: editingVariant.version,
+          price: Number(editingVariant.price || 0),
+          originalPrice: Number(editingVariant.originalPrice || editingVariant.price || 0),
+          stock: Number(editingVariant.stock || 0),
+        }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.success) throw new Error(json?.error || 'Không thể cập nhật cấu hình');
+      setEditingVariant(null);
+      await loadData();
+      setMessage({ type: 'success', text: 'Đã cập nhật cấu hình Flash Sale.' });
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Không thể cập nhật cấu hình' });
+    } finally {
+      setVariantActionId(null);
     }
   };
 
@@ -120,14 +175,32 @@ export default function FlashSaleAdminPage() {
           <div className="flex items-center justify-between"><div><h2 className="font-black text-gray-900">Cấu hình đang được chọn</h2><p className="text-xs text-gray-500">Tick hoặc bỏ tick từng màu/dung lượng tại trang Quản lý Tồn kho.</p></div><span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-[#d70018]">{selectedVariantCount} cấu hình</span></div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {selectedVariantCount > 0 ? selectedProducts.flatMap((product) => (product.variants || []).map((variant: any) => (
-              <div key={variant.id} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700">
-                <p className="font-black">{product.name}</p>
-                <p className="mt-1 text-[11px] text-gray-500">{[variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ')}</p>
+              <div key={variant.id} className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-black">{product.name}</p>
+                  <p className="mt-1 truncate text-[11px] text-gray-500">{[variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ')}</p>
+                  <p className="mt-1 text-[11px] font-bold text-[#d70018]">{Number(variant.price || 0).toLocaleString('vi-VN')}đ · Tồn {variant.stock || 0}</p>
+                </div>
+                <button type="button" onClick={() => setEditingVariant({ ...variant, productName: product.name })} className="rounded-md border border-blue-200 bg-blue-50 p-1.5 text-blue-600" title="Chỉnh sửa cấu hình"><Edit2 size={14} /></button>
+                <button type="button" disabled={variantActionId === variant.id} onClick={() => removeVariant(variant)} className="rounded-md border border-red-200 bg-red-50 p-1.5 text-[#d70018] disabled:opacity-50" title="Gỡ khỏi Flash Sale">{variantActionId === variant.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}</button>
               </div>
             ))) : <p className="text-sm text-gray-400">Chưa có cấu hình sản phẩm nào được chọn.</p>}
           </div>
         </div>
       </div>
+
+      {editingVariant && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-black">Chỉnh sửa cấu hình Flash Sale</h2><p className="mt-1 text-xs text-gray-500">{editingVariant.productName}</p></div><button type="button" onClick={() => setEditingVariant(null)} className="rounded-full bg-gray-100 p-2 text-gray-500"><X size={18} /></button></div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {[['storage', 'Dung lượng'], ['color', 'Màu sắc'], ['origin', 'Xuất xứ'], ['size', 'Kích thước'], ['version', 'Phiên bản']].map(([field, label]) => <label key={field}><span className="mb-1 block text-xs font-bold text-gray-600">{label}</span><input value={editingVariant[field] || ''} onChange={(event) => setEditingVariant((current: any) => ({ ...current, [field]: event.target.value }))} className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-[#d70018]" /></label>)}
+              {[['price', 'Giá bán'], ['originalPrice', 'Giá gốc'], ['stock', 'Tồn kho']].map(([field, label]) => <label key={field}><span className="mb-1 block text-xs font-bold text-gray-600">{label}</span><input type="number" min="0" value={editingVariant[field] ?? 0} onChange={(event) => setEditingVariant((current: any) => ({ ...current, [field]: Number(event.target.value) }))} className="w-full rounded-lg border px-3 py-2 text-sm font-bold outline-none focus:border-[#d70018]" /></label>)}
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setEditingVariant(null)} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Hủy</button><button type="button" onClick={saveVariant} disabled={variantActionId === editingVariant.id} className="inline-flex items-center gap-2 rounded-lg bg-[#d70018] px-5 py-2 text-sm font-black text-white disabled:opacity-60">{variantActionId === editingVariant.id ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Lưu thay đổi</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
