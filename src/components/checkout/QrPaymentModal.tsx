@@ -158,7 +158,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
 
               {/* Vùng hiển thị mã QR */}
               <div className="p-3 border-2 border-dashed border-red-200 rounded-2xl bg-red-50/20 flex flex-col justify-center items-center">
-                <div className="bg-white p-2 rounded-xl shadow-2xs border border-gray-200 w-52 h-52 flex items-center justify-center">
+                <div className="bg-white p-2 rounded-xl shadow-2xs border border-gray-200 w-full max-w-[320px] aspect-square flex items-center justify-center">
                   <img
                     src={qrUrl}
                     alt="Mã QR Thanh Toán"
@@ -252,21 +252,10 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
                 </div>
               </div>
 
-              {/* Người dùng chỉ có thể đóng màn hình; trạng thái chỉ đổi khi hệ thống xác nhận tiền. */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-98"
-                >
-                  <CheckCircle2 size={16} />
-                  <span>ĐÃ CHUYỂN KHOẢN — CHỜ XÁC NHẬN</span>
-                </button>
-                <p className="text-[10px] text-gray-400 text-center mt-2 flex items-center justify-center gap-1">
-                  <ShieldCheck size={12} className="text-emerald-600" />
-                  <span>Đơn sẽ chuyển sang đã thanh toán sau khi nhận được tiền</span>
-                </p>
-              </div>
+              <p className="pt-1 text-[10px] text-gray-500 text-center flex items-center justify-center gap-1">
+                <ShieldCheck size={12} className="text-emerald-600" />
+                <span>Đơn chỉ chuyển sang đã thanh toán khi hệ thống xác nhận tiền đã vào tài khoản.</span>
+              </p>
             </>
           )}
         </div>
