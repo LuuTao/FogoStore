@@ -82,7 +82,9 @@ export const FeaturedProductsSection: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [products.length, isHovered, status]);
 
-  if (loading || !config?.isActive || products.length === 0 || status === 'ENDED' || status === 'INACTIVE') return null;
+  // Lịch Flash Sale và danh sách sản phẩm là hai phần cấu hình độc lập.
+  // Không ẩn toàn bộ bảng chỉ vì quản trị viên chưa tick sản phẩm.
+  if (loading || !config?.isActive || status === 'ENDED' || status === 'INACTIVE') return null;
 
   const timeParts = [
     ...(countdown.days > 0 ? [{ label: 'Ngày', value: countdown.days }] : []),
@@ -128,38 +130,48 @@ export const FeaturedProductsSection: React.FC = () => {
         </div>
 
         <div className="relative mt-4" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-          <button type="button" onClick={() => moveSlider(-1)} aria-label="Sản phẩm trước" className="absolute left-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#d70018] shadow-lg transition hover:scale-110"><ChevronLeft size={22} /></button>
-          <div ref={trackRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {products.map((product) => {
-              const variants = (Array.isArray(product.variants) ? product.variants : [])
-                .filter((variant: any) => Number(variant.price) > 0)
-                .sort((a: any, b: any) => Number(a.price) - Number(b.price));
-              const variant = variants.find((item: any) => Number(item.stock) > 0) || variants[0] || {};
-              const price = Number(variant.price || 0);
-              const originalPrice = Number(variant.originalPrice || price);
-              const discount = originalPrice > price && price > 0 ? Math.round((1 - price / originalPrice) * 100) : 0;
-              const image = formatImage(Array.isArray(variant.images) ? variant.images[0] : variant.images || product.imageUrl);
-              const href = `/san-pham/${variant.slug || product.slug}${variant.id ? `?proid=${variant.id}` : ''}`;
+          {products.length > 0 ? (
+            <>
+              <button type="button" onClick={() => moveSlider(-1)} aria-label="Sản phẩm trước" className="absolute left-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#d70018] shadow-lg transition hover:scale-110"><ChevronLeft size={22} /></button>
+              <div ref={trackRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {products.map((product) => {
+                  const variants = (Array.isArray(product.variants) ? product.variants : [])
+                    .filter((variant: any) => Number(variant.price) > 0)
+                    .sort((a: any, b: any) => Number(a.price) - Number(b.price));
+                  const variant = variants.find((item: any) => Number(item.stock) > 0) || variants[0] || {};
+                  const price = Number(variant.price || 0);
+                  const originalPrice = Number(variant.originalPrice || price);
+                  const discount = originalPrice > price && price > 0 ? Math.round((1 - price / originalPrice) * 100) : 0;
+                  const image = formatImage(Array.isArray(variant.images) ? variant.images[0] : variant.images || product.imageUrl);
+                  const href = `/san-pham/${variant.slug || product.slug}${variant.id ? `?proid=${variant.id}` : ''}`;
 
-              return (
-                <Link key={product.id} data-flash-card href={href} className="group min-w-[47%] snap-start rounded-2xl bg-white p-3 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:min-w-[31%] md:min-w-[23%] lg:min-w-[18.9%]">
-                  <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f7f7f9]">
-                    {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-[#d70018] px-2 py-1 text-[10px] font-black text-white">-{discount}%</span>}
-                    <img src={image} alt={product.name} className="h-full w-full object-contain p-3 transition duration-500 group-hover:scale-105" />
-                  </div>
-                  <h3 className="mt-3 min-h-10 line-clamp-2 text-sm font-extrabold leading-5">{product.name}</h3>
-                  <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                    <span className="text-base font-black text-[#d70018] sm:text-lg">{price > 0 ? `${price.toLocaleString('vi-VN')}đ` : 'Liên hệ'}</span>
-                    {originalPrice > price && <span className="text-[11px] text-gray-400 line-through">{originalPrice.toLocaleString('vi-VN')}đ</span>}
-                  </div>
-                  <div className="mt-3 h-5 overflow-hidden rounded-full bg-red-100 text-center text-[9px] font-bold leading-5 text-[#d70018]">
-                    <span className="inline-flex items-center gap-1"><Flame size={11} fill="currentColor" /> Còn {Math.max(0, Number(variant.stock || 0))} suất</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-          <button type="button" onClick={() => moveSlider(1)} aria-label="Sản phẩm tiếp theo" className="absolute right-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#d70018] shadow-lg transition hover:scale-110"><ChevronRight size={22} /></button>
+                  return (
+                    <Link key={product.id} data-flash-card href={href} className="group min-w-[47%] snap-start rounded-2xl bg-white p-3 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:min-w-[31%] md:min-w-[23%] lg:min-w-[18.9%]">
+                      <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f7f7f9]">
+                        {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-[#d70018] px-2 py-1 text-[10px] font-black text-white">-{discount}%</span>}
+                        <img src={image} alt={product.name} className="h-full w-full object-contain p-3 transition duration-500 group-hover:scale-105" />
+                      </div>
+                      <h3 className="mt-3 min-h-10 line-clamp-2 text-sm font-extrabold leading-5">{product.name}</h3>
+                      <div className="mt-2 flex flex-wrap items-baseline gap-2">
+                        <span className="text-base font-black text-[#d70018] sm:text-lg">{price > 0 ? `${price.toLocaleString('vi-VN')}đ` : 'Liên hệ'}</span>
+                        {originalPrice > price && <span className="text-[11px] text-gray-400 line-through">{originalPrice.toLocaleString('vi-VN')}đ</span>}
+                      </div>
+                      <div className="mt-3 h-5 overflow-hidden rounded-full bg-red-100 text-center text-[9px] font-bold leading-5 text-[#d70018]">
+                        <span className="inline-flex items-center gap-1"><Flame size={11} fill="currentColor" /> Còn {Math.max(0, Number(variant.stock || 0))} suất</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              <button type="button" onClick={() => moveSlider(1)} aria-label="Sản phẩm tiếp theo" className="absolute right-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#d70018] shadow-lg transition hover:scale-110"><ChevronRight size={22} /></button>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/50 bg-white/10 px-4 py-8 text-center text-white">
+              <Flame className="mx-auto mb-2 text-yellow-300" size={28} />
+              <p className="font-black">Sản phẩm Flash Sale đang được cập nhật</p>
+              <p className="mt-1 text-xs text-white/80">Các ưu đãi sẽ xuất hiện tại đây trong ít phút nữa.</p>
+            </div>
+          )}
         </div>
       </div>
     </section>

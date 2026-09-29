@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { CalendarClock, Loader2, Save, TimerReset, Zap } from 'lucide-react';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
@@ -91,6 +92,18 @@ export default function FlashSaleAdminPage() {
         </div>
 
         {message && <div className={`rounded-xl border px-4 py-3 text-sm font-bold ${message.type === 'success' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-[#d70018]'}`}>{message.text}</div>}
+
+        {isActive && selectedProducts.length === 0 && (
+          <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-black">Flash Sale đang chạy nhưng chưa có sản phẩm</p>
+              <p className="mt-1 text-xs">Hãy tick “Flash Sale” cho ít nhất một sản phẩm trong Quản lý Tồn kho.</p>
+            </div>
+            <Link href="/admin/ton-kho" className="shrink-0 rounded-lg bg-amber-500 px-4 py-2 text-center text-xs font-black text-white shadow-sm hover:bg-amber-600">
+              Chọn sản phẩm
+            </Link>
+          </div>
+        )}
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:p-7">
           <div className="grid gap-5 md:grid-cols-2">
