@@ -2,9 +2,34 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Clock3, Flame, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock3, Flame } from 'lucide-react';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+type FlashSaleVariant = {
+  id?: string;
+  slug?: string;
+  price?: number | string;
+  originalPrice?: number | string;
+  stock?: number | string;
+  images?: string[] | string;
+  createdAt?: string;
+};
+
+type FlashSaleProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string;
+  variants?: FlashSaleVariant[];
+};
+
+type FlashSaleConfig = {
+  title?: string;
+  startAt?: string | null;
+  endAt?: string | null;
+  isActive?: boolean;
+};
 
 const formatImage = (value?: string) => {
   if (!value) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500';
@@ -12,15 +37,17 @@ const formatImage = (value?: string) => {
   return `${API_URL}/${value.replace(/^\//, '')}`;
 };
 
-const formatDateTime = (value?: string | null) => value
-  ? new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+const formatSaleSlot = (value?: string | null) => value
+  ? new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+    .format(new Date(value))
+    .replace(',', ' •')
   : '--';
 
 export const FeaturedProductsSection: React.FC = () => {
-  const [products, setProducts] = useState<any[]>([]);
-  const [config, setConfig] = useState<any>(null);
+  const [products, setProducts] = useState<FlashSaleProduct[]>([]);
+  const [config, setConfig] = useState<FlashSaleConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -30,15 +57,19 @@ export const FeaturedProductsSection: React.FC = () => {
         const json = await res.json();
         if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể tải Flash Sale');
         setConfig(json.data?.config || null);
-        setProducts(Array.isArray(json.data?.products) ? json.data.products : []);
+        setProducts(Array.isArray(json.data?.products) ? json.data.products as FlashSaleProduct[] : []);
       })
       .catch((error) => console.error('Lỗi tải Flash Sale:', error))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setNow(Date.now()));
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearInterval(timer);
+    };
   }, []);
 
   const status = useMemo(() => {
@@ -51,7 +82,8 @@ export const FeaturedProductsSection: React.FC = () => {
   }, [config, now]);
 
   const countdown = useMemo(() => {
-    const target = status === 'UPCOMING' ? new Date(config.startAt).getTime() : new Date(config?.endAt || 0).getTime();
+    const targetValue = status === 'UPCOMING' ? config?.startAt : config?.endAt;
+    const target = new Date(targetValue || 0).getTime();
     const seconds = Math.max(0, Math.floor((target - now) / 1000));
     return {
       days: Math.floor(seconds / 86400),
@@ -94,51 +126,50 @@ export const FeaturedProductsSection: React.FC = () => {
   ];
 
   return (
-    <section className="max-w-7xl mx-auto w-full px-3 sm:px-4 py-5 sm:py-7">
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-yellow-300 bg-gradient-to-b from-[#ec001b] via-[#d70018] to-[#b90014] p-3 sm:p-5 shadow-xl">
-        <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-yellow-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute -right-16 -bottom-20 h-48 w-48 rounded-full bg-orange-300/20 blur-3xl" />
-
-        <div className="relative flex flex-col gap-3 border-b border-white/25 pb-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2.5 text-white">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-300 text-[#d70018] shadow-md">
-              <Zap size={23} fill="currentColor" className="animate-pulse" />
-            </span>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-yellow-200">Ưu đãi giới hạn</p>
-              <h2 className="text-xl font-black uppercase leading-tight sm:text-3xl">{config.title || 'Flash Sale Giá Sốc'}</h2>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-white">
-            <div className="mr-1">
-              <p className="flex items-center gap-1 text-[11px] font-bold uppercase text-yellow-100">
-                <Clock3 size={13} /> {status === 'UPCOMING' ? 'Bắt đầu sau' : 'Kết thúc sau'}
-              </p>
-              <p className="mt-0.5 text-[10px] text-white/80">{formatDateTime(config.startAt)} – {formatDateTime(config.endAt)}</p>
-            </div>
-            {timeParts.map((part, index) => (
-              <React.Fragment key={part.label}>
-                {index > 0 && <span className="font-black text-yellow-200">:</span>}
-                <div className="min-w-11 rounded-lg bg-white px-2 py-1.5 text-center text-[#d70018] shadow-md">
-                  <strong className="block text-lg font-black leading-none">{String(part.value).padStart(2, '0')}</strong>
-                  <span className="text-[8px] font-bold uppercase text-gray-500">{part.label}</span>
-                </div>
-              </React.Fragment>
-            ))}
-          </div>
+    <section className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-4 sm:py-9">
+      <div className="relative pt-7 sm:pt-9">
+        <div className="pointer-events-none absolute inset-x-6 top-4 h-14 bg-gradient-to-r from-[#f13a22] via-[#ff5a3c] to-[#f13a22] [clip-path:polygon(4%_0,96%_0,100%_100%,0_100%)] sm:inset-x-10" />
+        <div className="absolute left-1/2 top-0 z-20 w-[72%] max-w-[485px] -translate-x-1/2 rounded-t-2xl border-b-4 border-[#9d0012] bg-gradient-to-b from-[#ef3347] to-[#c41329] px-4 py-3 text-center text-white shadow-lg">
+          <div className="pointer-events-none absolute -bottom-2 left-1/2 h-3 w-[108%] -translate-x-1/2 rounded-t-xl bg-[#8e0010] -z-10" />
+          <h2 className="truncate text-base font-black uppercase italic sm:text-xl">{config.title || 'Flash Sale Giá Sốc'}</h2>
         </div>
 
-        <div className="relative mt-4" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+        <div className="relative z-10 overflow-hidden rounded-[22px] border-[3px] border-[#ffd25a] bg-[#dc0b0b] px-2.5 pb-3 pt-6 shadow-[0_4px_0_#b78b22,0_12px_25px_rgba(120,0,0,0.25)] sm:px-5 sm:pb-4 sm:pt-7">
+          <div className="pointer-events-none absolute -left-4 top-12 rotate-[-25deg] rounded bg-yellow-300 px-2 py-1 text-sm font-black text-[#d70018] shadow">%</div>
+          <div className="pointer-events-none absolute -right-4 top-12 rotate-[25deg] rounded bg-yellow-300 px-2 py-1 text-sm font-black text-[#d70018] shadow">%</div>
+
+          <div className="relative flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <span className="shrink-0 rounded-full bg-white px-4 py-2 text-[11px] font-black text-[#d70018] shadow-sm sm:text-sm">{formatSaleSlot(config.startAt)}</span>
+              <span className="shrink-0 rounded-full border-2 border-white px-4 py-1.5 text-[11px] font-black text-white sm:text-sm">{formatSaleSlot(config.endAt)}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-1.5 text-white sm:justify-end">
+              <p className="mr-1 flex items-center gap-1 text-[11px] font-black uppercase sm:text-base">
+                <Clock3 size={15} /> {status === 'UPCOMING' ? 'Bắt đầu sau' : 'Kết thúc sau'}
+              </p>
+              {timeParts.map((part, index) => (
+                <React.Fragment key={part.label}>
+                  {index > 0 && <span className="text-base font-black">:</span>}
+                  <div className="min-w-9 rounded-md bg-white px-1.5 py-1 text-center text-[#d70018] shadow-sm sm:min-w-11 sm:px-2 sm:py-1.5">
+                    <strong className="block text-base font-black leading-none sm:text-xl">{String(part.value).padStart(2, '0')}</strong>
+                    <span className="text-[7px] font-bold uppercase text-gray-500">{part.label}</span>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
           {products.length > 0 ? (
             <>
-              <button type="button" onClick={() => moveSlider(-1)} aria-label="Sản phẩm trước" className="absolute left-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#d70018] shadow-lg transition hover:scale-110"><ChevronLeft size={22} /></button>
-              <div ref={trackRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <button type="button" onClick={() => moveSlider(-1)} aria-label="Sản phẩm trước" className="absolute -left-1 top-1/2 z-10 flex h-10 w-7 -translate-y-1/2 items-center justify-center rounded-r-full bg-white/95 text-gray-800 shadow-lg transition hover:scale-105 sm:h-12 sm:w-9"><ChevronLeft size={24} /></button>
+              <div ref={trackRef} className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-3">
                 {products.map((product) => {
                   const variants = (Array.isArray(product.variants) ? product.variants : [])
-                    .filter((variant: any) => Number(variant.price) > 0)
-                    .sort((a: any, b: any) => Number(a.price) - Number(b.price));
-                  const variant = variants.find((item: any) => Number(item.stock) > 0) || variants[0] || {};
+                    .filter((variant) => Number(variant.price) > 0)
+                    .sort((a, b) => Number(a.price) - Number(b.price));
+                  const variant = variants.find((item) => Number(item.stock) > 0) || variants[0] || {};
                   const price = Number(variant.price || 0);
                   const originalPrice = Number(variant.originalPrice || price);
                   const discount = originalPrice > price && price > 0 ? Math.round((1 - price / originalPrice) * 100) : 0;
@@ -146,24 +177,24 @@ export const FeaturedProductsSection: React.FC = () => {
                   const href = `/san-pham/${variant.slug || product.slug}${variant.id ? `?proid=${variant.id}` : ''}`;
 
                   return (
-                    <Link key={product.id} data-flash-card href={href} className="group w-[47%] flex-none snap-start rounded-2xl bg-white p-2.5 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[18.9%] lg:p-3">
-                      <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f7f7f9]">
+                    <Link key={product.id} data-flash-card href={href} className="group w-[47%] flex-none snap-start overflow-hidden rounded-xl bg-white p-2 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[19.1%] lg:p-2.5">
+                      <div className="relative aspect-square overflow-hidden rounded-lg bg-white">
                         {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-[#d70018] px-2 py-1 text-[10px] font-black text-white">-{discount}%</span>}
-                        <img src={image} alt={product.name} className="h-full w-full object-contain p-3 transition duration-500 group-hover:scale-105" />
+                        <img src={image} alt={product.name} className="h-full w-full object-contain p-2 transition duration-500 group-hover:scale-105" />
                       </div>
-                      <h3 className="mt-3 min-h-10 line-clamp-2 text-sm font-extrabold leading-5">{product.name}</h3>
-                      <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                        <span className="text-base font-black text-[#d70018] sm:text-lg">{price > 0 ? `${price.toLocaleString('vi-VN')}đ` : 'Liên hệ'}</span>
+                      <h3 className="mt-2 min-h-10 line-clamp-2 text-xs font-bold leading-5 sm:text-sm">{product.name}</h3>
+                      <div className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
+                        <span className="text-sm font-black text-[#d70018] sm:text-base">{price > 0 ? `${price.toLocaleString('vi-VN')}đ` : 'Liên hệ'}</span>
                         {originalPrice > price && <span className="text-[11px] text-gray-400 line-through">{originalPrice.toLocaleString('vi-VN')}đ</span>}
                       </div>
-                      <div className="mt-3 h-5 overflow-hidden rounded-full bg-red-100 text-center text-[9px] font-bold leading-5 text-[#d70018]">
-                        <span className="inline-flex items-center gap-1"><Flame size={11} fill="currentColor" /> Còn {Math.max(0, Number(variant.stock || 0))} suất</span>
+                      <div className="mt-2 h-4 overflow-hidden rounded-full bg-[#f8c3cb] text-center text-[8px] font-bold leading-4 text-white">
+                        <span className="inline-flex items-center gap-1"><Flame size={10} fill="currentColor" /> Còn {Math.max(0, Number(variant.stock || 0))} suất</span>
                       </div>
                     </Link>
                   );
                 })}
               </div>
-              <button type="button" onClick={() => moveSlider(1)} aria-label="Sản phẩm tiếp theo" className="absolute right-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#d70018] shadow-lg transition hover:scale-110"><ChevronRight size={22} /></button>
+              <button type="button" onClick={() => moveSlider(1)} aria-label="Sản phẩm tiếp theo" className="absolute -right-1 top-1/2 z-10 flex h-10 w-7 -translate-y-1/2 items-center justify-center rounded-l-full bg-white/95 text-gray-800 shadow-lg transition hover:scale-105 sm:h-12 sm:w-9"><ChevronRight size={24} /></button>
             </>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/50 bg-white/10 px-4 py-8 text-center text-white">
@@ -172,6 +203,11 @@ export const FeaturedProductsSection: React.FC = () => {
               <p className="mt-1 text-xs text-white/80">Các ưu đãi sẽ xuất hiện tại đây trong ít phút nữa.</p>
             </div>
           )}
+        </div>
+
+          <p className="mt-3 px-2 text-center text-[9px] font-bold leading-4 text-white sm:text-xs">
+            Áp dụng cho sản phẩm được chọn trong Flash Sale — Số lượng ưu đãi có hạn trong thời gian chương trình.
+          </p>
         </div>
       </div>
     </section>
