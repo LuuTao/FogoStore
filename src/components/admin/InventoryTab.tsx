@@ -1053,6 +1053,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                     <tr>
                                       <th className="py-2.5 px-4 text-center">ẢNH (&gt;1 ẢNH)</th>
                                       <th className="py-2.5 px-4">DUNG LƯỢNG / KÍCH THƯỚC</th>
+                                      {showVariantDetails && <th className="py-2.5 px-4">KÍCH THƯỚC / PHIÊN BẢN</th>}
                                       <th className="py-2.5 px-4">MÀU SẮC</th>
                                       <th className="py-2.5 px-4 text-center">XUẤT XỨ</th>
                                       <th className="py-2.5 px-4 text-right">GIÁ BÁN</th>
@@ -1065,6 +1066,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                   <tbody className="divide-y divide-gray-100">
                                     {variants.map((v) => {
                                       const isVn = (v.origin || '').toLowerCase().includes('việt nam') || (v.origin || '').toLowerCase().includes('vn');
+                                      const showVariantDetails = variants.some((variant) => variant.size || variant.version);
 
                                       return (
                                         <tr key={v.id} className="hover:bg-gray-50/80 transition-colors">
@@ -1094,6 +1096,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                           <td className="py-3 px-4 font-extrabold text-gray-900">
                                             {v.storage || 'Tiêu chuẩn'}
                                           </td>
+                                          {showVariantDetails && <td className="py-3 px-4 font-semibold text-gray-700">{[v.size, v.version].filter(Boolean).join(' · ') || '—'}</td>}
 
                                           {/* CỘT 3: MÀU SẮC THỰC TẾ (Lavender, Sage, Black, White...) */}
                                           <td className="py-3 px-4">
@@ -1184,7 +1187,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                       );
                                     })}
                                   </tbody>
-                                </table>
+                                  </table>
                               </div>
                             </div>
                           )}
@@ -1331,7 +1334,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Phiên bản (iPad)</label>
                   <select value={editingVariant.version || ''} onChange={(e) => setEditingVariant({ ...editingVariant, version: e.target.value })} className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold bg-white">
-                    <option value="">Không áp dụng</option><option value="Wifi">Wifi</option><option value="5G">5G</option>
+                    <option value="">Không áp dụng</option><option value="Wifi">Wifi</option><option value="5G (Cellular)">5G (Cellular)</option><option value="Wifi + 5G (Cellular)">Wifi + 5G (Cellular)</option>
                   </select>
                 </div>
               </div>

@@ -311,7 +311,7 @@ export default function IPadDetail({
     return price <= 0;
   }, [currentVariant]);
   const originList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.origin || 'Việt Nam').trim()).filter(Boolean)));
-  const versionList = ['5G', 'Wifi'];
+  const versionList = ['Wifi', '5G (Cellular)', 'Wifi + 5G (Cellular)'];
   const sizeList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean)));
   const currentOrigin = currentVariant?.origin || selectedOrigin || 'Việt Nam';
   const currentVersion = String(currentVariant?.version || currentVariant?.connectivity || currentVariant?.network || selectedVersion || 'Wifi');

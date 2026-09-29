@@ -73,6 +73,7 @@ export default function MacBookDetail({
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedOrigin, setSelectedOrigin] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
+  const [selectedVersion, setSelectedVersion] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isImageTransitioning, setIsImageTransitioning] = useState<boolean>(false);
@@ -126,6 +127,7 @@ export default function MacBookDetail({
     setSelectedColor(firstValidVar?.color || 'Space Gray');
     setSelectedOrigin(firstValidVar?.origin || 'Việt Nam');
     setSelectedSize(firstValidVar?.size || firstValidVar?.screenSize || firstValidVar?.inch || ((product.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/i)?.[0] || '14 inch'));
+    setSelectedVersion(firstValidVar?.version || 'Wifi');
 
     // Lấy danh sách MacBook liên quan từ DB
     fetch(`${API_URL}/api/products/filter?category=macbook`, { cache: 'no-store' })
@@ -239,7 +241,8 @@ export default function MacBookDetail({
           (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase() &&
           (v.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase() &&
           (!selectedOrigin || (v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase()) &&
-          (!v.size || !selectedSize || String(v.size).trim().toLowerCase() === selectedSize.trim().toLowerCase())
+          (!v.size || !selectedSize || String(v.size).trim().toLowerCase() === selectedSize.trim().toLowerCase()) &&
+          (!v.version || !selectedVersion || String(v.version).trim().toLowerCase() === selectedVersion.trim().toLowerCase())
       );
       if (exact) return exact;
     }
@@ -259,7 +262,7 @@ export default function MacBookDetail({
       stock: samplePrice > 0 ? (sample?.stock > 0 ? sample.stock : 10) : 0,
       images: sample?.images || product.variants[0]?.images || [],
     };
-  }, [product, selectedStorage, selectedColor, selectedOrigin, selectedSize]);
+  }, [product, selectedStorage, selectedColor, selectedOrigin, selectedSize, selectedVersion]);
 
   const imagesList: string[] = useMemo(() => {
     let list: string[] = [];
@@ -536,6 +539,13 @@ export default function MacBookDetail({
                   </div>
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Phiên bản:</label>
+                <div className="flex flex-wrap gap-2.5">
+                  {['Wifi', '5G (Cellular)', 'Wifi + 5G (Cellular)'].map((version) => <button key={version} type="button" onClick={() => setSelectedVersion(version)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${selectedVersion.toLowerCase() === version.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{version}</button>)}
+                </div>
+              </div>
 
               {/* CHỌN DUNG LƯỢNG SSD: TỰ ĐỘNG XUỐNG DÒNG VÀ VIỀN ĐỎ RÕ RÀNG */}
               {storageList.length > 0 && (
