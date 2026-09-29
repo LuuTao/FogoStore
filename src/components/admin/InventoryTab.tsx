@@ -99,6 +99,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
   const [addingVariantProduct, setAddingVariantProduct] = useState<any>(null);
   const [loadingAction, setLoadingAction] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [flashSaleUpdatingId, setFlashSaleUpdatingId] = useState<string | null>(null);
 
   // Chọn nhiều và Modal xóa
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -347,6 +348,25 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
     setSelectedProductIds((prev) =>
       prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
     );
+  };
+
+  const toggleFlashSaleProduct = async (product: any, nextValue: boolean) => {
+    try {
+      setFlashSaleUpdatingId(product.id);
+      const res = await fetch(`${API_BASE}/api/admin/products/${product.id}/flash-sale`, {
+        method: 'PATCH',
+        headers: getAuthHeader(),
+        body: JSON.stringify({ isFlashSale: nextValue }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể cập nhật Flash Sale');
+      showToast(nextValue ? `Đã thêm “${product.name}” vào Flash Sale` : `Đã gỡ “${product.name}” khỏi Flash Sale`);
+      await onRefresh();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Không thể cập nhật Flash Sale', 'error');
+    } finally {
+      setFlashSaleUpdatingId(null);
+    }
   };
 
   const toggleSelectSeries = (seriesProducts: { product: any }[], e: React.MouseEvent) => {
@@ -1020,6 +1040,27 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                             </div>
 
                             <div className="flex items-center gap-2">
+                              <label
+                                onClick={(event) => event.stopPropagation()}
+                                className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition ${
+                                  product.isFlashSale
+                                    ? 'border-amber-300 bg-amber-50 text-amber-700'
+                                    : 'border-gray-300 bg-white text-gray-600 hover:border-amber-300 hover:text-amber-700'
+                                }`}
+                                title="Hiển thị sản phẩm trong bảng Flash Sale trang chủ"
+                              >
+                                {flashSaleUpdatingId === product.id ? (
+                                  <Loader2 size={13} className="animate-spin" />
+                                ) : (
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(product.isFlashSale)}
+                                    onChange={(event) => toggleFlashSaleProduct(product, event.target.checked)}
+                                    className="accent-amber-600"
+                                  />
+                                )}
+                                <Zap size={12} /> Flash Sale
+                              </label>
                               <button
                                 onClick={() => setAddingVariantProduct(product)}
                                 className="bg-white hover:bg-red-50 hover:text-[#d70018] text-gray-700 border border-gray-300 hover:border-[#d70018] px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
