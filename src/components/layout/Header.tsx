@@ -598,17 +598,24 @@ export const Header: React.FC = () => {
         </div>
 
         <div className="hidden sm:flex w-full h-7 overflow-hidden bg-[#d70018] text-white items-center">
-          <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] md:text-xs lg:text-[13px] font-bold">
-            {[0, 1, 2, 3].map((copy) => (
-              <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
-                {marqueeItems.map((item) => (
-                  <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">
-                    <span aria-hidden="true">{item.icon}</span>
-                    <span>{item.text}</span>
-                  </span>
-                ))}
-              </div>
-            ))}
+          <div className="w-1/2 shrink-0 h-full flex items-center justify-center border-r border-white/25 px-3">
+            <span className="whitespace-nowrap text-[11px] md:text-xs lg:text-[13px] font-extrabold tracking-wide">
+              THE BEST APPLE RETAIL STORE IN HCM
+            </span>
+          </div>
+          <div className="w-1/2 h-full overflow-hidden flex items-center">
+            <div className="fogo-mobile-marquee flex w-max whitespace-nowrap text-[11px] md:text-xs lg:text-[13px] font-bold">
+              {[0, 1, 2, 3].map((copy) => (
+                <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
+                  {marqueeItems.map((item) => (
+                    <span key={`${copy}-${item.id}`} className="inline-flex items-center gap-1.5">
+                      <span aria-hidden="true">{item.icon}</span>
+                      <span>{item.text}</span>
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
