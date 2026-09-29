@@ -215,9 +215,15 @@ export default function MacBookDetail({
   const currentColorOptions = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return [];
 
-    const scopedVariants = selectedStorage
-      ? product.variants.filter((v: any) => (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase())
-      : product.variants;
+    const scopedVariants = product.variants.filter((v: any) => {
+      const storageMatches = !selectedStorage || (v.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase();
+      const originMatches = !selectedOrigin || String(v.origin || 'Việt Nam').trim().toLowerCase() === selectedOrigin.trim().toLowerCase();
+      const version = String(v.version || '').trim().toLowerCase();
+      const versionMatches = !selectedVersion || !version || version === selectedVersion.trim().toLowerCase();
+      const size = String(v.size || v.screenSize || v.inch || '').trim().toLowerCase();
+      const sizeMatches = !selectedSize || !size || size === selectedSize.trim().toLowerCase();
+      return storageMatches && originMatches && versionMatches && sizeMatches;
+    });
 
     const targetList = scopedVariants.length > 0 ? scopedVariants : product.variants;
     const map = new Map<string, any>();
@@ -233,7 +239,14 @@ export default function MacBookDetail({
       color: colorName,
       sampleVariant,
     }));
-  }, [product, selectedStorage]);
+  }, [product, selectedStorage, selectedOrigin, selectedVersion, selectedSize]);
+
+  const colorImageGallery = useMemo(() => currentColorOptions
+    .map(({ color, sampleVariant }) => ({
+      color,
+      image: Array.isArray(sampleVariant?.images) ? sampleVariant.images[0] : sampleVariant?.images || sampleVariant?.imageUrl || '',
+    }))
+    .filter((item) => Boolean(item.image)), [currentColorOptions]);
 
   const currentVariant = useMemo(() => {
     if (!product?.variants || product.variants.length === 0) return null;
@@ -272,6 +285,8 @@ export default function MacBookDetail({
   }, [product, selectedStorage, selectedColor, selectedOrigin, selectedSize, selectedVersion]);
 
   const imagesList: string[] = useMemo(() => {
+    if (colorImageGallery.length > 0) return colorImageGallery.map((item) => item.image);
+
     let list: string[] = [];
 
     const exactVariant = product?.variants?.find(
@@ -304,9 +319,15 @@ export default function MacBookDetail({
     }
 
     return list.length > 0 ? list : ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600'];
-  }, [product, selectedColor, selectedStorage]);
+  }, [colorImageGallery, product, selectedColor, selectedStorage]);
 
-  const displayImage = formatImg(imagesList[currentImageIndex] || imagesList[0]);
+  const selectedColorImageIndex = colorImageGallery.findIndex(
+    (item) => item.color.trim().toLowerCase() === selectedColor.trim().toLowerCase()
+  );
+  const activeImageIndex = selectedColorImageIndex >= 0
+    ? selectedColorImageIndex
+    : Math.min(currentImageIndex, Math.max(0, imagesList.length - 1));
+  const displayImage = formatImg(imagesList[activeImageIndex] || imagesList[0]);
 
   const isOutOfStock = useMemo(() => {
     if (!currentVariant) return true;
@@ -334,17 +355,24 @@ export default function MacBookDetail({
   };
 
   const handleSelectColor = (colorName: string) => {
-    if (selectedColor.toLowerCase() === colorName.toLowerCase()) return;
+    const galleryIndex = colorImageGallery.findIndex(
+      (item) => item.color.trim().toLowerCase() === colorName.trim().toLowerCase()
+    );
+    if (selectedColor.toLowerCase() === colorName.toLowerCase()) {
+      if (galleryIndex >= 0) setCurrentImageIndex(galleryIndex);
+      return;
+    }
 
     setIsImageTransitioning(true);
     setSelectedColor(colorName);
-    setCurrentImageIndex(0);
+    setCurrentImageIndex(galleryIndex >= 0 ? galleryIndex : 0);
 
-    setTimeout(() => {
-      setIsImageTransitioning(false), 150;
-    });
+    setTimeout(() => setIsImageTransitioning(false), 150);
 
-    const matched = product?.variants?.find(
+    const galleryVariant = currentColorOptions.find(
+      (option) => option.color.trim().toLowerCase() === colorName.trim().toLowerCase()
+    )?.sampleVariant;
+    const matched = galleryVariant || product?.variants?.find(
       (v: any) => (v.color || '').trim().toLowerCase() === colorName.toLowerCase()
     );
 
@@ -465,13 +493,23 @@ export default function MacBookDetail({
                 {imagesList.length > 1 && (
                   <>
                     <button
-                      onClick={() => setCurrentImageIndex((p) => (p - 1 + imagesList.length) % imagesList.length)}
+                      onClick={() => {
+                        const nextIndex = (activeImageIndex - 1 + imagesList.length) % imagesList.length;
+                        const galleryItem = colorImageGallery[nextIndex];
+                        if (galleryItem) handleSelectColor(galleryItem.color);
+                        else setCurrentImageIndex(nextIndex);
+                      }}
                       className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
                       <ChevronLeft size={18} />
                     </button>
                     <button
-                      onClick={() => setCurrentImageIndex((p) => (p + 1) % imagesList.length)}
+                      onClick={() => {
+                        const nextIndex = (activeImageIndex + 1) % imagesList.length;
+                        const galleryItem = colorImageGallery[nextIndex];
+                        if (galleryItem) handleSelectColor(galleryItem.color);
+                        else setCurrentImageIndex(nextIndex);
+                      }}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 cursor-pointer transition-all"
                     >
                       <ChevronRight size={18} />
@@ -490,15 +528,21 @@ export default function MacBookDetail({
                   <button
                     key={idx}
                     onClick={() => {
-                      setIsImageTransitioning(true);
-                      setCurrentImageIndex(idx);
-                      setTimeout(() => setIsImageTransitioning(false), 150);
+                      const galleryItem = colorImageGallery[idx];
+                      if (galleryItem) {
+                        handleSelectColor(galleryItem.color);
+                      } else {
+                        setIsImageTransitioning(true);
+                        setCurrentImageIndex(idx);
+                        setTimeout(() => setIsImageTransitioning(false), 150);
+                      }
                     }}
+                    title={colorImageGallery[idx] ? `Màu ${colorImageGallery[idx].color}` : 'Xem ảnh sản phẩm'}
                     className={`w-14 h-14 border rounded-xl p-0.5 bg-white shrink-0 cursor-pointer transition-all ${
-                      currentImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
+                      activeImageIndex === idx ? 'border-2 border-[#d70018] shadow-xs scale-105' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <img src={formatImg(img)} alt="" className="w-full h-full object-contain" />
+                    <img src={formatImg(img)} alt={colorImageGallery[idx]?.color || ''} className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
