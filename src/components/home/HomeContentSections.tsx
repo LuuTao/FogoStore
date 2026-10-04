@@ -38,14 +38,38 @@ const SECTION_COMPONENTS: Record<HomeSectionId, React.ComponentType> = {
   news: LatestNewsSection,
 };
 
+function normalizeHomeSections(value: unknown): HomeSectionSetting[] {
+  if (!Array.isArray(value)) return DEFAULT_HOME_SECTIONS;
+
+  const validIds = new Set<HomeSectionId>(DEFAULT_HOME_SECTIONS.map((section) => section.id));
+  const seen = new Set<HomeSectionId>();
+  const normalized: HomeSectionSetting[] = [];
+
+  value.forEach((item) => {
+    if (!item || typeof item !== 'object') return;
+    const candidate = item as Partial<HomeSectionSetting>;
+    if (!candidate.id || !validIds.has(candidate.id) || seen.has(candidate.id)) return;
+    seen.add(candidate.id);
+    normalized.push({ id: candidate.id, enabled: candidate.enabled !== false });
+  });
+
+  // Bản cấu hình cũ có thể chưa chứa Flash Sale hoặc iPhone. Luôn bổ sung khối
+  // bị thiếu để việc đổi thứ tự trong admin không làm mất nội dung trang chủ.
+  DEFAULT_HOME_SECTIONS.forEach((section) => {
+    if (!seen.has(section.id)) normalized.push(section);
+  });
+
+  return normalized;
+}
+
 export function HomeContentSections() {
   const [sections, setSections] = useState<HomeSectionSetting[]>(DEFAULT_HOME_SECTIONS);
 
   useEffect(() => {
-    fetchJsonCached<any>(`${API_URL}/api/home-layout`, 60_000)
+    fetchJsonCached<{ success?: boolean; data?: { sections?: unknown } }>(`${API_URL}/api/home-layout`, 60_000)
       .then((json) => {
         if (!json?.success || !Array.isArray(json.data?.sections)) return;
-        setSections(json.data.sections as HomeSectionSetting[]);
+        setSections(normalizeHomeSections(json.data.sections));
       })
       .catch(() => {
         // Giữ bố cục mặc định để Home vẫn hoạt động nếu API tạm thời gián đoạn.

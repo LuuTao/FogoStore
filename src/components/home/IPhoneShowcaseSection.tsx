@@ -7,7 +7,7 @@ import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { OptimizedImage } from '@/components/common/OptimizedImage';
 import { ProductSectionSkeleton } from '@/components/home/ProductSectionSkeleton';
-import { fetchJsonCached } from '@/lib/clientFetchCache';
+import { fetchHomeProducts } from '@/lib/homeProducts';
 
 import { ProductCardImages, ProductCardTags, ProductCardTitle } from '@/components/common/ProductCardExtras';
 
@@ -136,7 +136,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
   useEffect(() => {
     const fetchIPhones = async () => {
       try {
-        const json = await fetchJsonCached<any>(`${API_URL}/api/products/filter?category=iphone`, 60_000);
+        const json = await fetchHomeProducts('iphone');
         if (json.success && Array.isArray(json.data)) {
           const formatted: any[] = [];
 

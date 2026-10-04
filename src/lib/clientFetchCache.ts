@@ -10,7 +10,7 @@ const responseCache = new Map<string, CacheEntry>();
  * Cache ngắn ở phía trình duyệt và gộp các request trùng nhau đang chạy.
  * Dữ liệu tồn kho/Flash Sale dùng TTL rất ngắn; nội dung Home dùng TTL dài hơn.
  */
-export async function fetchJsonCached<T>(url: string, ttlMs = 60_000, init?: RequestInit): Promise<T> {
+export async function fetchJsonCached<T>(url: string, ttlMs = 60_000, init?: RequestInit, timeoutMs = 12_000): Promise<T> {
   const now = Date.now();
   const existing = responseCache.get(url);
 
@@ -22,8 +22,11 @@ export async function fetchJsonCached<T>(url: string, ttlMs = 60_000, init?: Req
     return existing.request as Promise<T>;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const request = fetch(url, {
     ...init,
+    signal: init?.signal || controller.signal,
     headers: {
       Accept: 'application/json',
       ...init?.headers,
@@ -40,7 +43,8 @@ export async function fetchJsonCached<T>(url: string, ttlMs = 60_000, init?: Req
     .catch((error) => {
       responseCache.delete(url);
       throw error;
-    });
+    })
+    .finally(() => clearTimeout(timeout));
 
   responseCache.set(url, { expiresAt: now + ttlMs, request });
   return request;
