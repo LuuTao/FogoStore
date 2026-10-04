@@ -33,7 +33,7 @@ const DEFAULT_COMMITMENT_BANNERS = [
 
 export const CommitmentSection: React.FC = () => {
   return (
-    <section className="max-w-7xl mx-auto px-4 mt-8 sm:mt-12 select-none">
+    <section className="w-full max-w-7xl mx-auto px-4 mt-8 sm:mt-12 select-none">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {DEFAULT_COMMITMENT_BANNERS.map((banner, index) => {
           const content = (
