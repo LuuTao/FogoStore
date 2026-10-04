@@ -9,6 +9,7 @@ import { IPadShowcaseSection } from '@/components/home/IPadShowcaseSection';
 import { MacBookShowcaseSection } from '@/components/home/MacBookShowcaseSection';
 import { LatestNewsSection } from '@/components/home/LatestNewsSection';
 import { CommitmentSection } from '@/components/home/CommitmentSection';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -41,10 +42,9 @@ export function HomeContentSections() {
   const [sections, setSections] = useState<HomeSectionSetting[]>(DEFAULT_HOME_SECTIONS);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/home-layout`, { cache: 'no-store' })
-      .then(async (response) => {
-        const json = await response.json();
-        if (!response.ok || !json?.success || !Array.isArray(json.data?.sections)) return;
+    fetchJsonCached<any>(`${API_URL}/api/home-layout`, 60_000)
+      .then((json) => {
+        if (!json?.success || !Array.isArray(json.data?.sections)) return;
         setSections(json.data.sections as HomeSectionSetting[]);
       })
       .catch(() => {

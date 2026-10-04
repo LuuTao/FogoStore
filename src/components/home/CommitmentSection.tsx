@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
+import { OptimizedImage } from '@/components/common/OptimizedImage';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -72,13 +74,8 @@ export const CommitmentSection: React.FC = () => {
         }
 
         // 2. Đồng bộ ngầm với Backend API
-        const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, {
-          cache: 'no-store',
-        });
-
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data)) {
+        const json = await fetchJsonCached<any>(`${API_URL}/api/banners`, 60_000);
+        if (json.success && Array.isArray(json.data)) {
             const apiCommits = json.data.filter(
               (it: any) => it.group === 'commit_cards' || it.position === 'commit_cards' || it.position === 'COMMITMENT'
             );
@@ -93,7 +90,6 @@ export const CommitmentSection: React.FC = () => {
                 }))
               );
             }
-          }
         }
       } catch (e) {
         // Khi lỗi mạng hoặc backend sleep, hệ thống vẫn dùng mảng mặc định mượt mà
@@ -113,11 +109,13 @@ export const CommitmentSection: React.FC = () => {
         {banners.map((banner, index) => {
           const content = (
             <div className="relative w-full h-[260px] sm:h-[320px] md:h-[380px] lg:h-[400px] rounded-xl overflow-hidden shadow-sm group border border-gray-100 bg-gray-50 transition-all duration-300 hover:shadow-md">
-              <img
+              <OptimizedImage
                 src={banner.imageUrl}
                 alt={banner.title || `Cam kết ${index + 1}`}
+                fill
+                sizes="(max-width: 768px) 50vw, 25vw"
                 draggable={false}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none"
+                className="object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none"
               />
             </div>
           );

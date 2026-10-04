@@ -21,6 +21,7 @@ import {
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -328,13 +329,10 @@ export const Header: React.FC = () => {
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`);
-        if (res.ok) {
-          const json = await res.json();
-          const data = json.data || json;
-          if (Array.isArray(data) && data.length > 0) {
-            setMenuList(data);
-          }
+        const json = await fetchJsonCached<any>(`${API_URL}/api/admin/menu`, 300_000);
+        const data = json.data || json;
+        if (Array.isArray(data) && data.length > 0) {
+          setMenuList(data);
         }
       } catch (err) {
         // Fallback
@@ -346,10 +344,7 @@ export const Header: React.FC = () => {
   useEffect(() => {
     const fetchMarqueeItems = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, { cache: 'no-store' });
-        if (!res.ok) return;
-
-        const json = await res.json();
+        const json = await fetchJsonCached<any>(`${API_URL}/api/banners`, 60_000);
         const data = json.data || json;
         if (!Array.isArray(data)) return;
 
@@ -375,9 +370,7 @@ export const Header: React.FC = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/products?all=true&limit=all`);
-        if (!res.ok) return;
-        const json = await res.json();
+        const json = await fetchJsonCached<any>(`${API_URL}/api/products?all=true&limit=all`, 120_000);
 
         let list: any[] = [];
         if (Array.isArray(json)) {

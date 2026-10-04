@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
 
 const API_URL = 'https://fogo-store-api.onrender.com';
 const API_BASE = `${API_URL}/api`;
@@ -104,17 +106,8 @@ export const HeroSection: React.FC = () => {
 
     const fetchAllBanners = async () => {
       try {
-        const res = await fetch(`${API_BASE}/banners?t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: {
-            Pragma: 'no-cache',
-            'Cache-Control': 'no-cache',
-          },
-        });
-
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        const json = await fetchJsonCached<any>(`${API_BASE}/banners`, 60_000);
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
             if (!isMounted) return;
 
             const heroList = json.data.filter(
@@ -144,7 +137,6 @@ export const HeroSection: React.FC = () => {
                 }))
               );
             }
-          }
         }
       } catch (err) {
         // Giữ nguyên banner mặc định khi mất mạng hoặc backend đang sleep
@@ -238,12 +230,16 @@ export const HeroSection: React.FC = () => {
           >
             {activeBanners.map((banner, idx) => (
               <div key={banner.id || idx} className="w-full h-full shrink-0">
-                <Link href={banner.link || '/'} className="block w-full h-full select-none">
-                  <img
+                <Link href={banner.link || '/'} className="relative block w-full h-full select-none">
+                  <Image
                     src={banner.imageUrl}
                     alt={banner.title || 'Banner'}
+                    fill
+                    priority={idx === 0}
+                    quality={82}
+                    sizes="100vw"
                     draggable={false}
-                    className="w-full h-full object-cover pointer-events-none"
+                    className="object-cover pointer-events-none"
                   />
                 </Link>
               </div>
@@ -283,11 +279,14 @@ export const HeroSection: React.FC = () => {
                         href={promo.link || '/'}
                         className="block relative w-full h-[105px] rounded-lg overflow-hidden shadow-xs border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
                       >
-                        <img
+                        <Image
                           src={promo.imageUrl}
                           alt={promo.title || 'Promo'}
+                          fill
+                          quality={75}
+                          sizes="50vw"
                           draggable={false}
-                          className="w-full h-full object-cover pointer-events-none"
+                          className="object-cover pointer-events-none"
                         />
                       </Link>
                     ))}
@@ -328,12 +327,16 @@ export const HeroSection: React.FC = () => {
           >
             {activeBanners.map((banner, idx) => (
               <div key={banner.id || idx} className="w-full h-full shrink-0">
-                <Link href={banner.link || '/'} className="block w-full h-full select-none">
-                  <img
+                <Link href={banner.link || '/'} className="relative block w-full h-full select-none">
+                  <Image
                     src={banner.imageUrl}
                     alt={banner.title || 'Banner'}
+                    fill
+                    priority={idx === 0}
+                    quality={82}
+                    sizes="100vw"
                     draggable={false}
-                    className="w-full h-full object-cover pointer-events-none"
+                    className="object-cover pointer-events-none"
                   />
                 </Link>
               </div>
@@ -379,11 +382,14 @@ export const HeroSection: React.FC = () => {
                         href={promo.link || '/'}
                         className="block relative h-[140px] rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white select-none active:scale-[0.98] transition-transform"
                       >
-                        <img
+                        <Image
                           src={promo.imageUrl}
                           alt="Promo"
+                          fill
+                          quality={75}
+                          sizes="50vw"
                           draggable={false}
-                          className="w-full h-full object-cover pointer-events-none"
+                          className="object-cover pointer-events-none"
                         />
                       </Link>
                     ))}
@@ -404,11 +410,15 @@ export const HeroSection: React.FC = () => {
           >
             {activeBanners.map((banner, idx) => (
               <div key={banner.id || idx} className="w-full h-full shrink-0">
-                <Link href={banner.link || '/'} className="block w-full h-full">
-                  <img
+                <Link href={banner.link || '/'} className="relative block w-full h-full">
+                  <Image
                     src={banner.imageUrl}
                     alt={banner.title || 'Banner'}
-                    className="w-full h-full object-cover object-center pointer-events-none"
+                    fill
+                    priority={idx === 0}
+                    quality={82}
+                    sizes="100vw"
+                    className="object-cover object-center pointer-events-none"
                   />
                 </Link>
               </div>
@@ -468,10 +478,13 @@ export const HeroSection: React.FC = () => {
                         href={promo.link || '/'}
                         className="block relative w-full h-[160px] sm:h-[180px] md:h-[200px] rounded-md overflow-hidden shadow-xl border border-gray-200 group bg-white cursor-pointer"
                       >
-                        <img
+                        <Image
                           src={promo.imageUrl}
                           alt="Promo"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          fill
+                          quality={75}
+                          sizes="640px"
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       </Link>
                     ))}

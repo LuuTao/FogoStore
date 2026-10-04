@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { ProductFaq } from '@/components/products/ProductFaq';
 import ProductSalesPolicy from '@/components/products/ProductSalesPolicy';
 import {
@@ -853,7 +853,7 @@ export default function WatchDetail({
                               [&_p]:mb-[1cm] [&_p]:leading-relaxed [&_p]:text-justify
                               [&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:rounded-2xl [&_img]:my-6 [&_img]:object-cover"
                     dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(
+                      __html: sanitizeHtml(
                         String(product.description || '')
                           .replace(/src="\/\//g, 'src="https://')
                           .replace(/src='\/\//g, "src='https://")

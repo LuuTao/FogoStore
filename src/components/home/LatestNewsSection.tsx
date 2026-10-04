@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, FileText } from 'lucide-react';
+import { OptimizedImage } from '@/components/common/OptimizedImage';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
 
 interface PostItem {
   id: string;
@@ -43,10 +45,7 @@ export const LatestNewsSection: React.FC = () => {
   useEffect(() => {
     const fetchLatestPosts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/admin/posts`, {
-          cache: 'no-store',
-        });
-        const json = await res.json();
+        const json = await fetchJsonCached<any>(`${API_URL}/api/posts`, 300_000);
         if (json.success && Array.isArray(json.data)) {
           setPosts(json.data.slice(0, 5));
         } else {
@@ -124,13 +123,13 @@ export const LatestNewsSection: React.FC = () => {
           <div className="lg:col-span-7 group">
             <Link href={`/tin-tuc/${mainPost.slug}`} className="block">
               <div className="w-full h-[260px] sm:h-[340px] md:h-[400px] rounded-md overflow-hidden bg-gray-100 border border-gray-200/80 shadow-sm relative">
-                <img
+                <OptimizedImage
                   src={getSafeImageUrl(mainPost.thumbnail)}
                   alt={mainPost.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Fogo+Store';
-                  }}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 58vw"
+                  fallbackSrc="https://placehold.co/600x400?text=Fogo+Store"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
               <h3 className="mt-3.5 text-base md:text-lg font-bold text-gray-900 group-hover:text-[#d70018] transition-colors leading-snug line-clamp-2">
@@ -147,13 +146,13 @@ export const LatestNewsSection: React.FC = () => {
             <div key={post.id} className={idx !== 0 ? 'pt-4' : ''}>
               <Link href={`/tin-tuc/${post.slug}`} className="flex gap-4 group items-center">
                 <div className="w-28 h-20 sm:w-32 sm:h-20 shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200/80 relative">
-                  <img
+                  <OptimizedImage
                     src={getSafeImageUrl(post.thumbnail)}
                     alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://placehold.co/200x150?text=Fogo';
-                    }}
+                    fill
+                    sizes="128px"
+                    fallbackSrc="https://placehold.co/200x150?text=Fogo"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
                 <div className="flex-1 min-w-0">

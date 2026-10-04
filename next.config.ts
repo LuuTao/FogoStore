@@ -31,6 +31,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'theme.hstatic.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+      },
     ],
   },
   // 1. Cấu hình Security Headers bảo vệ trang web

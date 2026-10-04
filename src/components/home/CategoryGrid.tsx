@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Award, CheckCircle2, Truck } from 'lucide-react';
 import { QUICK_CATEGORIES } from '@/data/quickCategories';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
+import { OptimizedImage } from '@/components/common/OptimizedImage';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -106,11 +108,9 @@ export const CategoryGrid: React.FC = () => {
 
     // 2. Fetch mới nhất từ API Backend (nếu lỗi mạng thì vẫn giữ ảnh mặc định)
     try {
-      const res = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const json = await res.json();
-        const dataList = json.data || json;
-        if (Array.isArray(dataList) && dataList.length > 0) {
+      const json = await fetchJsonCached<any>(`${API_URL}/api/banners`, 60_000);
+      const dataList = json.data || json;
+      if (Array.isArray(dataList) && dataList.length > 0) {
           const liveCatBanners = dataList.filter(
             (it: any) => it.group === 'category_banners' || it.position === 'category_banners'
           );
@@ -138,7 +138,6 @@ export const CategoryGrid: React.FC = () => {
               }))
             );
           }
-        }
       }
     } catch (err) {
       console.warn('Không thể fetch live banners:', err);
@@ -165,13 +164,12 @@ export const CategoryGrid: React.FC = () => {
             href={item.link || '/'}
             className="group relative block w-full aspect-[7/5] rounded-xl overflow-hidden border border-gray-200/80 bg-gray-100 shadow-2xs hover:shadow-lg hover:border-[#d70018]/50 transition-all duration-300"
           >
-            <img
+            <OptimizedImage
               src={item.imageUrl}
               alt={item.name}
-              width={700}
-              height={500}
-              loading="lazy"
-              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 pointer-events-none"
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover object-center group-hover:scale-105 transition-transform duration-500 pointer-events-none"
             />
           </Link>
         ))}
@@ -218,11 +216,13 @@ export const CategoryGrid: React.FC = () => {
               href={item.href || '/'}
               className="flex flex-col items-center justify-between p-1.5 sm:p-2 md:p-2.5 rounded-lg border border-gray-100 hover:border-[#d70018]/50 hover:shadow-md transition-all group bg-white text-center min-h-[95px] sm:min-h-[110px]"
             >
-              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-[#f8f9fa] border border-gray-200 p-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300">
-                <img
+              <div className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-[#f8f9fa] border border-gray-200 p-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                <OptimizedImage
                   src={item.imageUrl}
                   alt={item.name}
-                  className="w-full h-full object-contain rounded-full pointer-events-none drop-shadow-2xs"
+                  fill
+                  sizes="64px"
+                  className="object-contain p-1 rounded-full pointer-events-none drop-shadow-2xs"
                 />
               </div>
               <span className="text-[10px] sm:text-[11px] md:text-xs font-semibold text-gray-700 group-hover:text-[#d70018] transition-colors leading-tight mt-1.5 line-clamp-2">

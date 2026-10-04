@@ -7,6 +7,8 @@ import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { ProductCardImages, ProductCardTags } from '@/components/common/ProductCardExtras';
 import { getProductTags } from '@/lib/productTags';
+import { OptimizedImage } from '@/components/common/OptimizedImage';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -67,10 +69,9 @@ export const FeaturedProductsSection: React.FC = () => {
   ), [products]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/flash-sale`, { cache: 'no-store' })
-      .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể tải Flash Sale');
+    fetchJsonCached<any>(`${API_URL}/api/flash-sale`, 15_000)
+      .then((json) => {
+        if (!json?.success) throw new Error(json?.error || 'Không thể tải Flash Sale');
         setConfig(json.data?.config || null);
         setProducts(Array.isArray(json.data?.products) ? json.data.products as FlashSaleProduct[] : []);
       })
@@ -209,7 +210,7 @@ export const FeaturedProductsSection: React.FC = () => {
                     <div key={variant.id || `${product.id}-${variant.slug}`} data-flash-card className="group w-[47%] flex-none snap-start overflow-hidden rounded-xl bg-white p-2 text-gray-900 shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-[31%] md:w-[23%] lg:w-[19.1%] lg:p-2.5">
                       <Link href={href} className="relative block aspect-square overflow-hidden rounded-lg bg-white">
                         {discount > 0 && <span className="absolute left-2 top-2 z-10 rounded-md bg-[#d70018] px-2 py-1 text-[10px] font-black text-white">-{discount}%</span>}
-                        <img src={image} alt={product.name} className="h-full w-full object-contain p-2 transition duration-500 group-hover:scale-105" />
+                        <OptimizedImage src={image} alt={product.name} fill className="object-contain p-2 transition duration-500 group-hover:scale-105" />
                       </Link>
                       <Link href={href} className="mt-2 block min-h-10 line-clamp-2 text-xs font-bold leading-5 hover:text-[#d70018] sm:text-sm">{product.name}</Link>
                       <p className="mt-0.5 truncate text-[10px] font-semibold text-gray-500">{[variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ')}</p>

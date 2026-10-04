@@ -1,8 +1,14 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { HomeContentSections } from '@/components/home/HomeContentSections';
 import { Footer } from '@/components/layout/Footer';
+import { absoluteUrl } from '@/lib/seo';
+
+export const metadata: Metadata = {
+  alternates: { canonical: absoluteUrl('/') },
+};
 
 export default function HomePage() {
   return (

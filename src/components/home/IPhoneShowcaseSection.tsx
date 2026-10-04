@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { ArrowRight, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
+import { OptimizedImage } from '@/components/common/OptimizedImage';
+import { ProductSectionSkeleton } from '@/components/home/ProductSectionSkeleton';
+import { fetchJsonCached } from '@/lib/clientFetchCache';
 
 import { ProductCardImages, ProductCardTags, ProductCardTitle } from '@/components/common/ProductCardExtras';
 
@@ -133,10 +136,7 @@ export const IPhoneShowcaseSection: React.FC = () => {
   useEffect(() => {
     const fetchIPhones = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/products/filter?category=iphone`, {
-          cache: 'no-store',
-        });
-        const json = await res.json();
+        const json = await fetchJsonCached<any>(`${API_URL}/api/products/filter?category=iphone`, 60_000);
         if (json.success && Array.isArray(json.data)) {
           const formatted: any[] = [];
 
@@ -308,7 +308,8 @@ export const IPhoneShowcaseSection: React.FC = () => {
     });
   };
 
-  if (loading || products.length === 0) return null;
+  if (loading) return <ProductSectionSkeleton />;
+  if (products.length === 0) return null;
 
   return (
     <section className="max-w-7xl mx-auto px-2 sm:px-4 mt-6 sm:mt-10 select-none w-full overflow-hidden">
@@ -378,14 +379,12 @@ export const IPhoneShowcaseSection: React.FC = () => {
                   href={product.href}
                   className="w-full aspect-square my-1.5 sm:my-2 flex items-center justify-center bg-white overflow-hidden"
                 >
-                  <img
+                  <OptimizedImage
                     src={product.imageUrl}
                     alt={product.name}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80';
-                    }}
-                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200 drop-shadow-xs pointer-events-none"
+                    fill
+                    fallbackSrc="https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=400&q=80"
+                    className="object-contain p-1 drop-shadow-xs transition-transform duration-200 group-hover:scale-105"
                   />
                 </Link>
 
