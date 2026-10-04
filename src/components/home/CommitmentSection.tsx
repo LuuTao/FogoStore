@@ -2,9 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
-// 4 Banner cam kết mặc định trỏ thẳng vào public/commitments (Load ngay 0ms không phụ thuộc API)
+// Bốn banner cố định trong public, không phụ thuộc API hay cache cấu hình.
 const DEFAULT_COMMITMENT_BANNERS = [
   {
     id: 'commit-default-1',
@@ -39,14 +38,15 @@ export const CommitmentSection: React.FC = () => {
         {DEFAULT_COMMITMENT_BANNERS.map((banner, index) => {
           const content = (
             <div className="relative w-full h-[260px] sm:h-[320px] md:h-[380px] lg:h-[400px] rounded-xl overflow-hidden shadow-sm group border border-gray-100 bg-gray-50 transition-all duration-300 hover:shadow-md">
-              <Image
+              {/* Ảnh local được tải trực tiếp để tránh tầng tối ưu ảnh giữ trạng thái chờ trên mobile. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={banner.imageUrl}
                 alt={banner.title || `Cam kết ${index + 1}`}
-                fill
-                sizes="(max-width: 768px) 50vw, 25vw"
-                priority={index < 2}
+                loading="eager"
+                fetchPriority="high"
                 draggable={false}
-                className="object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none"
               />
             </div>
           );
