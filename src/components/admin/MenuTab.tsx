@@ -128,19 +128,17 @@ export default function MenuTab() {
       window.dispatchEvent(new Event('fogo_menu_updated'));
 
       // 2. Gửi API đồng bộ về Backend (kèm Token Admin tránh 401)
-      if (token) {
-        try {
-          await fetch(`${API_URL}/api/admin/subcategories/sync`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ menus }),
-          });
-        } catch (_) {
-          // Bỏ qua nếu endpoint backend chưa sẵn sàng, dữ liệu đã được lưu an toàn ở frontend
-        }
+      try {
+        await fetch(`${API_URL}/api/admin/subcategories/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ menus }),
+        });
+      } catch (_) {
+        // Bỏ qua nếu endpoint backend chưa sẵn sàng, dữ liệu đã được lưu an toàn ở frontend
       }
 
       setHasChanges(false);

@@ -22,6 +22,7 @@ import {
   Upload,
   Image as ImageIcon,
 } from 'lucide-react';
+import { getAuthHeaders } from '@/services/adminApi';
 
 interface Post {
   id: string;
@@ -101,7 +102,10 @@ export default function AdminPostsPage() {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/posts`, { cache: 'no-store' });
+      const res = await fetch(`${API_URL}/api/admin/posts`, {
+        cache: 'no-store',
+        headers: getAuthHeaders(),
+      });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setPosts(json.data);

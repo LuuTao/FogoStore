@@ -27,6 +27,7 @@ import { useCart } from '@/context/CartContext';
 import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { getAuthToken } from '@/services/clientApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -226,24 +227,18 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
-    let userId: string | null = null;
-    if (rawUser) {
-      try {
-        const u = JSON.parse(rawUser);
-        userId = u.id || u._id || null;
-      } catch {}
-    }
-
     const fullAddress = `${streetAddress.trim()}, ${ward}, ${province}`;
 
     try {
+      const authToken = getAuthToken();
       const response = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
         body: JSON.stringify({
-          userId: userId || undefined,
-          isGuest: !userId,
           customerName: cleanName,
           customerPhone: cleanPhone,
           customerEmail: cleanEmail || undefined,
@@ -262,14 +257,9 @@ export default function CheckoutPage() {
             name: item.name,
             storage: item.storage || 'Tiêu chuẩn',
             color: item.color || 'Mặc định',
-            price: Number(item.price || 0),
             quantity: Number(item.quantity || 1),
-            imageUrl: item.imageUrl || '',
           })),
-          subTotal: totalPrice,
-          totalAmount: finalPrice,
-          discountAmount,
-          shippingFee,
+          couponCode: couponCode.trim().toUpperCase() || undefined,
           needVat,
           vatInfo: needVat ? {
             companyName: companyName.trim(),
@@ -301,12 +291,12 @@ export default function CheckoutPage() {
 
       if (paymentMethod === 'vnpay-qr' || paymentMethod === 'momo') {
         setCreatedOrderCode(orderCode);
-        setCreatedTotalAmount(finalPrice);
+        setCreatedTotalAmount(Number(result.data?.totalAmount || finalPrice));
         setCreatedReservationExpiresAt(result.data?.stockReservedUntil || null);
         setIsQrModalOpen(true);
       } else {
         setTimeout(() => {
-          router.push(`/tra-cuu-don-hang?code=${orderCode}`);
+          router.push(`/don-hang/${encodeURIComponent(orderCode)}`);
         }, 1200);
       }
     } catch (error: any) {
@@ -324,7 +314,7 @@ export default function CheckoutPage() {
   const handleConfirmQrSuccess = () => {
     clearCart();
     setIsQrModalOpen(false);
-    router.push(`/tra-cuu-don-hang?code=${createdOrderCode}`);
+    router.push(`/don-hang/${encodeURIComponent(createdOrderCode)}`);
   };
 
   return (

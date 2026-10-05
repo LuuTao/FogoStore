@@ -470,17 +470,11 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         localStorage.getItem('fogo_admin_token') ||
         '';
 
-      if (!adminToken) {
-        alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại tài khoản Admin!');
-        setIsSaving(false);
-        return;
-      }
-
       const res = await fetch(`${API_URL}/api/admin/banners/sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`, // Gửi kèm token chuẩn
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
         },
         body: JSON.stringify({ items: payloadItems }),
       });

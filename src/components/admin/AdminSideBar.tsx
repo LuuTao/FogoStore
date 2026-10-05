@@ -57,7 +57,11 @@ export default function AdminSidebar({
   const router = useRouter();
 
   // Đăng xuất và xóa toàn bộ token lưu trên máy
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '')}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => {});
     localStorage.removeItem('fogo_token');
     localStorage.removeItem('fogo_user');
     localStorage.removeItem('token');

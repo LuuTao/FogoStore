@@ -16,6 +16,7 @@ import {
   Search,
 } from 'lucide-react';
 import mammoth from 'mammoth';
+import { getAuthHeaders } from '@/services/adminApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -116,7 +117,7 @@ export default function AdminSeoManagementPage() {
       // 2. Lưu lên API Database Backend
       await fetch(`${API_URL}/api/admin/seo`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           category: activeTab,
           htmlContent: contentHtml,

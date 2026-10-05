@@ -86,7 +86,12 @@ export default function OrdersTab({ orders = [], onRefresh }: Props) {
         orderStatus: newOrderStatus,
       };
 
-      if (newOrderStatus === 'COMPLETED') {
+      const currentOrder = orders.find((order) => order.id === id);
+      const paymentMethod = String(currentOrder?.paymentMethod || '').toLowerCase();
+      const isOnlinePayment = ['vnpay-qr', 'momo', 'qr', 'bank', 'card'].some((method) =>
+        paymentMethod.includes(method)
+      );
+      if (newOrderStatus === 'COMPLETED' && !isOnlinePayment) {
         payload.paymentStatus = 'PAID';
       }
 

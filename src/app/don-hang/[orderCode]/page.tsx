@@ -29,8 +29,9 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
+import { clearOrderAccessToken, getOrderAccessHeaders } from '@/lib/orderAccess';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -38,6 +39,7 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   // Toast thông báo
@@ -69,17 +71,28 @@ export default function OrderDetailPage() {
     if (!orderCode) return;
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/orders/${orderCode}`, { cache: 'no-store' });
+      setLoadError('');
+      const res = await fetch(`${API_URL}/api/orders/${orderCode}`, {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: getOrderAccessHeaders(orderCode),
+      });
       const json = await res.json();
       if (res.ok && json.success && json.data) {
+        // The backend upgrades any legacy browser token to a scoped HttpOnly cookie.
+        clearOrderAccessToken(orderCode);
         setOrder(json.data);
         setEditName(json.data.customerName || '');
         setEditPhone(json.data.customerPhone || '');
         setEditAddress(json.data.address || '');
         setEditNote(json.data.note || '');
         setSelectedPayment(json.data.paymentMethod || 'cod');
+      } else {
+        setOrder(null);
+        setLoadError(json.error || json.message || 'Không thể mở đơn hàng này.');
       }
     } catch {
+      setLoadError('Không thể kết nối máy chủ lấy dữ liệu đơn hàng.');
       setToast({
         show: true,
         type: 'error',
@@ -102,7 +115,8 @@ export default function OrderDetailPage() {
     try {
       const res = await fetch(`${API_URL}/api/orders/${orderCode}/cancel`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getOrderAccessHeaders(orderCode) },
       });
       const data = await res.json();
 
@@ -126,7 +140,8 @@ export default function OrderDetailPage() {
     try {
       const res = await fetch(`${API_URL}/api/orders/${orderCode}/update`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getOrderAccessHeaders(orderCode) },
         body: JSON.stringify({
           customerName: editName,
           customerPhone: editPhone,
@@ -157,7 +172,8 @@ export default function OrderDetailPage() {
     try {
       const res = await fetch(`${API_URL}/api/orders/${orderCode}/update`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getOrderAccessHeaders(orderCode) },
         body: JSON.stringify({ paymentMethod: selectedPayment }),
       });
       const data = await res.json();
@@ -180,16 +196,17 @@ export default function OrderDetailPage() {
     }
   };
 
-  // Xác nhận sau khi quét QR xong
+  // Modal chỉ gọi callback này sau khi backend xác nhận giao dịch đã PAID.
+  // Trình duyệt không bao giờ được tự gửi trạng thái thanh toán.
   const handleConfirmQrPaid = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderCode}/update`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentStatus: 'PAID' }),
+      const res = await fetch(`${API_URL}/api/orders/${orderCode}`, {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: getOrderAccessHeaders(orderCode),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
+      if (res.ok && data.success && data.data?.paymentStatus === 'PAID') {
         setOrder(data.data);
         setToast({ show: true, type: 'success', message: 'Đã ghi nhận thanh toán thành công!' });
       }
@@ -285,6 +302,15 @@ export default function OrderDetailPage() {
             <div className="bg-white rounded-2xl p-16 text-center border border-gray-200 shadow-xs">
               <Loader2 size={40} className="animate-spin text-[#d70018] mx-auto mb-3" />
               <p className="text-base font-bold text-gray-500">Đang nạp chi tiết đơn hàng...</p>
+            </div>
+          ) : loadError ? (
+            <div className="bg-white rounded-2xl p-10 text-center border border-gray-200 shadow-xs">
+              <ShieldCheck size={44} className="text-[#d70018] mx-auto mb-3" />
+              <h1 className="text-xl font-black text-gray-900">Đơn hàng được bảo vệ</h1>
+              <p className="mt-2 text-sm text-gray-500">{loadError}</p>
+              <Link href="/tra-cuu-don-hang" className="mt-5 inline-flex rounded-lg bg-[#d70018] px-5 py-2.5 text-sm font-bold text-white">
+                Tra cứu lại đơn hàng
+              </Link>
             </div>
           ) : (
             <div className="bg-white rounded-2xl p-6 sm:p-10 border border-gray-200 shadow-xs space-y-8">

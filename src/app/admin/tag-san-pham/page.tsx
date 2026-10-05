@@ -61,9 +61,8 @@ export default function ProductTagsPage() {
     setSaving(true); setMessage('');
     try {
       const token = getAdminToken();
-      if (!token) throw Error('Chưa có token đăng nhập admin. Vui lòng đăng nhập lại.');
       const res = await fetch(API + '/api/admin/products/' + editing.id + '/tags', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ tags }),
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify({ tags }),
       });
       const json = await readApiResponse(res);
       if (!res.ok || !json.success) throw Error(json.error || json.message || 'Không thể lưu tag');

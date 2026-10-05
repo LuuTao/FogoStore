@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getAuthToken } from '@/services/clientApi';
 
 export interface CartItem {
   id: string | number; // variantId hoặc id sản phẩm
@@ -27,7 +28,15 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const API_BASE = 'https://fogo-store-api.onrender.com/api';
+const API_BASE = `${(process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/api\/?$/, '').replace(/\/$/, '')}/api`;
+
+const authenticatedHeaders = (json = false): Record<string, string> => {
+  const token = getAuthToken();
+  return {
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -59,7 +68,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchCartFromDB = useCallback(async (userId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/cart/${userId}`, { cache: 'no-store' });
+      const res = await fetch(`${API_BASE}/cart/${userId}`, {
+        cache: 'no-store',
+        headers: authenticatedHeaders(),
+      });
       
       if (!res.ok) {
         setCartItems([]);
@@ -133,15 +145,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         await fetch(`${API_BASE}/cart/add`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authenticatedHeaders(true),
           body: JSON.stringify({
-            userId,
             variantId: String(item.id),
-            name: item.name,
-            price: item.price,
-            storage: item.storage || '',
-            color: item.color || '',
-            imageUrl: (item.imageUrl || '').replace('http://localhost:5000', 'https://fogo-store-api.onrender.com'),
             quantity: item.quantity,
           }),
         });
@@ -170,8 +176,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         await fetch(`${API_BASE}/cart/update-quantity`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, variantId: String(id), storage: storage || '', color: color || '', quantity }),
+          headers: authenticatedHeaders(true),
+          body: JSON.stringify({ variantId: String(id), quantity }),
         });
       } catch (err) {
         console.error(err);
@@ -191,8 +197,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         await fetch(`${API_BASE}/cart/remove`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, variantId: String(id), storage: storage || '', color: color || '' }),
+          headers: authenticatedHeaders(true),
+          body: JSON.stringify({ variantId: String(id) }),
         });
       } catch (err) {
         console.error(err);
@@ -206,7 +212,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (userId) {
       try {
-        await fetch(`${API_BASE}/cart/clear/${userId}`, { method: 'DELETE' });
+        await fetch(`${API_BASE}/cart/clear/${userId}`, {
+          method: 'DELETE',
+          headers: authenticatedHeaders(),
+        });
       } catch (err) {
         console.error(err);
       }

@@ -18,11 +18,14 @@ import {
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { getAuthToken } from '@/services/clientApi';
+import { clearOrderAccessToken, getOrderAccessHeaders } from '@/lib/orderAccess';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export default function OrderTrackingPage() {
   const [keyword, setKeyword] = useState('');
+  const [lookupPhone, setLookupPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -51,10 +54,15 @@ export default function OrderTrackingPage() {
         const user = JSON.parse(rawUser);
         setCurrentUser(user);
         const userId = user.id || user._id;
+        const token = getAuthToken();
 
         if (userId) {
           setLoading(true);
-          fetch(`${API_URL}/api/orders/my-orders?userId=${userId}`, { cache: 'no-store' })
+          fetch(`${API_URL}/api/orders/my-orders`, {
+            cache: 'no-store',
+            credentials: 'include',
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          })
             .then((res) => res.json())
             .then((res) => {
               if (res.success && Array.isArray(res.data)) {
@@ -78,9 +86,14 @@ export default function OrderTrackingPage() {
     setLoading(true);
     try {
       // Tìm theo mã đơn hàng
-      const res = await fetch(`${API_URL}/api/orders/${keyword.trim()}`, { cache: 'no-store' });
+      const res = await fetch(`${API_URL}/api/orders/${keyword.trim()}`, {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: getOrderAccessHeaders(keyword.trim(), lookupPhone),
+      });
       const data = await res.json();
       if (res.ok && data.success && data.data) {
+        clearOrderAccessToken(data.data.orderCode || keyword.trim());
         setOrders([data.data]);
       } else {
         // Nếu không ra, tìm theo API user hoặc số điện thoại
@@ -154,17 +167,27 @@ export default function OrderTrackingPage() {
               Tra Cứu Tiến Độ Đơn Hàng
             </h1>
             <p className="text-xs text-gray-500 mb-6">
-              Nhập chính xác <b>Số điện thoại đặt hàng</b> hoặc <b>Mã đơn hàng</b> (VD: FG-123456)
+              Nhập <b>Mã đơn hàng</b>. Với đơn cũ, nhập thêm đúng số điện thoại đặt hàng để xác minh.
             </p>
 
-            <form onSubmit={handleSearch} className="flex gap-2 max-w-lg mx-auto">
-              <div className="relative flex-1">
+            <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 max-w-2xl mx-auto">
+              <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Nhập số điện thoại hoặc mã đơn..."
+                  placeholder="Mã đơn FG-123456"
+                  className="w-full text-xs pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#d70018]"
+                />
+              </div>
+              <div className="relative">
+                <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="tel"
+                  value={lookupPhone}
+                  onChange={(e) => setLookupPhone(e.target.value)}
+                  placeholder="Số điện thoại đặt hàng"
                   className="w-full text-xs pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#d70018]"
                 />
               </div>

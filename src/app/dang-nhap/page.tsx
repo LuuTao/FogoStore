@@ -43,10 +43,9 @@ export default function LoginPage() {
       }
 
       // Nhận token và user theo đúng cấu trúc phản hồi API
-      const authToken = data.data?.token || data.token;
       const authUser = data.data?.user || data.user;
 
-      login(authToken, authUser);
+      login(authUser);
 
       if (authUser?.role === 'ADMIN') {
         router.push('/admin/don-hang');
@@ -107,7 +106,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Đăng nhập không thành công');
       }
 
-      login(data.data.token, data.data.user);
+      login(data.data.user);
 
       if (data.data.user.role === 'ADMIN') {
         router.push('/admin/don-hang');

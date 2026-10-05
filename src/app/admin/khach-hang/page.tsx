@@ -15,6 +15,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
+import { getAuthHeaders } from '@/services/adminApi';
 
 interface CustomerItem {
   _id: string;
@@ -40,7 +41,10 @@ export default function AdminCustomerPage() {
     const fetchCustomers = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/api/admin/customers`);
+        const res = await fetch(`${API_URL}/api/admin/customers`, {
+          cache: 'no-store',
+          headers: getAuthHeaders(),
+        });
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
           setCustomers(json.data);

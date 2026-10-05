@@ -63,7 +63,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
         throw new Error(data.error || 'Tài khoản hoặc mật khẩu không chính xác');
       }
 
-      login(data.data.token, data.data.user);
+      login(data.data.user);
       onClose();
 
       if (data.data.user.role === 'ADMIN') {
@@ -126,7 +126,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
         throw new Error(data.error || 'Mã xác thực không chính xác hoặc đã hết hạn');
       }
 
-      login(data.data.token, data.data.user);
+      login(data.data.user);
       alert('Đăng ký tài khoản thành công!');
       onClose();
     } catch (err: any) {
@@ -163,7 +163,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
         throw new Error(data.error || 'Đăng nhập Google thất bại');
       }
 
-      login(data.data.token, data.data.user);
+      login(data.data.user);
       onClose();
 
       if (data.data.user.role === 'ADMIN') {

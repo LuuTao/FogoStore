@@ -22,8 +22,9 @@ import {
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { getAuthToken } from '@/services/clientApi';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 interface OrderItem {
   id: string;
@@ -72,6 +73,7 @@ export default function MyOrdersPage() {
       const parsedUser = JSON.parse(rawUser);
       setUser(parsedUser);
       const userId = parsedUser.id || parsedUser._id;
+      const token = getAuthToken();
 
       if (!userId) {
         setError('Không xác định được ID tài khoản. Vui lòng đăng nhập lại.');
@@ -80,7 +82,10 @@ export default function MyOrdersPage() {
       }
 
       // 2. Fetch danh sách đơn hàng của người dùng hiện tại
-      fetch(`${API_URL}/api/orders/my-orders?userId=${userId}`, { cache: 'no-store' })
+      fetch(`${API_URL}/api/orders/my-orders`, {
+        cache: 'no-store',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
         .then((res) => res.json())
         .then((json) => {
           if (json.success && Array.isArray(json.data)) {

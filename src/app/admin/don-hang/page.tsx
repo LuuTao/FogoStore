@@ -136,13 +136,10 @@ export default function AdminOrdersPage() {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      let res = await fetch(`${API_URL}/api/admin/orders`, { 
+      const res = await fetch(`${API_URL}/api/admin/orders`, {
         headers,
         cache: 'no-store' 
       });
-      if (!res.ok) {
-        res = await fetch(`${API_URL}/api/orders`, { cache: 'no-store' });
-      }
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setOrders(json.data);

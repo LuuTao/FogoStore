@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import AnalyticsTab from '@/components/admin/AnalyticsTab';
+import { getAuthHeaders } from '@/services/adminApi';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export default function ThongKePage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -13,7 +14,10 @@ export default function ThongKePage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/admin/orders`, { cache: 'no-store' });
+      const res = await fetch(`${API_URL}/api/admin/orders`, {
+        cache: 'no-store',
+        headers: getAuthHeaders(),
+      });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setOrders(json.data);

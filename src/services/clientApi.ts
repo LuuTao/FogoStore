@@ -11,7 +11,9 @@ export const getAuthToken = (): string | null => {
     const directToken = 
       localStorage.getItem('token') || 
       localStorage.getItem('fogo_token') || 
-      localStorage.getItem('accessToken');
+      localStorage.getItem('accessToken') ||
+      localStorage.getItem('fogo_admin_token') ||
+      localStorage.getItem('admin_token');
     if (directToken) return directToken;
 
     // Kiểm tra trong object user
@@ -33,6 +35,8 @@ export const getAuthToken = (): string | null => {
 export const clearAuthSession = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('token');
+  localStorage.removeItem('fogo_admin_token');
+  localStorage.removeItem('admin_token');
   localStorage.removeItem('fogo_token');
   localStorage.removeItem('accessToken');
   localStorage.removeItem('user');
@@ -77,6 +81,7 @@ export async function clientFetch<T = any>(
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include',
       signal: options.signal || controller.signal,
     });
 

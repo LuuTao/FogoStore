@@ -22,8 +22,9 @@ import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MENU_DATA } from '@/data/navigation';
+import { getAuthHeaders } from '@/services/adminApi';
 
-const API_URL = 'https://fogo-store-api.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
 export interface SubMenuItem {
   name: string;
@@ -94,7 +95,7 @@ export default function AdminMenuPage() {
 
       // 2. Tải trực tiếp từ Database Neon
       try {
-        const res = await fetch(`${API_URL}/api/admin/menu?t=${Date.now()}`, {
+        const res = await fetch(`${API_URL}/api/menu?t=${Date.now()}`, {
           cache: 'no-store',
         });
         if (res.ok) {
@@ -218,7 +219,7 @@ export default function AdminMenuPage() {
       // 2. Gửi request đồng bộ lên Database Neon
       await fetch(`${API_URL}/api/admin/menu`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ menu: menus }),
       });
 
@@ -248,7 +249,7 @@ export default function AdminMenuPage() {
     try {
       await fetch(`${API_URL}/api/admin/menu`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ menu: MENU_DATA }),
       });
     } catch (e) {}

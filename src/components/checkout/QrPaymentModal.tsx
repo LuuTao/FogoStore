@@ -12,6 +12,7 @@ import {
   Building2,
   ShieldCheck,
 } from 'lucide-react';
+import { getOrderAccessHeaders } from '@/lib/orderAccess';
 
 interface QrPaymentModalProps {
   isOpen: boolean;
@@ -91,6 +92,8 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
       try {
         const res = await fetch(`${API_URL}/api/orders/${orderCode}/status?t=${Date.now()}`, {
           cache: 'no-store',
+          credentials: 'include',
+          headers: getOrderAccessHeaders(orderCode),
         });
         if (res.ok) {
           const json = await res.json();

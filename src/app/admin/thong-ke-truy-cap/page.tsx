@@ -12,6 +12,7 @@ import {
   RefreshCw,
   TrendingUp
 } from 'lucide-react';
+import { getAuthHeaders } from '@/services/adminApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -39,7 +40,7 @@ export default function TrafficAnalyticsPage() {
       setLoading(true);
       const res = await fetch(
         `${API_URL}/api/admin/traffic-analytics?startDate=${startDate}&endDate=${endDate}`,
-        { cache: 'no-store' }
+        { cache: 'no-store', headers: getAuthHeaders() }
       );
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {

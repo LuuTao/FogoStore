@@ -89,7 +89,7 @@ export default function PostDetailPage() {
     const fetchPostData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_URL}/api/admin/posts`, { cache: 'no-store' });
+        const res = await fetch(`${API_URL}/api/posts`, { cache: 'no-store' });
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
           setAllPosts(json.data);

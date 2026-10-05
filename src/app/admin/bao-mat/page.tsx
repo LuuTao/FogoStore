@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Flame
 } from 'lucide-react';
+import { getAuthToken } from '@/services/clientApi';
 
 interface SecurityLog {
   id: string;
@@ -62,7 +63,7 @@ export default function SecurityManagementPage() {
     setAuthError('');
 
     try {
-      const adminToken = localStorage.getItem('fogo_admin_token') || localStorage.getItem('admin_token') || '';
+      const adminToken = getAuthToken() || '';
       const res = await fetch(`${API_URL}/api/admin/security-auth`, {
         method: 'POST',
         headers: {
@@ -95,7 +96,7 @@ export default function SecurityManagementPage() {
   const fetchLogs = async (secTokenOverride?: string) => {
     setLoading(true);
     const secToken = secTokenOverride || sessionStorage.getItem('fogo_sec_token') || '';
-    const adminToken = localStorage.getItem('fogo_admin_token') || localStorage.getItem('admin_token') || '';
+    const adminToken = getAuthToken() || '';
 
     try {
       const res = await fetch(`${API_URL}/api/admin/security-logs`, {
@@ -140,7 +141,7 @@ export default function SecurityManagementPage() {
   const handleClearLogs = async () => {
     if (!confirm('Bạn có chắc chắn muốn dọn sạch toàn bộ log cảnh báo?')) return;
     const secToken = sessionStorage.getItem('fogo_sec_token') || '';
-    const adminToken = localStorage.getItem('fogo_admin_token') || localStorage.getItem('admin_token') || '';
+    const adminToken = getAuthToken() || '';
 
     try {
       await fetch(`${API_URL}/api/admin/security-logs`, {

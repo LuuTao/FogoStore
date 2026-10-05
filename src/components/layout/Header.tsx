@@ -273,7 +273,7 @@ export const Header: React.FC = () => {
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  const { user, logout } = useAuth();
+  const { user, logout, logoutAllDevices } = useAuth();
   const { totalQuantity } = useCart();
 
   useEffect(() => {
@@ -329,7 +329,7 @@ export const Header: React.FC = () => {
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
-        const json = await fetchJsonCached<any>(`${API_URL}/api/admin/menu`, 300_000);
+        const json = await fetchJsonCached<any>(`${API_URL}/api/menu`, 300_000);
         const data = json.data || json;
         if (Array.isArray(data) && data.length > 0) {
           setMenuList(data);
@@ -927,6 +927,17 @@ export const Header: React.FC = () => {
                       </div>
 
                       <div className="pt-2 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            void logoutAllDevices();
+                          }}
+                          className="mb-1 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Shield size={14} />
+                          <span>Đăng xuất mọi thiết bị</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
