@@ -2,85 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Home, Menu, Store } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 // Chú ý chữ B viết hoa: AdminSideBar
 import AdminSideBar from '@/components/admin/AdminSideBar';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
-
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!isLoading && user?.role !== 'ADMIN') router.replace('/dang-nhap');
+  }, [isLoading, router, user?.role]);
 
-    const verifyAdminSession = async () => {
-      try {
-        let response = await fetch(`${API_URL}/api/auth/me`, {
-          credentials: 'include',
-          cache: 'no-store',
-        });
-        if (response.status === 401) {
-          const refreshed = await fetch(`${API_URL}/api/auth/refresh`, {
-            method: 'POST',
-            credentials: 'include',
-          });
-          if (refreshed.ok) {
-            response = await fetch(`${API_URL}/api/auth/me`, {
-              credentials: 'include',
-              cache: 'no-store',
-            });
-          }
-        }
-
-        const body = await response.json().catch(() => null);
-        const isAdmin = Boolean(response.ok && body?.success && body?.data?.role === 'ADMIN');
-        if (cancelled) return;
-        setAuthorized(isAdmin);
-        if (isAdmin) {
-          localStorage.setItem('fogo_user', JSON.stringify(body.data));
-          localStorage.setItem('user', JSON.stringify(body.data));
-        } else {
-          localStorage.removeItem('fogo_user');
-          localStorage.removeItem('user');
-        }
-      } catch {
-        if (!cancelled) setAuthorized(false);
-      }
-    };
-
-    verifyAdminSession();
-    return () => { cancelled = true; };
-  }, []);
-
-  if (authorized === null) {
+  if (isLoading || user?.role !== 'ADMIN') {
     return <div className="min-h-screen bg-white" />;
-  }
-
-  if (!authorized) {
-    return (
-      <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center text-center px-4 select-none">
-        <h1 className="text-5xl sm:text-7xl font-black text-[#d70018] tracking-wide drop-shadow-sm leading-none">
-          HẾT PHIÊN
-        </h1>
-        <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mt-6 uppercase tracking-wide">
-          Phiên quản trị không còn hiệu lực
-        </h2>
-        <p className="text-base sm:text-lg text-gray-500 font-medium mt-3 max-w-lg leading-relaxed">
-          Vui lòng đăng nhập lại sau khi hệ thống vừa nâng cấp bảo mật hoặc thay đổi JWT_SECRET.
-        </p>
-        <div className="mt-8">
-          <Link
-            href="/dang-nhap"
-            className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full bg-[#d70018] hover:bg-red-700 text-white font-black text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95"
-          >
-            <Home size={22} />
-            <span>Đăng nhập lại</span>
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   return (

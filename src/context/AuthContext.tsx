@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { installCredentialedApiFetch } from '@/lib/secureFetch';
+import { installCredentialedApiFetch, refreshAuthSession } from '@/lib/secureFetch';
 
 installCredentialedApiFetch();
 
@@ -21,6 +21,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  isLoading: boolean;
   login: (user: User) => void;
   logout: () => void;
   logoutAllDevices: () => Promise<void>;
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     localStorage.removeItem('fogo_token');
@@ -50,8 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetch(`${API_URL}/api/auth/me`, { credentials: 'include', cache: 'no-store' })
       .then(async (response) => {
         if (response.status === 401) {
-          const refreshed = await fetch(`${API_URL}/api/auth/refresh`, { method: 'POST', credentials: 'include' });
-          if (!refreshed.ok) throw new Error('Phiên hết hạn');
+          const refreshed = await refreshAuthSession();
+          if (!refreshed) throw new Error('Phiên hết hạn');
           return fetch(`${API_URL}/api/auth/me`, { credentials: 'include', cache: 'no-store' });
         }
         return response;
@@ -68,6 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         localStorage.removeItem('fogo_user');
         localStorage.removeItem('user');
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   }, []);
 
@@ -78,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setToken(null);
     setUser(formattedUser);
+    setIsLoading(false);
     
     // Đồng bộ tất cả các key mà các component đang dùng
     localStorage.setItem('fogo_user', JSON.stringify(formattedUser));
@@ -109,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, logoutAllDevices }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, logoutAllDevices }}>
       {children}
     </AuthContext.Provider>
   );
