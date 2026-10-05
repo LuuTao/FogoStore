@@ -71,13 +71,10 @@ const SUB_MODELS_MAP: Record<string, SubModelItem[]> = {
   '18': [
     { name: '18 Pro Max', tag: 'iphone-18-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
     { name: '18 Pro', tag: 'iphone-18-pro', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
-    { name: '18 Plus', tag: 'iphone-18-plus', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
-    { name: 'iPhone 18', tag: 'iphone-18-tieuchuan', img: 'https://cdn.hstatic.net/products/200000768357/burgundy_345c3a6b026f4c72acf2a2774152a256_master.png?w=100' },
   ],
   '17': [
     { name: '17 Pro Max', tag: 'iphone-17-pro-max', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: '17 Pro', tag: 'iphone-17-pro', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
-    { name: '17 Plus', tag: 'iphone-17-plus', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: '17 Air', tag: 'iphone-17-air', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
     { name: 'iPhone 17', tag: 'iphone-17-tieuchuan', img: 'https://cdn.hstatic.net/products/200000768357/h_nh__nh_f27c19cdd95d4d2ba295fcde3a86415c_master.jpeg?w=100' },
   ],
