@@ -6,27 +6,52 @@ import { Home, Menu, Store } from 'lucide-react';
 // Chú ý chữ B viết hoa: AdminSideBar
 import AdminSideBar from '@/components/admin/AdminSideBar';
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('fogo_user');
-      if (!savedUser) {
-        setAuthorized(false);
-        return;
-      }
+    let cancelled = false;
 
-      const parsedUser = JSON.parse(savedUser);
-      if (parsedUser?.role === 'ADMIN') {
-        setAuthorized(true);
-      } else {
-        setAuthorized(false);
+    const verifyAdminSession = async () => {
+      try {
+        let response = await fetch(`${API_URL}/api/auth/me`, {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (response.status === 401) {
+          const refreshed = await fetch(`${API_URL}/api/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+          });
+          if (refreshed.ok) {
+            response = await fetch(`${API_URL}/api/auth/me`, {
+              credentials: 'include',
+              cache: 'no-store',
+            });
+          }
+        }
+
+        const body = await response.json().catch(() => null);
+        const isAdmin = Boolean(response.ok && body?.success && body?.data?.role === 'ADMIN');
+        if (cancelled) return;
+        setAuthorized(isAdmin);
+        if (isAdmin) {
+          localStorage.setItem('fogo_user', JSON.stringify(body.data));
+          localStorage.setItem('user', JSON.stringify(body.data));
+        } else {
+          localStorage.removeItem('fogo_user');
+          localStorage.removeItem('user');
+        }
+      } catch {
+        if (!cancelled) setAuthorized(false);
       }
-    } catch {
-      setAuthorized(false);
-    }
+    };
+
+    verifyAdminSession();
+    return () => { cancelled = true; };
   }, []);
 
   if (authorized === null) {
@@ -36,22 +61,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!authorized) {
     return (
       <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center text-center px-4 select-none">
-        <h1 className="text-8xl sm:text-9xl font-black text-[#d70018] tracking-widest drop-shadow-sm leading-none">
-          404
+        <h1 className="text-5xl sm:text-7xl font-black text-[#d70018] tracking-wide drop-shadow-sm leading-none">
+          HẾT PHIÊN
         </h1>
         <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mt-6 uppercase tracking-wide">
-          Trang tìm kiếm không tồn tại
+          Phiên quản trị không còn hiệu lực
         </h2>
         <p className="text-base sm:text-lg text-gray-500 font-medium mt-3 max-w-lg leading-relaxed">
-          Đường dẫn bạn yêu cầu không tồn tại! Vui lòng quay lại trang chủ.
+          Vui lòng đăng nhập lại sau khi hệ thống vừa nâng cấp bảo mật hoặc thay đổi JWT_SECRET.
         </p>
         <div className="mt-8">
           <Link
-            href="/"
+            href="/dang-nhap"
             className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full bg-[#d70018] hover:bg-red-700 text-white font-black text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95"
           >
             <Home size={22} />
-            <span>Quay về trang chủ</span>
+            <span>Đăng nhập lại</span>
           </Link>
         </div>
       </div>

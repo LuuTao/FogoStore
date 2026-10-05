@@ -54,6 +54,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ account, password }),
       });
@@ -117,6 +118,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
     try {
       const res = await fetch(`${API_URL}/api/auth/verify-email-otp`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp }),
       });
@@ -151,6 +153,7 @@ function AuthModalContent({ isOpen, onClose }: AuthModalProps) {
     try {
       const res = await fetch(`${API_URL}/api/auth/google`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: idToken,

@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CalendarClock, Edit2, Loader2, Save, TimerReset, Trash2, X, Zap } from 'lucide-react';
+import { getAuthHeaders } from '@/services/adminApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
-
-const getToken = () => typeof window === 'undefined' ? '' : localStorage.getItem('fogo_admin_token') || localStorage.getItem('fogo_token') || localStorage.getItem('token') || '';
 
 const toLocalInput = (value?: string | null) => {
   if (!value) return '';
@@ -29,10 +28,14 @@ export default function FlashSaleAdminPage() {
 
   const loadData = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/flash-sale`, { headers: { Authorization: `Bearer ${getToken()}` }, cache: 'no-store' });
+      const res = await fetch(`${API_URL}/api/admin/flash-sale`, {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+        cache: 'no-store',
+      });
       const text = await res.text();
       const json = JSON.parse(text);
-      if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể tải cấu hình Flash Sale');
+      if (!res.ok || !json?.success) throw new Error(json?.error || json?.message || 'Không thể tải cấu hình Flash Sale');
       const config = json.data?.config || {};
       setTitle(config.title || 'FLASH SALE GIÁ SỐC');
       setStartAt(toLocalInput(config.startAt));
@@ -55,7 +58,8 @@ export default function FlashSaleAdminPage() {
     try {
       const res = await fetch(`${API_URL}/api/admin/flash-sale`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           title,
           startAt: startAt ? new Date(startAt).toISOString() : null,
@@ -64,7 +68,7 @@ export default function FlashSaleAdminPage() {
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể lưu Flash Sale');
+      if (!res.ok || !json?.success) throw new Error(json?.error || json?.message || 'Không thể lưu Flash Sale');
       setStatus(json.data?.status || 'INACTIVE');
       setMessage({ type: 'success', text: 'Đã lưu lịch Flash Sale thành công.' });
     } catch (error) {
@@ -80,11 +84,12 @@ export default function FlashSaleAdminPage() {
     try {
       const response = await fetch(`${API_URL}/api/admin/variants/${variant.id}/flash-sale`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify({ isFlashSale: false }),
       });
       const json = await response.json().catch(() => null);
-      if (!response.ok || !json?.success) throw new Error(json?.error || 'Không thể gỡ cấu hình khỏi Flash Sale');
+      if (!response.ok || !json?.success) throw new Error(json?.error || json?.message || 'Không thể gỡ cấu hình khỏi Flash Sale');
       setSelectedProducts((current) => current
         .map((product) => ({ ...product, variants: (product.variants || []).filter((item: any) => item.id !== variant.id) }))
         .filter((product) => product.variants.length > 0));
@@ -103,7 +108,8 @@ export default function FlashSaleAdminPage() {
     try {
       const response = await fetch(`${API_URL}/api/admin/variants/${editingVariant.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           storage: editingVariant.storage,
           color: editingVariant.color,
@@ -116,7 +122,7 @@ export default function FlashSaleAdminPage() {
         }),
       });
       const json = await response.json().catch(() => null);
-      if (!response.ok || !json?.success) throw new Error(json?.error || 'Không thể cập nhật cấu hình');
+      if (!response.ok || !json?.success) throw new Error(json?.error || json?.message || 'Không thể cập nhật cấu hình');
       setEditingVariant(null);
       await loadData();
       setMessage({ type: 'success', text: 'Đã cập nhật cấu hình Flash Sale.' });

@@ -363,11 +363,12 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       setFlashSaleUpdatingId(variant.id);
       const res = await fetch(`${API_BASE}/api/admin/variants/${variant.id}/flash-sale`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: getAuthHeader(),
         body: JSON.stringify({ isFlashSale: nextValue }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) throw new Error(json?.error || 'Không thể cập nhật Flash Sale');
+      if (!res.ok || !json?.success) throw new Error(json?.error || json?.message || 'Không thể cập nhật Flash Sale');
       const detail = [variant.storage, variant.size, variant.version, variant.color].filter(Boolean).join(' · ');
       showToast(nextValue ? `Đã thêm “${product.name} — ${detail}” vào Flash Sale` : `Đã gỡ “${product.name} — ${detail}” khỏi Flash Sale`);
       await onRefresh();
