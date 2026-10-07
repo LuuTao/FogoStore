@@ -356,7 +356,13 @@ export const Header: React.FC = () => {
 
     const fetchHeaderBanners = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/banners`, { cache: 'no-store' });
+        const response = await fetch(`${API_URL}/api/banners?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            Pragma: 'no-cache',
+            'Cache-Control': 'no-cache',
+          },
+        });
         if (!response.ok) return;
         const json = await response.json();
         const data = json.data || json;
@@ -727,7 +733,7 @@ export const Header: React.FC = () => {
               <>
                 <div
                   style={{ '--mobile-search-top': `${mobileSearchTop}px` } as React.CSSProperties}
-                  className="fixed left-3 right-3 top-[var(--mobile-search-top)] z-50 flex max-h-[min(72dvh,640px)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 sm:absolute sm:left-0 sm:right-0 sm:top-full sm:mt-1.5 sm:block sm:max-h-none sm:rounded-xl"
+                  className="fixed left-3 right-3 top-[var(--mobile-search-top)] z-50 flex max-h-[min(72dvh,640px)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 sm:left-1/2 sm:right-auto sm:w-[calc(100vw-32px)] sm:max-w-[680px] sm:-translate-x-1/2 xl:absolute xl:left-0 xl:right-0 xl:top-full xl:mt-1.5 xl:block xl:w-auto xl:max-w-none xl:translate-x-0 xl:max-h-none xl:rounded-xl"
                 >
                 {!searchTerm.trim() && searchTrendBanner && (
                   <Link
@@ -744,9 +750,9 @@ export const Header: React.FC = () => {
                     />
                   </Link>
                 )}
-                <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3 text-[13px] font-extrabold text-gray-800 sm:bg-gray-50 sm:px-3.5 sm:py-2 sm:text-[11px] sm:text-gray-500 sm:uppercase sm:tracking-wider">
+                <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3 text-[13px] font-extrabold text-gray-800 xl:bg-gray-50 xl:px-3.5 xl:py-2 xl:text-[11px] xl:text-gray-500 xl:uppercase xl:tracking-wider">
                   <span>{searchTerm.trim() ? `Gợi ý cho “${searchTerm}”` : '🔥 Xu hướng tìm kiếm'}</span>
-                  <span className="shrink-0 pl-3 text-[11px] font-bold text-gray-400 sm:text-inherit">
+                  <span className="shrink-0 pl-3 text-[11px] font-bold text-gray-400 xl:text-inherit">
                     {searchTerm.trim() ? searchResults.length : trendingProducts.length} lựa chọn
                   </span>
                 </div>
@@ -783,16 +789,16 @@ export const Header: React.FC = () => {
                   </div>
                 )}
 
-                <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain sm:max-h-[380px] ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
+                <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain xl:max-h-[380px] ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
                   {(searchTerm.trim() ? searchResults : trendingProducts).length > 0 ? (
                     (searchTerm.trim() ? searchResults : trendingProducts).map((item) => (
                       <Link
                         key={item.id}
                         href={item.href || `/san-pham/${item.slug}`}
                         onClick={() => setShowDropdown(false)}
-                        className={`group flex cursor-pointer items-center gap-2.5 bg-white p-2.5 transition-colors hover:bg-red-50/50 sm:gap-3 sm:p-3 ${!searchTerm.trim() ? 'min-w-0 min-h-[82px]' : ''}`}
+                        className={`group flex cursor-pointer items-center gap-2.5 bg-white p-2.5 transition-colors hover:bg-red-50/50 xl:gap-3 xl:p-3 ${!searchTerm.trim() ? 'min-w-0 min-h-[82px]' : ''}`}
                       >
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-white p-1 shadow-2xs transition-transform group-hover:scale-105 sm:h-12 sm:w-12">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-white p-1 shadow-2xs transition-transform group-hover:scale-105 xl:h-12 xl:w-12">
                           <img
                             src={item.imageUrl}
                             alt={item.name}
@@ -805,7 +811,7 @@ export const Header: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className="line-clamp-2 break-words text-[13px] font-bold leading-[1.3] text-gray-800 transition-colors group-hover:text-[#d70018] sm:block sm:truncate sm:text-xs">
+                            <p className="line-clamp-2 break-words text-[13px] font-bold leading-[1.3] text-gray-800 transition-colors group-hover:text-[#d70018] xl:block xl:truncate xl:text-xs">
                               {item.name}
                             </p>
                           </div>
