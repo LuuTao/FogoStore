@@ -13,7 +13,9 @@ import {
   XCircle, 
   Loader2,
   Phone,
-  UserCheck
+  UserCheck,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -28,7 +30,9 @@ export default function OrderTrackingPage() {
   const [lookupPhone, setLookupPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
+  const [accountOrders, setAccountOrders] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [copiedOrderCode, setCopiedOrderCode] = useState<string | null>(null);
 
   const formatVnd = (num: number) => (!num || num <= 0 ? '0đ' : num.toLocaleString('vi-VN') + 'đ');
 
@@ -66,6 +70,7 @@ export default function OrderTrackingPage() {
             .then((res) => res.json())
             .then((res) => {
               if (res.success && Array.isArray(res.data)) {
+                setAccountOrders(res.data);
                 setOrders(res.data);
               }
             })
@@ -81,7 +86,30 @@ export default function OrderTrackingPage() {
   // Tra cứu theo từ khóa (Mã đơn hoặc Số điện thoại)
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!keyword.trim()) return;
+
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    const normalizedPhone = lookupPhone.replace(/\D/g, '');
+
+    // Với tài khoản đã đăng nhập, lọc ngay trên toàn bộ đơn hàng của chính tài khoản.
+    // Hỗ trợ nhập một phần mã đơn và/hoặc một phần số điện thoại.
+    if (currentUser) {
+      if (!normalizedKeyword && !normalizedPhone) {
+        setOrders(accountOrders);
+        return;
+      }
+
+      setOrders(accountOrders.filter((order) => {
+        const orderCode = String(order.orderCode || '').toLowerCase();
+        const customerPhone = String(order.customerPhone || '').replace(/\D/g, '');
+        const matchesCode = !normalizedKeyword || orderCode.includes(normalizedKeyword);
+        const matchesPhone = !normalizedPhone || customerPhone.includes(normalizedPhone);
+        return matchesCode && matchesPhone;
+      }));
+      return;
+    }
+
+    // Khách chưa đăng nhập vẫn phải cung cấp mã đơn chính xác để tránh lộ dữ liệu.
+    if (!normalizedKeyword) return;
 
     setLoading(true);
     try {
@@ -105,6 +133,28 @@ export default function OrderTrackingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCopyOrderCode = async (orderCode: string) => {
+    if (!orderCode) return;
+
+    try {
+      await navigator.clipboard.writeText(orderCode);
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = orderCode;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+
+    setCopiedOrderCode(orderCode);
+    window.setTimeout(() => {
+      setCopiedOrderCode((current) => current === orderCode ? null : current);
+    }, 1800);
   };
 
   const renderStatusBadge = (st: string) => {
@@ -227,8 +277,27 @@ export default function OrderTrackingPage() {
               orders.map((order) => (
                 <div key={order.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs hover:border-gray-300 transition-all">
                   <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <span className="font-mono font-black text-[#d70018] text-sm">{order.orderCode}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyOrderCode(order.orderCode)}
+                        className="inline-flex h-7 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[10px] font-bold text-gray-600 transition-colors hover:border-[#d70018] hover:text-[#d70018]"
+                        title={`Sao chép mã ${order.orderCode}`}
+                        aria-label={`Sao chép mã đơn hàng ${order.orderCode}`}
+                      >
+                        {copiedOrderCode === order.orderCode ? (
+                          <>
+                            <Check size={13} className="text-emerald-600" />
+                            <span className="hidden sm:inline text-emerald-600">Đã sao chép</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={13} />
+                            <span className="hidden sm:inline">Sao chép</span>
+                          </>
+                        )}
+                      </button>
                       <span className="text-gray-300">•</span>
                       <span className="text-gray-500 flex items-center gap-1 text-[11px]">
                         <Calendar size={13} />
