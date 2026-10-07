@@ -30,6 +30,7 @@ import {
   CheckSquare,
   Square,
   Megaphone,
+  Search,
 } from 'lucide-react';
 
 interface Props {
@@ -40,6 +41,7 @@ interface Props {
 type BannerGroup =
   | 'product_card_images'
   | 'mobile_marquee'     // Thanh thông báo chạy trên mobile
+  | 'search_trend_banner' // Banner trong bảng Xu hướng tìm kiếm
   | 'hero_banners'       // Banner Lớn Đầu Trang
   | 'promo_cards'        // 2 Banner Nhỏ Đè Hero
   | 'category_banners'   // 4 Banner Category (Render 350x250)
@@ -72,7 +74,13 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onre
 
 const resolveImageUrl = (url?: string | null): string => {
   if (!url) return '';
-  if (url.startsWith('/card-badges/')) return url;
+  if (
+    url.startsWith('/card-badges/') ||
+    url.startsWith('/banners/') ||
+    url.startsWith('/banner-bao-hanh/') ||
+    url.startsWith('/noi-bat/') ||
+    url.startsWith('/subbanners/')
+  ) return url;
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
     if (url.includes('localhost:')) {
       return url.replace(/http:\/\/localhost:[0-9]+/g, API_URL);
@@ -100,6 +108,9 @@ const compressImageFile = (file: File, targetGroup: BannerGroup): Promise<string
         if (targetGroup === 'hero_banners') {
           width = 1920;
           height = 540;
+        } else if (targetGroup === 'search_trend_banner') {
+          width = 1200;
+          height = 300;
         } else if (targetGroup === 'category_banners') {
           width = 700;
           height = 500;
@@ -143,6 +154,13 @@ const INITIAL_ITEMS: ItemConfig[] = [
   { id: 'marquee-2', name: 'Thu cũ đổi mới', group: 'mobile_marquee', imageUrl: '♻' },
   { id: 'marquee-3', name: 'Miễn phí vận chuyển', group: 'mobile_marquee', imageUrl: '🚚' },
   { id: 'marquee-4', name: 'Hỗ trợ trả góp', group: 'mobile_marquee', imageUrl: '✦' },
+  {
+    id: 'search-trend-default-1',
+    name: 'MacBook Air M5',
+    link: '/macbook',
+    group: 'search_trend_banner',
+    imageUrl: '/banners/banner1.png',
+  },
   {
     id: 'hero-1',
     name: 'Đại Tiệc Mua Sắm Apple - Giảm Sốc Đến 40%',
@@ -513,6 +531,10 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
   };
 
   const handleOpenAdd = () => {
+    if (activeGroup === 'search_trend_banner' && currentItems.length >= 1) {
+      alert('Khu vực Xu hướng tìm kiếm chỉ sử dụng 1 banner. Bạn hãy bấm Chỉnh sửa banner hiện tại.');
+      return;
+    }
     setEditingItem(null);
     setItemName('');
     setItemImageUrl('');
@@ -666,6 +688,7 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
         {[
           { id: 'product_card_images', label: '3 Ảnh Thẻ Sản Phẩm', icon: ImageIcon },
           { id: 'mobile_marquee', label: 'Thông Báo Chạy Mobile', icon: Megaphone },
+          { id: 'search_trend_banner', label: 'Banner Xu Hướng Tìm Kiếm', icon: Search },
           { id: 'hero_banners', label: 'Banner Lớn (Hero)', icon: Sliders },
           { id: 'promo_cards', label: '2 Banner Nhỏ Đè Hero', icon: CreditCard },
           { id: 'category_banners', label: '4 Banner Category (350x250)', icon: LayoutGrid },
@@ -778,11 +801,12 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                     />
 
                     {/* Tay cầm kéo thả */}
-                    <GripVertical
-                      size={18}
-                      className="text-gray-300 group-hover:text-gray-600 cursor-grab active:cursor-grabbing shrink-0"
-                      title="Kéo thả để sắp xếp vị trí"
-                    />
+                    <span title="Kéo thả để sắp xếp vị trí" className="shrink-0">
+                      <GripVertical
+                        size={18}
+                        className="cursor-grab text-gray-300 group-hover:text-gray-600 active:cursor-grabbing"
+                      />
+                    </span>
 
                     {/* Số thứ tự */}
                     <span className="w-6 text-center text-xs font-black text-gray-400 group-hover:text-gray-800 shrink-0">
@@ -794,6 +818,8 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                       className={`rounded bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center ${
                         activeGroup === 'mobile_marquee'
                           ? 'w-14 h-14 bg-red-50 text-2xl'
+                          : activeGroup === 'search_trend_banner'
+                          ? 'w-36 aspect-[4/1]'
                           : activeGroup === 'all_categories'
                           ? 'w-14 h-14 rounded-full p-1 bg-white'
                           : activeGroup === 'category_banners'
@@ -981,6 +1007,9 @@ export default function BannersTab({ banners: propBanners, onRefresh }: Props) {
                   )}
                   {activeGroup === 'all_categories' && (
                     <span className="text-[10px] text-emerald-600 font-bold">Chuẩn: 300x300px (Icon Tròn)</span>
+                  )}
+                  {activeGroup === 'search_trend_banner' && (
+                    <span className="text-[10px] text-[#d70018] font-bold">Khuyên dùng: 1200x300px</span>
                   )}
                 </div>
                 <div className="flex gap-2">

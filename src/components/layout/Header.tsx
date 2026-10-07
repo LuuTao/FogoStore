@@ -237,6 +237,13 @@ interface MarqueeItem {
   text: string;
 }
 
+interface SearchTrendBanner {
+  id: string;
+  title: string;
+  imageUrl: string;
+  href: string;
+}
+
 const DEFAULT_MARQUEE_ITEMS: MarqueeItem[] = [
   { id: 'marquee-1', icon: '', text: 'Apple chính hãng' },
   { id: 'marquee-2', icon: '♻', text: 'Thu cũ đổi mới' },
@@ -271,6 +278,7 @@ export const Header: React.FC = () => {
   const [mobileSearchTop, setMobileSearchTop] = useState(116);
   const [productsCache, setProductsCache] = useState<SearchProduct[]>([]);
   const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(DEFAULT_MARQUEE_ITEMS);
+  const [searchTrendBanner, setSearchTrendBanner] = useState<SearchTrendBanner | null>(null);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchFormRef = useRef<HTMLFormElement>(null);
@@ -344,9 +352,13 @@ export const Header: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const fetchMarqueeItems = async () => {
+    let cancelled = false;
+
+    const fetchHeaderBanners = async () => {
       try {
-        const json = await fetchJsonCached<any>(`${API_URL}/api/banners`, 60_000);
+        const response = await fetch(`${API_URL}/api/banners`, { cache: 'no-store' });
+        if (!response.ok) return;
+        const json = await response.json();
         const data = json.data || json;
         if (!Array.isArray(data)) return;
 
@@ -359,13 +371,32 @@ export const Header: React.FC = () => {
           }))
           .filter((item: MarqueeItem) => item.text);
 
+        const rawSearchBanner = (data as Array<Record<string, unknown>>).find(
+          (item) =>
+            (item.position || item.group) === 'search_trend_banner' &&
+            item.isActive !== false &&
+            item.active !== false
+        );
+
+        if (cancelled) return;
         if (configuredItems.length > 0) setMarqueeItems(configuredItems);
+        setSearchTrendBanner(rawSearchBanner ? {
+          id: String(rawSearchBanner.id || 'search-trend-banner'),
+          title: String(rawSearchBanner.title || rawSearchBanner.name || 'Ưu đãi FoGo Store'),
+          imageUrl: formatSearchImage(String(rawSearchBanner.imageUrl || '')),
+          href: String(rawSearchBanner.linkUrl || rawSearchBanner.link || '/'),
+        } : null);
       } catch {
         // Giữ nội dung mặc định khi backend chưa sẵn sàng.
       }
     };
 
-    fetchMarqueeItems();
+    fetchHeaderBanners();
+    window.addEventListener('fogo_banners_updated', fetchHeaderBanners);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('fogo_banners_updated', fetchHeaderBanners);
+    };
   }, []);
 
   // Nạp toàn bộ danh mục sản phẩm (kèm tất cả các biến thể) vào Cache
@@ -694,16 +725,25 @@ export const Header: React.FC = () => {
 
             {showDropdown && (
               <>
-                <button
-                  type="button"
-                  aria-label="Đóng bảng tìm kiếm"
-                  onClick={() => setShowDropdown(false)}
-                  className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[1px] sm:hidden"
-                />
                 <div
                   style={{ '--mobile-search-top': `${mobileSearchTop}px` } as React.CSSProperties}
-                  className="fixed left-3 right-3 top-[var(--mobile-search-top)] z-50 max-h-[min(68dvh,580px)] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 sm:absolute sm:left-0 sm:right-0 sm:top-full sm:mt-1.5 sm:max-h-none sm:rounded-xl"
+                  className="fixed left-3 right-3 top-[var(--mobile-search-top)] z-50 flex max-h-[min(72dvh,640px)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 sm:absolute sm:left-0 sm:right-0 sm:top-full sm:mt-1.5 sm:block sm:max-h-none sm:rounded-xl"
                 >
+                {!searchTerm.trim() && searchTrendBanner && (
+                  <Link
+                    href={searchTrendBanner.href}
+                    onClick={() => setShowDropdown(false)}
+                    className="block aspect-[4/1] w-full shrink-0 overflow-hidden border-b border-gray-100 bg-gray-50"
+                    title={searchTrendBanner.title}
+                  >
+                    <img
+                      src={searchTrendBanner.imageUrl}
+                      alt={searchTrendBanner.title}
+                      onError={() => setSearchTrendBanner(null)}
+                      className="h-full w-full object-cover"
+                    />
+                  </Link>
+                )}
                 <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3 text-[13px] font-extrabold text-gray-800 sm:bg-gray-50 sm:px-3.5 sm:py-2 sm:text-[11px] sm:text-gray-500 sm:uppercase sm:tracking-wider">
                   <span>{searchTerm.trim() ? `Gợi ý cho “${searchTerm}”` : '🔥 Xu hướng tìm kiếm'}</span>
                   <span className="shrink-0 pl-3 text-[11px] font-bold text-gray-400 sm:text-inherit">
@@ -743,7 +783,7 @@ export const Header: React.FC = () => {
                   </div>
                 )}
 
-                <div className={`max-h-[calc(min(68dvh,580px)-48px)] overflow-y-auto overscroll-contain sm:max-h-[380px] ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
+                <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain sm:max-h-[380px] ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
                   {(searchTerm.trim() ? searchResults : trendingProducts).length > 0 ? (
                     (searchTerm.trim() ? searchResults : trendingProducts).map((item) => (
                       <Link
