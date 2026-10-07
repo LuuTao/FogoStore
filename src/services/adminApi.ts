@@ -180,6 +180,16 @@ export const adminGetTrafficStats = async () => {
 };
 
 // IMPORT EXCEL
+export const adminPreviewExcel = async (formData: FormData) => {
+  const res = await fetch(`${API_URL}/api/admin/products/import-excel/preview`, {
+    credentials: 'include',
+    method: 'POST',
+    headers: getAuthHeaders(true),
+    body: formData,
+  });
+  return res.json();
+};
+
 export const adminImportExcel = async (formData: FormData) => {
   const res = await fetch(`${API_URL}/api/admin/products/import-excel`, {
     credentials: 'include',

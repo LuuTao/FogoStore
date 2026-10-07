@@ -268,10 +268,12 @@ export const Header: React.FC = () => {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileSearchTop, setMobileSearchTop] = useState(116);
   const [productsCache, setProductsCache] = useState<SearchProduct[]>([]);
   const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(DEFAULT_MARQUEE_ITEMS);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchFormRef = useRef<HTMLFormElement>(null);
 
   const { user, logout, logoutAllDevices } = useAuth();
   const { totalQuantity } = useCart();
@@ -553,6 +555,23 @@ export const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!showDropdown) return;
+
+    const updateMobileDropdownPosition = () => {
+      const formRect = searchFormRef.current?.getBoundingClientRect();
+      if (formRect) setMobileSearchTop(Math.round(formRect.bottom + 6));
+    };
+
+    updateMobileDropdownPosition();
+    window.addEventListener('resize', updateMobileDropdownPosition);
+    window.addEventListener('scroll', updateMobileDropdownPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMobileDropdownPosition);
+      window.removeEventListener('scroll', updateMobileDropdownPosition, true);
+    };
+  }, [showDropdown]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchTerm.trim();
@@ -640,7 +659,7 @@ export const Header: React.FC = () => {
           </div>
 
           <div ref={searchContainerRef} className="flex-1 min-w-0 max-w-lg relative">
-            <form onSubmit={handleSearchSubmit} className="relative">
+            <form ref={searchFormRef} onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
                 value={searchTerm}
@@ -674,10 +693,22 @@ export const Header: React.FC = () => {
             </form>
 
             {showDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+              <>
+                <button
+                  type="button"
+                  aria-label="Đóng bảng tìm kiếm"
+                  onClick={() => setShowDropdown(false)}
+                  className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[1px] sm:hidden"
+                />
+                <div
+                  style={{ '--mobile-search-top': `${mobileSearchTop}px` } as React.CSSProperties}
+                  className="fixed left-3 right-3 top-[var(--mobile-search-top)] z-50 max-h-[min(68dvh,580px)] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 sm:absolute sm:left-0 sm:right-0 sm:top-full sm:mt-1.5 sm:max-h-none sm:rounded-xl"
+                >
+                <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3 text-[13px] font-extrabold text-gray-800 sm:bg-gray-50 sm:px-3.5 sm:py-2 sm:text-[11px] sm:text-gray-500 sm:uppercase sm:tracking-wider">
                   <span>{searchTerm.trim() ? `Gợi ý cho “${searchTerm}”` : '🔥 Xu hướng tìm kiếm'}</span>
-                  <span>{searchTerm.trim() ? searchResults.length : trendingProducts.length} lựa chọn</span>
+                  <span className="shrink-0 pl-3 text-[11px] font-bold text-gray-400 sm:text-inherit">
+                    {searchTerm.trim() ? searchResults.length : trendingProducts.length} lựa chọn
+                  </span>
                 </div>
 
                 {!searchTerm.trim() && searchHistory.length > 0 && (
@@ -712,25 +743,29 @@ export const Header: React.FC = () => {
                   </div>
                 )}
 
-                <div className={`max-h-[380px] overflow-y-auto ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
+                <div className={`max-h-[calc(min(68dvh,580px)-48px)] overflow-y-auto overscroll-contain sm:max-h-[380px] ${searchTerm.trim() ? 'divide-y divide-gray-100' : 'grid grid-cols-2 gap-px bg-gray-100'}`}>
                   {(searchTerm.trim() ? searchResults : trendingProducts).length > 0 ? (
                     (searchTerm.trim() ? searchResults : trendingProducts).map((item) => (
                       <Link
                         key={item.id}
                         href={item.href || `/san-pham/${item.slug}`}
                         onClick={() => setShowDropdown(false)}
-                        className={`flex items-center gap-3 p-3 hover:bg-red-50/50 transition-colors group cursor-pointer bg-white ${!searchTerm.trim() ? 'min-w-0' : ''}`}
+                        className={`group flex cursor-pointer items-center gap-2.5 bg-white p-2.5 transition-colors hover:bg-red-50/50 sm:gap-3 sm:p-3 ${!searchTerm.trim() ? 'min-w-0 min-h-[82px]' : ''}`}
                       >
-                        <div className="w-12 h-12 rounded-lg border border-gray-100 p-1 flex items-center justify-center shrink-0 bg-white shadow-2xs group-hover:scale-105 transition-transform">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-white p-1 shadow-2xs transition-transform group-hover:scale-105 sm:h-12 sm:w-12">
                           <img
                             src={item.imageUrl}
                             alt={item.name}
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = '/logoFogo.png';
+                            }}
                             className="max-w-full max-h-full object-contain"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-bold text-gray-800 group-hover:text-[#d70018] truncate transition-colors">
+                            <p className="line-clamp-2 break-words text-[13px] font-bold leading-[1.3] text-gray-800 transition-colors group-hover:text-[#d70018] sm:block sm:truncate sm:text-xs">
                               {item.name}
                             </p>
                           </div>
@@ -774,7 +809,8 @@ export const Header: React.FC = () => {
                     Xem tất cả kết quả &rarr;
                   </button>
                 )}
-              </div>
+                </div>
+              </>
             )}
           </div>
 
