@@ -733,7 +733,7 @@ export const Header: React.FC = () => {
               <>
                 <div
                   style={{ '--mobile-search-top': `${mobileSearchTop}px` } as React.CSSProperties}
-                  className="fixed left-3 right-3 top-[var(--mobile-search-top)] z-50 flex max-h-[min(72dvh,640px)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 sm:left-1/2 sm:right-auto sm:w-[calc(100vw-32px)] sm:max-w-[500px] sm:-translate-x-1/2 sm:rounded-xl lg:absolute lg:left-0 lg:right-auto lg:top-full lg:mt-1.5 lg:w-[500px] lg:max-w-[calc(100vw-1rem)] lg:translate-x-0 lg:max-h-none xl:right-0 xl:w-auto xl:max-w-none"
+                  className="fixed left-3 right-3 top-[var(--mobile-search-top)] z-50 flex max-h-[min(72dvh,640px)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 sm:absolute sm:left-1/2 sm:right-auto sm:top-full sm:mt-1.5 sm:w-[calc(100vw-32px)] sm:max-w-[500px] sm:-translate-x-1/2 sm:rounded-xl sm:max-h-none"
                 >
                 {!searchTerm.trim() && searchTrendBanner && (
                   <Link
