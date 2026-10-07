@@ -117,7 +117,7 @@ export default function OrderTrackingPage() {
       const res = await fetch(`${API_URL}/api/orders/${keyword.trim()}`, {
         cache: 'no-store',
         credentials: 'include',
-        headers: getOrderAccessHeaders(keyword.trim(), lookupPhone),
+        headers: getOrderAccessHeaders(keyword.trim()),
       });
       const data = await res.json();
       if (res.ok && data.success && data.data) {
@@ -217,10 +217,12 @@ export default function OrderTrackingPage() {
               Tra Cứu Tiến Độ Đơn Hàng
             </h1>
             <p className="text-xs text-gray-500 mb-6">
-              Nhập <b>Mã đơn hàng</b>. Với đơn cũ, nhập thêm đúng số điện thoại đặt hàng để xác minh.
+              {currentUser
+                ? <>Chỉ hiển thị đơn thuộc tài khoản của bạn. Có thể lọc theo <b>mã đơn</b> hoặc <b>số điện thoại</b>.</>
+                : <>Vui lòng đăng nhập để xem các đơn của bạn. Đơn đặt không đăng nhập chỉ mở được trên thiết bị đã tạo đơn bằng <b>mã truy cập riêng</b>.</>}
             </p>
 
-            <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 max-w-2xl mx-auto">
+            <form onSubmit={handleSearch} className={`grid grid-cols-1 gap-2 max-w-2xl mx-auto ${currentUser ? 'sm:grid-cols-[1fr_1fr_auto]' : 'sm:grid-cols-[1fr_auto]'}`}>
               <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -231,16 +233,18 @@ export default function OrderTrackingPage() {
                   className="w-full text-xs pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#d70018]"
                 />
               </div>
-              <div className="relative">
-                <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="tel"
-                  value={lookupPhone}
-                  onChange={(e) => setLookupPhone(e.target.value)}
-                  placeholder="Số điện thoại đặt hàng"
-                  className="w-full text-xs pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#d70018]"
-                />
-              </div>
+              {currentUser && (
+                <div className="relative">
+                  <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={lookupPhone}
+                    onChange={(e) => setLookupPhone(e.target.value)}
+                    placeholder="Số điện thoại đặt hàng"
+                    className="w-full text-xs pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#d70018]"
+                  />
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={loading}

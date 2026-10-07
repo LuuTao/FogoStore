@@ -12,12 +12,11 @@ export const getOrderAccessToken = (orderCode: string) => {
   return localStorage.getItem(orderTokenKey(orderCode)) || '';
 };
 
-export const getOrderAccessHeaders = (orderCode: string, phone?: string) => {
+export const getOrderAccessHeaders = (orderCode: string) => {
   const headers: Record<string, string> = {};
   const authToken = getAuthToken();
   const orderToken = getOrderAccessToken(orderCode);
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
   if (orderToken) headers['x-order-token'] = orderToken;
-  if (!orderToken && phone?.trim()) headers['x-order-phone'] = phone.trim();
   return headers;
 };
