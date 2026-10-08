@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   ShieldCheck,
-  Truck,
   CreditCard,
   QrCode,
   Wallet,
@@ -18,6 +18,7 @@ import {
   Loader2,
   UserCheck,
   LogIn,
+  MapPin,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
@@ -29,6 +30,28 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { getAuthToken } from '@/services/clientApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+
+const DeliveryLocationMap = dynamic(() => import('@/components/checkout/DeliveryLocationMap'), {
+  ssr: false,
+  loading: () => <div className="h-64 w-full animate-pulse bg-gray-100 sm:h-72" />,
+});
+
+type VerifiedLocation = {
+  placeId: string;
+  name: string;
+  formattedAddress: string;
+  commune: string;
+  province: string;
+  latitude: number;
+  longitude: number;
+};
+
+const normalizeAdministrativeName = (value: string) => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/\b(thanh pho|tinh|phuong|xa|thi tran|dac khu|huyen dao)\b/g, '')
+  .replace(/[^a-z0-9]/g, '');
 
 // ----------------------------------------------------------------------
 // DỮ LIỆU ĐỊA CHÍNH: TỈNH/THÀNH PHỐ -> XÃ/PHƯỜNG TRỰC THUỘC
@@ -131,11 +154,115 @@ export default function CheckoutPage() {
 
   const [streetAddress, setStreetAddress] = useState('');
   const [note, setNote] = useState('');
+  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
+  const [locationServiceMessage, setLocationServiceMessage] = useState('');
+  const [verifiedLocation, setVerifiedLocation] = useState<VerifiedLocation | null>(null);
+  const addressLookupSequence = useRef(0);
+  const suppressNextAddressLookup = useRef(false);
 
   const handleProvinceChange = (newProv: string) => {
+    addressLookupSequence.current += 1;
     setProvince(newProv);
     const newWards = VIETNAM_STREAMLINED_LOCATIONS[newProv] || ['Phường / Xã khác'];
     setWard(newWards[0] || '');
+    setVerifiedLocation(null);
+    setLocationServiceMessage('');
+  };
+
+  const geocodeCurrentAddress = useCallback(async () => {
+    const cleanStreet = streetAddress.trim();
+    const currentSequence = ++addressLookupSequence.current;
+    if (cleanStreet.length < 6) return;
+
+    setAddressLookupLoading(true);
+    setLocationServiceMessage('');
+    try {
+      const query = [cleanStreet, ward, province].filter(Boolean).join(', ');
+      const response = await fetch(`${API_URL}/api/location/geocode?address=${encodeURIComponent(query)}`, {
+        cache: 'no-store',
+      });
+      const result = await response.json();
+      if (currentSequence !== addressLookupSequence.current) return;
+
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.error || 'Chưa xác định được vị trí của địa chỉ này.');
+      }
+
+      setVerifiedLocation(result.data as VerifiedLocation);
+    } catch (error) {
+      if (currentSequence === addressLookupSequence.current) {
+        setVerifiedLocation(null);
+        setLocationServiceMessage(
+          error instanceof Error ? error.message : 'Không thể kết nối dịch vụ định vị lúc này.',
+        );
+      }
+    } finally {
+      if (currentSequence === addressLookupSequence.current) setAddressLookupLoading(false);
+    }
+  }, [streetAddress, ward, province]);
+
+  useEffect(() => {
+    if (suppressNextAddressLookup.current) {
+      suppressNextAddressLookup.current = false;
+      return;
+    }
+    if (streetAddress.trim().length < 6) return;
+
+    const timer = window.setTimeout(() => {
+      void geocodeCurrentAddress();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [streetAddress, ward, province, geocodeCurrentAddress]);
+
+  const syncAdministrativeFields = (location: VerifiedLocation) => {
+    const providerProvince = normalizeAdministrativeName(location.province);
+    if (!providerProvince) return;
+    const matchedProvince = provincesList.find((item) => {
+      const normalized = normalizeAdministrativeName(item);
+      return normalized === providerProvince || normalized.endsWith(providerProvince) || providerProvince.endsWith(normalized);
+    });
+    if (!matchedProvince) return;
+
+    setProvince(matchedProvince);
+    const availableWards = VIETNAM_STREAMLINED_LOCATIONS[matchedProvince] || [];
+    const providerCommune = normalizeAdministrativeName(location.commune);
+    const matchedWard = providerCommune ? availableWards.find((item) => {
+      const normalized = normalizeAdministrativeName(item);
+      return normalized === providerCommune || normalized.endsWith(providerCommune) || providerCommune.endsWith(normalized);
+    }) : undefined;
+    if (matchedWard) setWard(matchedWard);
+  };
+
+  const handleMapPositionChange = async (latitude: number, longitude: number) => {
+    const currentSequence = ++addressLookupSequence.current;
+    setVerifiedLocation((current) => current ? { ...current, latitude, longitude } : current);
+    setAddressLookupLoading(true);
+    setLocationServiceMessage('Đang cập nhật địa chỉ theo vị trí ghim...');
+    try {
+      const response = await fetch(
+        `${API_URL}/api/location/reverse?lat=${encodeURIComponent(latitude)}&lng=${encodeURIComponent(longitude)}`,
+        { cache: 'no-store' },
+      );
+      const result = await response.json();
+      if (currentSequence !== addressLookupSequence.current) return;
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.error || 'Không thể đọc địa chỉ tại vị trí ghim này.');
+      }
+
+      const location = result.data as VerifiedLocation;
+      suppressNextAddressLookup.current = true;
+      setStreetAddress(location.name || location.formattedAddress);
+      syncAdministrativeFields(location);
+      setVerifiedLocation(location);
+      setLocationServiceMessage('');
+    } catch (error) {
+      if (currentSequence !== addressLookupSequence.current) return;
+      setLocationServiceMessage(
+        error instanceof Error ? error.message : 'Không thể đọc địa chỉ tại vị trí ghim này.',
+      );
+    } finally {
+      if (currentSequence === addressLookupSequence.current) setAddressLookupLoading(false);
+    }
   };
 
   // VAT
@@ -493,7 +620,12 @@ export default function CheckoutPage() {
                           <label className="block text-[11px] font-bold text-gray-600 mb-1">Xã / Phường / Thị trấn</label>
                           <select
                             value={ward}
-                            onChange={(e) => setWard(e.target.value)}
+                            onChange={(e) => {
+                              addressLookupSequence.current += 1;
+                              setWard(e.target.value);
+                              setVerifiedLocation(null);
+                              setLocationServiceMessage('');
+                            }}
                             className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 bg-white focus:border-[#d70018] focus:outline-none"
                           >
                             {wardsList.map((wName) => (
@@ -503,7 +635,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
-                      <div>
+                      <div className="relative">
                         <label className="block text-[11px] font-bold text-gray-600 mb-1">
                           Số nhà, Tên đường, Khu phố <span className="text-[#d70018]">*</span>
                         </label>
@@ -511,11 +643,61 @@ export default function CheckoutPage() {
                           type="text"
                           required
                           value={streetAddress}
-                          onChange={(e) => setStreetAddress(e.target.value)}
+                          onChange={(e) => {
+                            addressLookupSequence.current += 1;
+                            setStreetAddress(e.target.value);
+                            setVerifiedLocation(null);
+                            setLocationServiceMessage('');
+                          }}
                           placeholder="Ví dụ: 123 Nguyễn Thị Minh Khai, Khu phố 2"
-                          className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 focus:border-[#d70018] focus:outline-none"
+                          autoComplete="street-address"
+                          className="w-full text-xs border border-gray-300 rounded-md px-3 py-2.5 pr-10 focus:border-[#d70018] focus:outline-none"
                         />
+                        {addressLookupLoading && (
+                          <Loader2 size={16} className="absolute right-3 top-[30px] animate-spin text-[#d70018]" />
+                        )}
+
+                        {locationServiceMessage && streetAddress.trim().length >= 6 && (
+                          <p className="mt-1.5 text-[10px] text-amber-700">{locationServiceMessage}</p>
+                        )}
+                        {!verifiedLocation && !locationServiceMessage && (
+                          <p className="mt-1.5 text-[10px] text-gray-500">
+                            Nhập đủ số nhà và tên đường. Bản đồ sẽ tự đặt ghim sau khi bạn dừng gõ.
+                          </p>
+                        )}
                       </div>
+
+                      {verifiedLocation && (
+                        <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40">
+                          <div className="flex items-start gap-2 px-3 py-2.5 text-xs text-emerald-800">
+                            <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold">Vị trí giao hàng</p>
+                              <p className="mt-0.5 text-[10px] leading-relaxed text-emerald-700">{verifiedLocation.formattedAddress}</p>
+                              <p className="mt-1 text-[10px] font-semibold text-gray-600">
+                                Kéo ghim đỏ hoặc chạm vào bản đồ để chỉnh đúng vị trí nhà của bạn.
+                              </p>
+                            </div>
+                          </div>
+                          <DeliveryLocationMap
+                            latitude={verifiedLocation.latitude}
+                            longitude={verifiedLocation.longitude}
+                            onPositionChange={handleMapPositionChange}
+                          />
+                          <div className="flex items-center justify-between gap-3 border-t border-emerald-200 bg-white px-3 py-2">
+                            <span className="text-[9px] font-semibold text-gray-400">Bản đồ © OpenStreetMap</span>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${verifiedLocation.latitude},${verifiedLocation.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline"
+                            >
+                              <MapPin size={13} />
+                              Mở trên Google Maps
+                            </a>
+                          </div>
+                        </div>
+                      )}
 
                       <div>
                         <label className="block text-[11px] font-bold text-gray-600 mb-1">Ghi chú giao hàng</label>
