@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   ShieldCheck,
   Truck,
-  Store,
   CreditCard,
   QrCode,
   Wallet,
@@ -117,7 +116,6 @@ export default function CheckoutPage() {
   const [createdTotalAmount, setCreatedTotalAmount] = useState(0);
   const [createdReservationExpiresAt, setCreatedReservationExpiresAt] = useState<string | null>(null);
 
-  const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'store'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<string>('cod');
 
   const [customerGender, setCustomerGender] = useState<'anh' | 'chi'>('anh');
@@ -133,7 +131,6 @@ export default function CheckoutPage() {
 
   const [streetAddress, setStreetAddress] = useState('');
   const [note, setNote] = useState('');
-  const [selectedStore, setSelectedStore] = useState('61-63 Trần Quang Khải, P. Tân Định, Quận 1');
 
   const handleProvinceChange = (newProv: string) => {
     setProvince(newProv);
@@ -215,7 +212,7 @@ export default function CheckoutPage() {
       }
     }
 
-    if (deliveryMethod === 'delivery' && !streetAddress.trim()) {
+    if (!streetAddress.trim()) {
       setToast({ show: true, type: 'error', message: 'Vui lòng nhập số nhà và tên đường cụ thể.' });
       return;
     }
@@ -226,8 +223,6 @@ export default function CheckoutPage() {
     }
 
     setIsSubmitting(true);
-
-    const fullAddress = `${streetAddress.trim()}, ${ward}, ${province}`;
 
     try {
       const authToken = getAuthToken();
@@ -243,12 +238,12 @@ export default function CheckoutPage() {
           customerPhone: cleanPhone,
           customerEmail: cleanEmail || undefined,
           gender: customerGender,
-          deliveryMethod: deliveryMethod === 'delivery' ? 'Giao hàng tận nơi' : 'Nhận tại cửa hàng',
+          deliveryMethod: 'Giao hàng tận nơi',
           province,
           ward,
           district: ward,
-          address: fullAddress,
-          storeAddress: deliveryMethod === 'store' ? selectedStore : undefined,
+          address: streetAddress.trim(),
+          storeAddress: '',
           note: note.trim(),
           paymentMethod,
           items: cartItems.map((item) => ({
@@ -472,43 +467,14 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* 2. HÌNH THỨC NHẬN HÀNG */}
+                {/* 2. ĐỊA CHỈ NHẬN HÀNG */}
                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                   <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 flex items-center gap-2 border-b border-gray-100 pb-2.5">
                     <span className="w-1.5 h-4 bg-[#d70018] inline-block" />
-                    <span>2. Hình thức nhận hàng</span>
+                    <span>2. Địa chỉ nhận hàng</span>
                   </h2>
 
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryMethod('delivery')}
-                      className={`py-2.5 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        deliveryMethod === 'delivery'
-                          ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/50 shadow-xs'
-                          : 'border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-white'
-                      }`}
-                    >
-                      <Truck size={16} />
-                      <span>Giao hàng tận nơi</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryMethod('store')}
-                      className={`py-2.5 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        deliveryMethod === 'store'
-                          ? 'border-2 border-[#d70018] text-[#d70018] bg-red-50/50 shadow-xs'
-                          : 'border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-white'
-                      }`}
-                    >
-                      <Store size={16} />
-                      <span>Nhận tại cửa hàng</span>
-                    </button>
-                  </div>
-
-                  {deliveryMethod === 'delivery' ? (
-                    <div className="space-y-3.5">
+                  <div className="space-y-3.5">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
                           <label className="block text-[11px] font-bold text-gray-600 mb-1">Tỉnh / Thành phố</label>
@@ -543,7 +509,7 @@ export default function CheckoutPage() {
                         </label>
                         <input
                           type="text"
-                          required={deliveryMethod === 'delivery'}
+                          required
                           value={streetAddress}
                           onChange={(e) => setStreetAddress(e.target.value)}
                           placeholder="Ví dụ: 123 Nguyễn Thị Minh Khai, Khu phố 2"
@@ -562,38 +528,6 @@ export default function CheckoutPage() {
                         />
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <label className="block text-[11px] font-bold text-gray-600 mb-1">Chọn chi nhánh Fogo Store:</label>
-                      {[
-                        '61-63 Trần Quang Khải, P. Tân Định, TP. Hồ Chí Minh',
-                        '243-245A Dương Bá Trạc, P. Rạch Ông, TP. Hồ Chí Minh',
-                        '179 Khánh Hội, P. Khánh Hội, TP. Hồ Chí Minh',
-                        '490-492 Lê Hồng Phong, P. Vườn Lài, TP. Hồ Chí Minh',
-                      ].map((st, i) => (
-                        <label
-                          key={i}
-                          className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer text-xs transition-colors ${
-                            selectedStore === st
-                              ? 'border-[#d70018] bg-red-50/40 text-gray-900 font-semibold'
-                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="storeSelect"
-                            checked={selectedStore === st}
-                            onChange={() => setSelectedStore(st)}
-                            className="mt-0.5 accent-[#d70018]"
-                          />
-                          <div>
-                            <span className="font-bold block text-gray-900">Chi nhánh {i + 1}: {st}</span>
-                            <span className="text-[11px] text-emerald-600 font-medium">Sẵn hàng - Giữ máy trong 24 giờ</span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* 3. PHƯƠNG THỨC THANH TOÁN */}

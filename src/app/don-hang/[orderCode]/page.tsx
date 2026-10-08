@@ -30,8 +30,11 @@ import { Footer } from '@/components/layout/Footer';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { QrPaymentModal } from '@/components/checkout/QrPaymentModal';
 import { clearOrderAccessToken, getOrderAccessHeaders } from '@/lib/orderAccess';
+import { buildFullAddress, getStreetAddress, VIETNAM_STREAMLINED_LOCATIONS } from '@/lib/vietnamLocations';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
+const DEFAULT_PROVINCE = 'Thành phố Hồ Chí Minh';
+const PROVINCES = Object.keys(VIETNAM_STREAMLINED_LOCATIONS);
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -58,7 +61,10 @@ export default function OrderDetailPage() {
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editProvince, setEditProvince] = useState(DEFAULT_PROVINCE);
+  const [editWard, setEditWard] = useState(VIETNAM_STREAMLINED_LOCATIONS[DEFAULT_PROVINCE][0]);
   const [editNote, setEditNote] = useState('');
+  const editWards = VIETNAM_STREAMLINED_LOCATIONS[editProvince] || ['Phường / Xã khác'];
 
   // Modal Đổi Phương Thức Thanh Toán
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -84,7 +90,12 @@ export default function OrderDetailPage() {
         setOrder(json.data);
         setEditName(json.data.customerName || '');
         setEditPhone(json.data.customerPhone || '');
-        setEditAddress(json.data.address || '');
+        const orderProvince = json.data.province || DEFAULT_PROVINCE;
+        const provinceWards = VIETNAM_STREAMLINED_LOCATIONS[orderProvince] || ['Phường / Xã khác'];
+        const orderWard = json.data.district || provinceWards[0] || '';
+        setEditProvince(orderProvince);
+        setEditWard(orderWard);
+        setEditAddress(getStreetAddress(json.data.address, orderWard, orderProvince));
         setEditNote(json.data.note || '');
         setSelectedPayment(json.data.paymentMethod || 'cod');
       } else {
@@ -146,6 +157,10 @@ export default function OrderDetailPage() {
           customerName: editName,
           customerPhone: editPhone,
           address: editAddress,
+          province: editProvince,
+          district: editWard,
+          deliveryMethod: 'Giao hàng tận nơi',
+          storeAddress: '',
           note: editNote,
         }),
       });
@@ -409,7 +424,7 @@ export default function OrderDetailPage() {
                       <p className="font-black text-gray-900 text-base">{order.deliveryMethod || 'Giao hàng tận nơi'}</p>
                       <p className="text-gray-700 leading-relaxed text-sm">
                         {order.address
-                          ? `${order.address}${order.district ? ', ' + order.district : ''}${order.province ? ', ' + order.province : ''}`
+                          ? buildFullAddress(order.address, order.district, order.province)
                           : (order.storeAddress || 'Tại cửa hàng Fogo Store')}
                       </p>
                       {order.note && <p className="text-gray-500 text-xs italic">Ghi chú: {order.note}</p>}
@@ -534,7 +549,7 @@ export default function OrderDetailPage() {
       {/* MODAL 1: SỬA THÔNG TIN NHẬN HÀNG */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 relative border border-gray-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 relative border border-gray-200">
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
@@ -570,13 +585,52 @@ export default function OrderDetailPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Tỉnh / Thành phố *</label>
+                  <select
+                    required
+                    value={editProvince}
+                    onChange={(e) => {
+                      const nextProvince = e.target.value;
+                      const nextWards = VIETNAM_STREAMLINED_LOCATIONS[nextProvince] || ['Phường / Xã khác'];
+                      setEditProvince(nextProvince);
+                      setEditWard(nextWards[0] || '');
+                    }}
+                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 bg-white outline-none focus:border-[#d70018]"
+                  >
+                    {PROVINCES.map((province) => (
+                      <option key={province} value={province}>{province}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Xã / Phường / Thị trấn *</label>
+                  <select
+                    required
+                    value={editWard}
+                    onChange={(e) => setEditWard(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 bg-white outline-none focus:border-[#d70018]"
+                  >
+                    {!editWards.includes(editWard) && editWard && (
+                      <option value={editWard}>{editWard}</option>
+                    )}
+                    {editWards.map((ward) => (
+                      <option key={ward} value={ward}>{ward}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block font-bold text-gray-700 mb-1">Địa chỉ giao hàng</label>
+                <label className="block font-bold text-gray-700 mb-1">Số nhà, tên đường, khu phố *</label>
                 <input
                   type="text"
+                  required
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
-                  placeholder="Số nhà, tên đường, phường xã..."
+                  placeholder="Ví dụ: 123 Nguyễn Thị Minh Khai, Khu phố 2"
                   className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 outline-none focus:border-[#d70018]"
                 />
               </div>
