@@ -10,7 +10,8 @@ import { Footer } from '@/components/layout/Footer';
 import { FilterAndSortBar, SortType, FilterState } from '@/components/category/FilterAndSortBar';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
-import { ProductCardTitle } from '@/components/common/ProductCardExtras';
+import { ProductCardTags, ProductCardTitle } from '@/components/common/ProductCardExtras';
+import { getProductTags } from '@/lib/productTags';
 
 interface SeriesTabItem {
   name: string;
@@ -337,6 +338,7 @@ export default function DynamicAccessoryPage() {
           discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
           imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
           statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
+          tags: getProductTags(prod),
         });
       } else {
         storageMap.forEach((varList, stKey) => {
@@ -363,6 +365,7 @@ export default function DynamicAccessoryPage() {
             discountPercent: origPrice > curPrice && hasPrice ? Math.round(((origPrice - curPrice) / origPrice) * 100) : 5,
             imageUrl: formatProductImageUrl(v.images?.[0] || prod.imageUrl || prod.image),
             statusTag: hasPrice ? 'Sẵn hàng' : 'Tạm hết hàng',
+            tags: getProductTags(prod),
           });
         });
       }
@@ -721,6 +724,7 @@ export default function DynamicAccessoryPage() {
                     >
                       <ProductCardTitle name={product.name} singleLine />
                     </Link>
+                    <ProductCardTags name={product.name} tags={product.tags} />
                   </div>
 
                   <div className="mt-1.5">

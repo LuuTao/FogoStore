@@ -11,11 +11,15 @@ import {
   CheckCircle,
   Loader2,
   X,
+  Pencil,
+  Tags,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { getAuthHeaders } from '@/services/adminApi';
+import { ProductTagEditor } from '@/components/admin/ProductTagEditor';
+import { getProductTags } from '@/lib/productTags';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://fogo-store-api.onrender.com').replace(/\/$/, '');
 
@@ -35,6 +39,10 @@ export default function AdminProductsPage() {
   const [categoryId, setCategoryId] = useState('');
   const [seriesId, setSeriesId] = useState('');
   const [description, setDescription] = useState('');
+  const [productTags, setProductTags] = useState<string[]>([]);
+  const [tagEditingProduct, setTagEditingProduct] = useState<any | null>(null);
+  const [editingTags, setEditingTags] = useState<string[]>([]);
+  const [isSavingTags, setIsSavingTags] = useState(false);
   
   // Biến thể khởi tạo
   const [variants, setVariants] = useState([
@@ -52,7 +60,7 @@ export default function AdminProductsPage() {
     setLoading(true);
     try {
       const [resProd, resCat] = await Promise.all([
-        fetch(`${API_URL}/api/products`),
+        fetch(`${API_URL}/api/products?all=true`, { cache: 'no-store' }),
         fetch(`${API_URL}/api/products/categories`),
       ]);
       const [prodData, catData] = await Promise.all([resProd.json(), resCat.json()]);
@@ -125,6 +133,7 @@ export default function AdminProductsPage() {
         name,
         categoryName: selectedCategory?.name || '',
         description,
+        tags: productTags,
         variants: variants.map((v) => ({
           storage: v.storage,
           color: v.color,
@@ -149,6 +158,7 @@ export default function AdminProductsPage() {
       setName('');
       setSlug('');
       setDescription('');
+      setProductTags([]);
       loadData();
     } catch (err: any) {
       alert(err.message);
@@ -172,6 +182,34 @@ export default function AdminProductsPage() {
       }
     } catch (err) {
       alert('Lỗi kết nối khi xóa');
+    }
+  };
+
+  const handleSaveProductTags = async () => {
+    if (!tagEditingProduct) return;
+    setIsSavingTags(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/products/${tagEditingProduct.id}/tags`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ tags: editingTags }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Không thể lưu tag sản phẩm');
+      const savedTags = Array.isArray(data.data?.tags) ? data.data.tags : editingTags;
+      setProducts((current) => current.map((product) => {
+        if (product.id !== tagEditingProduct.id) return product;
+        const specs = product.specs && typeof product.specs === 'object' && !Array.isArray(product.specs)
+          ? product.specs
+          : {};
+        return { ...product, specs: { ...specs, productTags: savedTags } };
+      }));
+      setTagEditingProduct(null);
+      alert('Đã cập nhật tag. Tag mới sẽ hiển thị trên sản phẩm.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Không thể lưu tag sản phẩm');
+    } finally {
+      setIsSavingTags(false);
     }
   };
 
@@ -240,6 +278,7 @@ export default function AdminProductsPage() {
                   <tr>
                     <th className="py-3 px-4">Ảnh</th>
                     <th className="py-3 px-4">Tên Sản Phẩm</th>
+                    <th className="py-3 px-4">Tag hiển thị</th>
                     <th className="py-3 px-4">Danh Mục</th>
                     <th className="py-3 px-4">Kho Biến Thể</th>
                     <th className="py-3 px-4">Mức Giá</th>
@@ -249,20 +288,21 @@ export default function AdminProductsPage() {
                 <tbody className="divide-y divide-gray-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-gray-400 font-medium">
+                      <td colSpan={7} className="py-12 text-center text-gray-400 font-medium">
                         <Loader2 size={24} className="animate-spin text-[#d70018] mx-auto mb-2" />
                         Đang lấy danh mục từ PostgreSQL...
                       </td>
                     </tr>
                   ) : filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-gray-400 font-medium">
+                      <td colSpan={7} className="py-10 text-center text-gray-400 font-medium">
                         Không có sản phẩm nào.
                       </td>
                     </tr>
                   ) : (
                     filteredProducts.map((p) => {
                       const firstVar = p.variants?.[0];
+                      const tags = getProductTags(p);
                       return (
                         <tr key={p.id} className="hover:bg-gray-50/80 transition-colors">
                           <td className="py-3 px-4 w-16">
@@ -278,6 +318,19 @@ export default function AdminProductsPage() {
                             <p className="font-bold text-gray-900 leading-snug">{p.name}</p>
                             <p className="text-[11px] text-gray-400">/{p.slug}</p>
                           </td>
+                          <td className="py-3 px-4 min-w-40">
+                            {tags.length > 0 ? (
+                              <div className="flex max-w-56 flex-wrap gap-1">
+                                {tags.map((tag) => (
+                                  <span key={tag} className="rounded bg-red-50 px-2 py-0.5 text-[10px] font-bold text-[#d70018] ring-1 ring-red-100">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-gray-400">Chưa có tag</span>
+                            )}
+                          </td>
                           <td className="py-3 px-4">
                             <span className="bg-gray-100 text-gray-700 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
                               {p.category?.name || 'iPhone'}
@@ -292,6 +345,16 @@ export default function AdminProductsPage() {
                             {formatVnd(firstVar?.price)}
                           </td>
                           <td className="py-3 px-4 text-center">
+                            <button
+                              onClick={() => {
+                                setTagEditingProduct(p);
+                                setEditingTags(tags);
+                              }}
+                              className="text-gray-400 hover:text-[#d70018] p-1.5 transition-colors cursor-pointer"
+                              title="Gắn hoặc sửa tag"
+                            >
+                              <Pencil size={16} />
+                            </button>
                             <button
                               onClick={() => handleDeleteProduct(p.id)}
                               className="text-gray-400 hover:text-red-600 p-1.5 transition-colors cursor-pointer"
@@ -375,6 +438,8 @@ export default function AdminProductsPage() {
                   </select>
                 </div>
               )}
+
+              <ProductTagEditor value={productTags} onChange={setProductTags} />
 
               {/* Danh sách biến thể */}
               <div className="pt-3 border-t border-gray-100">
@@ -461,6 +526,39 @@ export default function AdminProductsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {tagEditingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-black text-gray-900">
+                  <Tags size={18} className="text-[#d70018]" />
+                  Gắn và chỉnh sửa tag
+                </h2>
+                <p className="mt-1 text-xs text-gray-500">{tagEditingProduct.name}</p>
+              </div>
+              <button type="button" onClick={() => setTagEditingProduct(null)} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                <X size={19} />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-5">
+              <ProductTagEditor value={editingTags} onChange={setEditingTags} />
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-gray-100 bg-gray-50 px-5 py-3">
+              <button type="button" disabled={isSavingTags} onClick={() => setTagEditingProduct(null)} className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                Hủy
+              </button>
+              <button type="button" disabled={isSavingTags} onClick={handleSaveProductTags} className="inline-flex items-center gap-1.5 rounded-md bg-[#d70018] px-4 py-2 text-xs font-bold text-white hover:bg-[#b50014] disabled:opacity-50">
+                {isSavingTags ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                {isSavingTags ? 'Đang lưu…' : 'Lưu và hiển thị'}
+              </button>
+            </div>
           </div>
         </div>
       )}

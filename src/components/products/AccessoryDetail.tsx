@@ -30,6 +30,8 @@ import { Footer } from '@/components/layout/Footer';
 import { useCart } from '@/context/CartContext';
 import { ToastNotification } from '@/components/common/ToastNotification';
 import { InstallmentModal } from '@/components/checkout/InstallmentModal';
+import { ProductCardTags } from '@/components/common/ProductCardExtras';
+import { getProductTags } from '@/lib/productTags';
 
 interface Props {
   initialProduct: any;
@@ -468,6 +470,7 @@ export default function AccessoryDetail({
                 <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words">
                   {cleanProductName} - Chính hãng
                 </h1>
+                <ProductCardTags name={product.name} tags={getProductTags(product)} align="left" size="large" />
               </div>
 
               {/* Mức giá */}
