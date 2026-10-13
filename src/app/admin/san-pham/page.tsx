@@ -49,6 +49,8 @@ export default function AdminProductsPage() {
     {
       storage: '128GB',
       color: 'Đen Titan',
+      size: '',
+      version: '',
       price: 25000000,
       originalPrice: 28000000,
       stock: 20,
@@ -101,6 +103,8 @@ export default function AdminProductsPage() {
       {
         storage: '256GB',
         color: 'Trắng Titan',
+        size: '',
+        version: '',
         price: 28000000,
         originalPrice: 31000000,
         stock: 15,
@@ -137,6 +141,8 @@ export default function AdminProductsPage() {
         variants: variants.map((v) => ({
           storage: v.storage,
           color: v.color,
+          size: v.size,
+          version: v.version,
           price: Number(v.price),
           originalPrice: Number(v.originalPrice),
           stock: Number(v.stock),
@@ -494,6 +500,22 @@ export default function AdminProductsPage() {
                           value={v.originalPrice}
                           onChange={(e) => handleVariantChange(idx, 'originalPrice', e.target.value)}
                           className="border rounded p-1.5 bg-white"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Kích thước (14 inch)"
+                          value={v.size}
+                          onChange={(e) => handleVariantChange(idx, 'size', e.target.value)}
+                          className="border rounded p-1.5 bg-white"
+                        />
+                        <input
+                          type="text"
+                          placeholder="CPU/GPU (12 CPU / 18 GPU) hoặc Wifi/5G"
+                          value={v.version}
+                          onChange={(e) => handleVariantChange(idx, 'version', e.target.value)}
+                          className="border rounded p-1.5 bg-white font-bold"
                         />
                       </div>
                       <input

@@ -410,12 +410,12 @@ export default function WatchDetail({
 
         {/* BREADCRUMB */}
         <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-3 px-4 text-xs text-gray-600">
-          <div className="max-w-7xl mx-auto flex items-center gap-2 truncate">
-            <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Link href="/" className="shrink-0 hover:text-[#d70018]">Trang chủ</Link>
             <span>/</span>
-            <Link href="/watch" className="hover:text-[#d70018]">Apple Watch</Link>
+            <Link href="/watch" className="shrink-0 hover:text-[#d70018]">Apple Watch</Link>
             <span>/</span>
-            <span className="text-gray-900 font-bold">{cleanProductName} {selectedSize}</span>
+            <span className="min-w-0 break-words font-bold leading-relaxed text-gray-900">{cleanProductName} {selectedSize}</span>
           </div>
         </div>
 

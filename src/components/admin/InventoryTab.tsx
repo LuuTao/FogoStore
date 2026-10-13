@@ -146,6 +146,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
       storage: '128GB',
       color: 'Titan Tự Nhiên',
       origin: 'Việt Nam',
+      size: '',
+      version: '',
       price: 29990000,
       originalPrice: 31990000,
       stock: 20,
@@ -310,7 +312,9 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
           (v) =>
             (v.storage && v.storage.toLowerCase().includes(keyword)) ||
             (v.color && v.color.toLowerCase().includes(keyword)) ||
-            (v.origin && v.origin.toLowerCase().includes(keyword))
+            (v.origin && v.origin.toLowerCase().includes(keyword)) ||
+            (v.size && v.size.toLowerCase().includes(keyword)) ||
+            (v.version && v.version.toLowerCase().includes(keyword))
         );
         if (!matchName && !matchVar) return false;
       }
@@ -472,6 +476,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
               'Dung Lượng / Kích Thước': v.storage || 'Tiêu chuẩn',
               'Màu Sắc': v.color || 'Tiêu chuẩn',
               'Xuất Xứ': v.origin || 'Việt Nam',
+              'Kích Thước Màn Hình': v.size || '',
+              'Cấu Hình CPU/GPU / Phiên Bản': v.version || '',
               'Giá Bán (VNĐ)': price > 0 ? price : 'Liên hệ',
               'Giá Gốc (VNĐ)': originalPrice > 0 ? originalPrice : '',
               'Tồn Kho (Máy)': stock,
@@ -488,6 +494,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
             'Dung Lượng / Kích Thước': 'Chưa tạo',
             'Màu Sắc': 'Chưa tạo',
             'Xuất Xứ': 'Chưa tạo',
+            'Kích Thước Màn Hình': '',
+            'Cấu Hình CPU/GPU / Phiên Bản': '',
             'Giá Bán (VNĐ)': 'Liên hệ',
             'Giá Gốc (VNĐ)': '',
             'Tồn Kho (Máy)': 0,
@@ -506,6 +514,8 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         { wch: 24 },
         { wch: 18 },
         { wch: 15 },
+        { wch: 22 },
+        { wch: 30 },
         { wch: 18 },
         { wch: 18 },
         { wch: 15 },
@@ -654,7 +664,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
         setIsOpenAddProductModal(false);
         setNewProdName('');
         setVariantsList([
-          { storage: '128GB', color: 'Titan Tự Nhiên', origin: 'Việt Nam', price: 29990000, originalPrice: 31990000, stock: 20, isFlashSale: false, images: [] },
+          { storage: '128GB', color: 'Titan Tự Nhiên', origin: 'Việt Nam', size: '', version: '', price: 29990000, originalPrice: 31990000, stock: 20, isFlashSale: false, images: [] },
         ]);
         showToast('Đã đăng sản phẩm thành công!');
         onRefresh();
@@ -1095,7 +1105,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                                     <tr>
                                       <th className="py-2.5 px-4 text-center">ẢNH (&gt;1 ẢNH)</th>
                                       <th className="py-2.5 px-4">DUNG LƯỢNG / KÍCH THƯỚC</th>
-                                      {variants.some((variant) => variant.size || variant.version) && <th className="py-2.5 px-4">KÍCH THƯỚC / PHIÊN BẢN</th>}
+                                      {variants.some((variant) => variant.size || variant.version) && <th className="py-2.5 px-4">MÀN HÌNH / CPU-GPU / PHIÊN BẢN</th>}
                                       <th className="py-2.5 px-4">MÀU SẮC</th>
                                       <th className="py-2.5 px-4 text-center">XUẤT XỨ</th>
                                       <th className="py-2.5 px-4 text-right">GIÁ BÁN</th>
@@ -1393,10 +1403,24 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                   <input type="text" placeholder="Ví dụ: 13 inch" value={editingVariant.size || ''} onChange={(e) => setEditingVariant({ ...editingVariant, size: e.target.value })} className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold" />
                 </div>
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">Phiên bản (iPad)</label>
-                  <select value={editingVariant.version || ''} onChange={(e) => setEditingVariant({ ...editingVariant, version: e.target.value })} className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold bg-white">
-                    <option value="">Không áp dụng</option><option value="Wifi">Wifi</option><option value="5G (Cellular)">5G (Cellular)</option><option value="Wifi + 5G (Cellular)">Wifi + 5G (Cellular)</option>
-                  </select>
+                  <label className="font-bold text-gray-700 block mb-1">Cấu hình CPU/GPU / Phiên bản</label>
+                  <input
+                    type="text"
+                    list="variant-version-suggestions"
+                    placeholder="VD: 12 CPU / 18 GPU hoặc Wifi"
+                    value={editingVariant.version || ''}
+                    onChange={(e) => setEditingVariant({ ...editingVariant, version: e.target.value })}
+                    className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold"
+                  />
+                  <datalist id="variant-version-suggestions">
+                    <option value="Wifi" />
+                    <option value="5G (Cellular)" />
+                    <option value="Wifi + 5G (Cellular)" />
+                    <option value="8 CPU / 8 GPU" />
+                    <option value="10 CPU / 10 GPU" />
+                    <option value="12 CPU / 18 GPU" />
+                    <option value="14 CPU / 20 GPU" />
+                  </datalist>
                 </div>
               </div>
 
@@ -1532,6 +1556,37 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Kích thước màn hình</label>
+                  <input
+                    name="size"
+                    type="text"
+                    placeholder="VD: 14 inch"
+                    className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Cấu hình CPU/GPU / Phiên bản</label>
+                  <input
+                    name="version"
+                    type="text"
+                    list="new-variant-version-suggestions"
+                    placeholder="VD: 12 CPU / 18 GPU"
+                    className="w-full border rounded p-2 outline-none focus:border-red-500 font-bold"
+                  />
+                  <datalist id="new-variant-version-suggestions">
+                    <option value="Wifi" />
+                    <option value="5G (Cellular)" />
+                    <option value="Wifi + 5G (Cellular)" />
+                    <option value="8 CPU / 8 GPU" />
+                    <option value="10 CPU / 10 GPU" />
+                    <option value="12 CPU / 18 GPU" />
+                    <option value="14 CPU / 20 GPU" />
+                  </datalist>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1714,7 +1769,7 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                 {variantsList.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-gray-50 border rounded-lg grid grid-cols-1 md:grid-cols-6 gap-2 items-center"
+                    className="p-3 bg-gray-50 border rounded-lg grid grid-cols-1 md:grid-cols-4 gap-2 items-center"
                   >
                     <select
                       value={item.storage}
@@ -1741,6 +1796,28 @@ export default function InventoryTab({ inventory, onRefresh }: Props) {
                         setVariantsList(up);
                       }}
                       className="border p-1.5 rounded bg-white"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Kích thước (14 inch)"
+                      value={item.size}
+                      onChange={(e) => {
+                        const up = [...variantsList];
+                        up[idx].size = e.target.value;
+                        setVariantsList(up);
+                      }}
+                      className="border p-1.5 rounded bg-white"
+                    />
+                    <input
+                      type="text"
+                      placeholder={newProdCategory.toLowerCase().includes('macbook') ? 'CPU/GPU (12 CPU / 18 GPU)' : 'Phiên bản (Wifi / 5G)'}
+                      value={item.version}
+                      onChange={(e) => {
+                        const up = [...variantsList];
+                        up[idx].version = e.target.value;
+                        setVariantsList(up);
+                      }}
+                      className="border p-1.5 rounded bg-white font-bold"
                     />
                     <select
                       value={item.origin || 'Việt Nam'}

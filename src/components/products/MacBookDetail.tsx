@@ -135,7 +135,7 @@ export default function MacBookDetail({
     setSelectedColor(firstValidVar?.color || 'Space Gray');
     setSelectedOrigin(firstValidVar?.origin || 'Việt Nam');
     setSelectedSize(firstValidVar?.size || firstValidVar?.screenSize || firstValidVar?.inch || ((product.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/i)?.[0] || '14 inch'));
-    setSelectedVersion(firstValidVar?.version || 'Wifi');
+    setSelectedVersion(firstValidVar?.version || '');
 
     // Lấy danh sách MacBook liên quan từ DB
     fetch(`${API_URL}/api/products/filter?category=macbook`, { cache: 'no-store' })
@@ -360,7 +360,7 @@ export default function MacBookDetail({
     if (matched) {
       setSelectedColor(matched.color || selectedColor);
       setSelectedOrigin(matched.origin || selectedOrigin || 'Việt Nam');
-      setSelectedVersion(matched.version || selectedVersion || 'Wifi');
+      setSelectedVersion(matched.version || selectedVersion || '');
       setSelectedSize(matched.size || matched.screenSize || matched.inch || selectedSize);
       setCurrentImageIndex(0);
     }
@@ -404,6 +404,27 @@ export default function MacBookDetail({
     }
   };
 
+  const handleSelectVersion = (version: string) => {
+    const normalizedVersion = version.trim().toLowerCase();
+    const matched = product?.variants?.find((variant: any) =>
+      String(variant.version || '').trim().toLowerCase() === normalizedVersion &&
+      (!selectedStorage || String(variant.storage || '').trim().toLowerCase() === selectedStorage.trim().toLowerCase()) &&
+      (!selectedColor || String(variant.color || '').trim().toLowerCase() === selectedColor.trim().toLowerCase()) &&
+      (!selectedSize || !variant.size || String(variant.size).trim().toLowerCase() === selectedSize.trim().toLowerCase())
+    ) || product?.variants?.find((variant: any) =>
+      String(variant.version || '').trim().toLowerCase() === normalizedVersion
+    );
+
+    setSelectedVersion(version);
+    if (matched) {
+      setSelectedStorage(matched.storage || selectedStorage);
+      setSelectedColor(matched.color || selectedColor);
+      setSelectedOrigin(matched.origin || selectedOrigin || 'Việt Nam');
+      setSelectedSize(matched.size || matched.screenSize || matched.inch || selectedSize);
+      setCurrentImageIndex(0);
+    }
+  };
+
   const formatVnd = (num: any) => {
     const parsedNum = Number(num);
     if (!parsedNum || parsedNum <= 0 || isNaN(parsedNum)) {
@@ -413,18 +434,31 @@ export default function MacBookDetail({
   };
 
   const cleanProductName = product?.name
-    ? product.name.replace(/\b(8GB|16GB|24GB|32GB|128GB|256GB|512GB|1TB|2TB|Tiêu chuẩn|Wi-?Fi|5G(?:\s*\(Cellular\))?)\b/gi, '').trim()
+    ? product.name
+      .replace(/\b\d+\s*(?:core\s*)?CPU\s*\/\s*\d+\s*(?:core\s*)?GPU\b/gi, '')
+      .replace(/\b(8GB|16GB|24GB|32GB|128GB|256GB|512GB|1TB|2TB|Tiêu chuẩn|Wi-?Fi|5G(?:\s*\(Cellular\))?)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
     : 'MacBook';
 
   const currentPrice = currentVariant?.price ?? product?.price ?? 0;
   const currentOriginalPrice = currentVariant?.originalPrice ?? product?.originalPrice ?? 0;
   const currentOrigin = currentVariant?.origin || selectedOrigin || product?.origin || 'Việt Nam';
-  const currentVersion = String(currentVariant?.version || selectedVersion || 'Wifi');
+  const currentVersion = String(currentVariant?.version || selectedVersion || '');
   const hasVersionVariants = product?.variants?.some((variant: any) => variant.version) || false;
-  const originList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.origin || 'Việt Nam').trim()).filter(Boolean)));
-  const sizeList = Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean))).length > 0
-    ? Array.from(new Set((product?.variants || []).map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim()).filter(Boolean)))
-    : Array.from(new Set(((product?.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/gi) || []).map((size: string) => size.replace(/\s+/g, ' '))));
+  const versionList: string[] = Array.from(new Set<string>((product?.variants || [])
+    .map((variant: any) => String(variant.version || '').trim())
+    .filter(Boolean)));
+  const variantSizes: string[] = (product?.variants || [])
+    .map((variant: any) => String(variant.size || variant.screenSize || variant.inch || '').trim())
+    .filter(Boolean);
+  const originList: string[] = Array.from(new Set<string>((product?.variants || [])
+    .map((variant: any) => String(variant.origin || 'Việt Nam').trim())
+    .filter(Boolean)));
+  const sizeList: string[] = variantSizes.length > 0
+    ? Array.from(new Set<string>(variantSizes))
+    : Array.from(new Set<string>(((product?.name || '').match(/\b\d{2}(?:\.\d+)?\s*inch\b/gi) || [])
+      .map((size: string) => size.replace(/\s+/g, ' '))));
   useEffect(() => {
     if (typeof window === 'undefined' || !currentVariant?.id) return;
     const cleanBase = (baseSlug || '').toLowerCase().replace(/\/+$/, '').trim();
@@ -444,7 +478,7 @@ export default function MacBookDetail({
 
     addToCart({
       id: currentVariant.id,
-      name: `${cleanProductName} ${selectedStorage}`,
+      name: `${cleanProductName}${selectedVersion ? ` ${selectedVersion}` : ''} ${selectedStorage}`,
       modelSlug: baseSlug,
       price: currentPrice,
       originalPrice: currentOriginalPrice || currentPrice,
@@ -487,12 +521,12 @@ export default function MacBookDetail({
 
         {/* BREADCRUMB */}
         <div className="w-full bg-[#f8f9fa] border-b border-gray-200 py-3 px-4 text-xs text-gray-600">
-          <div className="max-w-7xl mx-auto flex items-center gap-2 truncate">
-            <Link href="/" className="hover:text-[#d70018]">Trang chủ</Link>
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Link href="/" className="shrink-0 hover:text-[#d70018]">Trang chủ</Link>
             <span>/</span>
-            <Link href="/macbook" className="hover:text-[#d70018]">MacBook</Link>
+            <Link href="/macbook" className="shrink-0 hover:text-[#d70018]">MacBook</Link>
             <span>/</span>
-            <span className="text-gray-900 font-bold">{cleanProductName} {selectedStorage}</span>
+            <span className="min-w-0 break-words font-bold leading-relaxed text-gray-900">{cleanProductName} {selectedStorage}</span>
           </div>
         </div>
 
@@ -619,12 +653,12 @@ export default function MacBookDetail({
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Phiên bản:</label>
+              {hasVersionVariants && versionList.length > 0 && <div>
+                <label className="block text-sm sm:text-base font-black text-gray-900 mb-2">Cấu hình CPU / GPU:</label>
                 <div className="flex flex-wrap gap-2.5">
-                  {['Wifi', '5G (Cellular)', 'Wifi + 5G (Cellular)'].map((version) => <button key={version} type="button" onClick={() => setSelectedVersion(version)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${selectedVersion.toLowerCase() === version.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{version}</button>)}
+                  {versionList.map((version) => <button key={version} type="button" onClick={() => handleSelectVersion(version)} className={`px-4 py-2 text-xs sm:text-sm font-black rounded-xl border-2 ${currentVersion.toLowerCase() === version.toLowerCase() ? 'border-[#d70018] text-[#d70018] bg-red-50/20' : 'border-gray-200 text-gray-800'}`}>{version}</button>)}
                 </div>
-              </div>
+              </div>}
 
               {/* CHỌN DUNG LƯỢNG SSD: TỰ ĐỘNG XUỐNG DÒNG VÀ VIỀN ĐỎ RÕ RÀNG */}
               {storageList.length > 0 && (
